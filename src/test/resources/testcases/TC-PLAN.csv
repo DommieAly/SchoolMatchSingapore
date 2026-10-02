@@ -1,0 +1,10 @@
+tc_id,requirement,technique,input,expected
+TC-PLAN-01-01,FR-PLAN-01,boundary value: best possible score (4),4,SAFE
+TC-PLAN-01-02,FR-PLAN-01,equivalence class: score below lowerScore (8) is still SAFE,7,SAFE
+TC-PLAN-01-03,FR-PLAN-01,boundary value: score = U - m - 1,9,SAFE
+TC-PLAN-01-04,FR-PLAN-01,boundary value: score = U - m (last SAFE),10,SAFE
+TC-PLAN-01-05,FR-PLAN-01,boundary value: score = U - m + 1 (first MATCH),11,MATCH
+TC-PLAN-01-06,FR-PLAN-01,boundary value: score = U (last MATCH),12,MATCH
+TC-PLAN-01-07,FR-PLAN-01,boundary value: score = U + 1 (first REACH),13,REACH
+TC-PLAN-01-08,FR-PLAN-01,boundary value: score = U + 2,14,REACH
+TC-PLAN-01-09,FR-PLAN-01,boundary value: worst possible score (32),32,REACH

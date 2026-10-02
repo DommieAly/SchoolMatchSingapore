@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<!--/* DM 02 LoginForm — LoginUI.displayLoginForm / submitLogin (FR-LOGIN-01..05, NFR-SEC-04, DC-08).
+       Model: next (safe local path or null), add (school code or null), sessionEnded (sent here from an expired
+       logout), fieldErrors (flash: identifier / password / login), identifier (flash: what was typed),
+       flashMessage, flashError. */-->
+<!-- DM-02 LoginForm · LoginUI -->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Log in')}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+            <h1 class="h3 mb-3">Log in</h1>
+            <div th:if="${sessionEnded}" class="alert alert-info small" role="status">
+                Your session had already ended, so you are already logged out.
+            </div>
+            <div th:replace="~{fragments/messages :: messages}"></div>
+            <div th:if="${add != null}" class="alert alert-info small" role="status">
+                Log in to finish adding the school to your shortlist.
+            </div>
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" th:action="@{/login}" novalidate>
+                        <input th:if="${next != null}" type="hidden" name="next" th:value="${next}">
+                        <input th:if="${add != null}" type="hidden" name="add" th:value="${add}">
+                        <div class="mb-3">
+                            <label for="identifier" class="form-label">Username or email</label>
+                            <input id="identifier" type="text" name="identifier" th:value="${identifier}"
+                                   class="form-control" required maxlength="254" autocomplete="username" autofocus
+                                   th:classappend="${fieldErrors?.get('identifier') != null} ? 'is-invalid'">
+                            <div class="invalid-feedback" th:text="${fieldErrors?.get('identifier')}">Error</div>
+                        </div>
+                        <div class="mb-4">
+                            <label for="password" class="form-label">Password</label>
+                            <input id="password" type="password" name="password" class="form-control" required
+                                   autocomplete="current-password"
+                                   th:classappend="${fieldErrors?.get('password') != null} ? 'is-invalid'">
+                            <div class="invalid-feedback" th:text="${fieldErrors?.get('password')}">Error</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a class="btn btn-outline-secondary" th:href="@{/}">Cancel</a>
+                            <button type="submit" class="btn btn-primary flex-grow-1">Log in</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <p class="text-center small mt-3">No account yet? <a th:href="@{/register}">Register</a></p>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

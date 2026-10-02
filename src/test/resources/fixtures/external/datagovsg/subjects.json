@@ -1,0 +1,59 @@
+{
+ "help": "https://data.gov.sg/api/3/action/help_show?name=datastore_search",
+ "success": true,
+ "result": {
+  "resource_id": "d_f1d144e423570c9d84dbc5102c2e664d",
+  "fields": [
+   {
+    "type": "text",
+    "id": "School_Name"
+   },
+   {
+    "type": "text",
+    "id": "Subject_Desc"
+   },
+   {
+    "type": "int4",
+    "id": "_id"
+   }
+  ],
+  "records": [
+   {
+    "_id": 1,
+    "School_Name": "CATHOLIC HIGH SCHOOL",
+    "Subject_Desc": "Additional Mathematics"
+   },
+   {
+    "_id": 2,
+    "School_Name": "CATHOLIC HIGH SCHOOL",
+    "Subject_Desc": "Appreciation of Chinese Culture"
+   },
+   {
+    "_id": 3,
+    "School_Name": "ST. HILDA'S SECONDARY SCHOOL",
+    "Subject_Desc": "Additional Mathematics"
+   },
+   {
+    "_id": 4,
+    "School_Name": "ST. HILDA'S SECONDARY SCHOOL",
+    "Subject_Desc": "Art"
+   },
+   {
+    "_id": 5,
+    "School_Name": "HUA YI SECONDARY SCHOOL",
+    "Subject_Desc": "Additional Mathematics"
+   },
+   {
+    "_id": 6,
+    "School_Name": "HUA YI SECONDARY SCHOOL",
+    "Subject_Desc": "Art"
+   }
+  ],
+  "_links": {
+   "start": "/api/action/datastore_search?resource_id=d_f1d144e423570c9d84dbc5102c2e664d&limit=1000",
+   "next": "/api/action/datastore_search?resource_id=d_f1d144e423570c9d84dbc5102c2e664d&offset=1000&limit=1000"
+  },
+  "limit": 1000,
+  "total": 6
+ }
+}

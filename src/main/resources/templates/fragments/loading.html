@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<!--/*
+  loading(message): full-screen spinner shown while the next page is on its way
+  (DM-20 DirectionsLoading, DM-23 RecommendationLoading; displayLoadingIndicator / animateSpinner; NFR-PERF-03).
+    <div th:replace="~{fragments/loading :: loading('Finding the route…')}"></div>
+  static/js/loading.js shows it when a form with a data-loading attribute is submitted;
+  data-loading="Some text" replaces the message.
+*/-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="loading(message)" class="loading-overlay d-none" role="status" aria-live="polite" aria-hidden="true">
+    <div class="loading-box card shadow text-center p-4">
+        <div class="spinner-border text-primary mx-auto mb-3" aria-hidden="true"></div>
+        <p class="mb-0 fw-medium" data-loading-text th:text="${message}">Loading…</p>
+    </div>
+</div>
+</body>
+</html>

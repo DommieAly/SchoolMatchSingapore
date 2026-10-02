@@ -1,0 +1,89 @@
+/* SchoolMatch SG: small additions on top of Bootstrap 5.3. Prefer Bootstrap classes in templates. */
+
+/* Footer stays at the bottom on short pages. */
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bs-tertiary-bg);
+}
+
+body > main {
+  flex: 1 0 auto;
+  width: 100%;
+}
+
+.site-footer {
+  flex-shrink: 0;
+}
+
+/* Summary cards (fragments/school-summary-card.html). */
+.school-card {
+  transition: box-shadow 0.15s ease-in-out;
+}
+
+.school-card:hover,
+.school-card:focus-within {
+  box-shadow: var(--bs-box-shadow-sm);
+}
+
+/* Empty list areas. */
+.empty-state {
+  border-style: dashed !important;
+  background-color: var(--bs-body-bg);
+}
+
+/* Filter checkbox lists can be long (CCAs). */
+.filter-options {
+  max-height: 14rem;
+  overflow-y: auto;
+  background-color: var(--bs-body-bg);
+}
+
+/* Maps (fragments/map-canvas.html). */
+.map-canvas,
+.map-unavailable {
+  height: 28rem;
+  min-height: 16rem;
+}
+
+.map-unavailable {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  text-align: center;
+  border-style: dashed !important;
+  background-color: var(--bs-body-bg);
+}
+
+.map-list {
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+/* Loading overlay (fragments/loading.html, static/js/loading.js). */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(var(--bs-body-bg-rgb), 0.75);
+}
+
+.loading-box {
+  min-width: 16rem;
+}
+
+.compare-table th[scope="row"] {
+  white-space: nowrap;
+}
+
+@media (max-width: 575.98px) {
+  .map-canvas,
+  .map-unavailable {
+    height: 20rem;
+  }
+}

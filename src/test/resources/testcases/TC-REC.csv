@@ -1,0 +1,20 @@
+tc_id,requirement,technique,input,expected
+TC-REC-01-01,FR-REC-01,BVA (lowest score),score=4,SAFE 0.7
+TC-REC-01-02,FR-REC-01,BVA (U-2),score=10,SAFE 0.7
+TC-REC-01-03,FR-REC-01,BVA (U-1),score=11,MATCH 1.0
+TC-REC-01-04,FR-REC-01,BVA (U),score=12,MATCH 1.0
+TC-REC-01-05,FR-REC-01,BVA (U+1),score=13,REACH 0.3
+TC-REC-01-06,FR-REC-01,BVA (U+2),score=14,REACH 0.3
+TC-REC-01-07,FR-REC-01,BVA (U+3),score=15,EXCLUDED
+TC-REC-01-08,FR-REC-01,EP (no range for PG),pg=2,EXCLUDED
+TC-REC-02-01,FR-REC-01; NFR-USE-03,BVA (score 3),score=3,error psleScore
+TC-REC-02-02,FR-REC-01; NFR-USE-03,BVA (score 33),score=33,error psleScore
+TC-REC-02-03,FR-REC-01; NFR-USE-03,EP (no score),score=,error psleScore
+TC-REC-02-04,FR-REC-01; NFR-USE-03,BVA (PG 0),pg=0,error postingGroup
+TC-REC-02-05,FR-REC-01; NFR-USE-03,BVA (PG 4),pg=4,error postingGroup
+TC-REC-02-06,FR-REC-01; NFR-USE-03,EP (commute 20 not an option),maxMin=20,error maxCommuteMin
+TC-REC-02-07,FR-REC-01; NFR-USE-03,EP (no travel mode),mode=,error travelMode
+TC-REC-02-08,FR-REC-01; NFR-USE-03,EP (no start location),start=none,error startLocation
+TC-REC-02-09,FR-REC-01; NFR-USE-03,EP (start outside Singapore),start=outside,error startLocation
+TC-REC-03-01,FR-REC-01,EP (commute at the limit),commute=30,MATCH 1.0
+TC-REC-03-02,FR-REC-01,BVA (commute 1 min over the limit),commute=31,EXCLUDED

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<!--/* DM 07 SchoolSearch / DM 08 SearchResults — SchoolSearchUI.submitSearch (FR-SEARCH-01..06, FR-FILTER-01..09).
+       Model: term, params, and either fieldErrors for an invalid term (no results) or schools, totalCount, page,
+       totalPages, baseUrl, chips, notAppliedChips, clearAllUrl, filterUrl, mapUrl, sortOrder, sortOptions, searchCount, hasFilters,
+       activeFilters, noPsleDataCount, plus when they apply: fieldErrors (filter input), sortMessage, flashError,
+       pgHint, startLocation and the card extras (cardDistanceKm, cardCommuteMin, cardCommuteMode, cardRanges).
+       The design's display operations are the th:fragment names below. */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Search schools')}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <h1 class="h3 mb-3">Search schools</h1>
+    <!--/* highlightInvalidFields (filter input, NFR-USE-03) and displayServiceUnavailable (flashError, EX-1) */-->
+    <div th:replace="~{fragments/messages :: messages}"></div>
+    <p th:if="${fieldErrors != null and fieldErrors['location'] != null and filterUrl != null}" class="small">
+        <a th:href="@{${filterUrl}}">Set a starting point on the filter page</a></p>
+
+    <!--/* displaySearchField + highlightInvalidFields (FR-SEARCH-01, NFR-USE-03) */-->
+    <form th:fragment="displaySearchField" class="mb-4" th:action="@{/schools}" method="get" role="search"
+          th:with="qError=${fieldErrors != null ? fieldErrors['q'] : null}">
+        <label for="q" class="form-label">School name</label>
+        <div class="input-group has-validation">
+            <input id="q" name="q" type="search" maxlength="100" class="form-control" autocomplete="off"
+                   placeholder="e.g. Catholic High" th:value="${term}"
+                   th:classappend="${qError != null} ? 'is-invalid'"
+                   th:aria-invalid="${qError != null}" aria-describedby="q-help q-error">
+            <button type="submit" class="btn btn-primary">Search</button>
+            <div id="q-error" class="invalid-feedback" th:fragment="highlightInvalidFields"
+                 th:if="${qError != null}" th:text="${qError}">Enter 1–100 characters</div>
+        </div>
+        <div id="q-help" class="form-text">Part of the name is enough. Leave it empty to list all schools A–Z.
+            A new search starts without filters.</div>
+    </form>
+
+    <th:block th:if="${schools != null}">
+
+        <!--/* Toolbar: count and order, Open filters, View on map (same parameters, DC-15) */-->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <p class="text-muted mb-0">
+                <span th:if="${hasFilters and searchCount > 0}"
+                      th:text="|${totalCount} of ${searchCount} ${searchCount == 1 ? 'school matches' : 'schools match'} your filters|">
+                    2 of 10 schools match your filters</span>
+                <span th:unless="${hasFilters and searchCount > 0}"
+                      th:text="${totalCount == 1 ? '1 school' : totalCount + ' schools'}">12 schools</span>
+                <span th:switch="${sortOrder?.name()}">
+                    <span th:case="'DISTANCE_ASC'">· nearest first</span>
+                    <span th:case="'COMMUTE_ASC'">· shortest travel time first</span>
+                    <span th:case="*">· A–Z</span>
+                </span>
+                <span th:text="|· page ${page} of ${totalPages}|">· page 1 of 1</span>
+            </p>
+            <div class="d-flex gap-2">
+                <a class="btn btn-sm btn-outline-primary" th:href="@{${filterUrl}}">Open filters</a>
+                <a class="btn btn-sm btn-outline-secondary" th:href="@{${mapUrl}}">View on map</a>
+            </div>
+        </div>
+
+        <!--/* Active filters as chips, each with a remove link, and Clear all (FR-FILTER-08, FR-FILTER-09) */-->
+        <!--/* Chips are only the filters that were applied; a rejected one is shown as "Not applied" (step 9, AF-3) */-->
+        <section th:if="${!#lists.isEmpty(chips) or (notAppliedChips != null and !#lists.isEmpty(notAppliedChips))}"
+                 class="mb-3" aria-label="Active filters">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="small text-body-secondary" th:unless="${#lists.isEmpty(chips)}">Filters:</span>
+                <span th:each="chip : ${chips}" class="badge rounded-pill text-bg-light border fw-normal">
+                    <span th:text="${chip.label()}">CCA: BOWLING</span>
+                    <a class="ms-1 link-secondary text-decoration-none"
+                       th:href="@{${#strings.isEmpty(chip.removeQuery()) ? '/schools' : '/schools?' + chip.removeQuery()}}"
+                       th:aria-label="|Remove ${chip.label()}|" th:title="|Remove ${chip.label()}|">&times;</a>
+                </span>
+                <th:block th:if="${notAppliedChips != null and !#lists.isEmpty(notAppliedChips)}">
+                    <span class="small text-body-secondary">Not applied:</span>
+                    <span th:each="chip : ${notAppliedChips}"
+                          class="badge rounded-pill text-bg-light border border-warning fw-normal">
+                        <span th:text="${chip.label()}">Within 3 km</span>
+                        <a class="ms-1 link-secondary text-decoration-none"
+                           th:href="@{${#strings.isEmpty(chip.removeQuery()) ? '/schools' : '/schools?' + chip.removeQuery()}}"
+                           th:aria-label="|Remove ${chip.label()}|" th:title="|Remove ${chip.label()}|">&times;</a>
+                    </span>
+                </th:block>
+                <a class="btn btn-link btn-sm" th:href="@{${clearAllUrl}}">Clear all</a>
+            </div>
+        </section>
+
+        <!--/* PSLE notes (FR-FILTER-03, DC-22, NFR-DATA-03) */-->
+        <div th:if="${cardRanges != null}" class="small mb-3">
+            <p class="mb-1" th:if="${pgHint != null}" th:text="${pgHint}">
+                No posting group chosen, so posting group 3 is used.</p>
+            <p class="mb-1" th:if="${noPsleDataCount > 0}"
+               th:text="${noPsleDataCount == 1 ? '1 school has no PSLE data and is hidden.'
+                                                : noPsleDataCount + ' schools have no PSLE data and are hidden.'}">
+                2 schools have no PSLE data and are hidden.</p>
+            <p class="mb-1 text-warning-emphasis" th:if="${seedData}">
+                <strong>TEST VALUES – not MOE data.</strong> The PSLE filter uses made-up seed ranges.</p>
+            <p class="mb-1 text-body-secondary" th:unless="${seedData}">
+                The PSLE filter uses ranges from past years: historical, not a guarantee.</p>
+        </div>
+
+        <!--/* selectSortOrder (FR-SEARCH-06): distance only with a starting point, travel time after the travel filter */-->
+        <nav th:if="${sortOptions != null and #lists.size(sortOptions) > 1}" class="mb-3" aria-label="Sort order">
+            <span class="small text-body-secondary me-1">Sort:</span>
+            <th:block th:each="option : ${sortOptions}">
+                <a th:unless="${option.active()}" class="btn btn-sm btn-outline-secondary me-1"
+                   th:href="@{${option.url()}}" th:text="${option.label()}">Distance</a>
+                <span th:if="${option.active()}" class="btn btn-sm btn-secondary me-1 disabled" aria-current="true"
+                      th:text="${option.label()}">Name (A–Z)</span>
+            </th:block>
+        </nav>
+        <p th:if="${sortMessage != null}" class="alert alert-warning small py-2" role="status" th:text="${sortMessage}">
+            Sorting by distance needs a starting point.</p>
+
+        <!--/* displayNoMatches (FR-SEARCH-05; Filter Schools AF-5: the filters stay visible above) */-->
+        <div th:fragment="displayNoMatches" th:if="${totalCount == 0}" class="alert alert-info" role="status">
+            <th:block th:if="${hasFilters and searchCount > 0}">No schools match all your filters
+                <span th:if="${!#lists.isEmpty(activeFilters)}"
+                      th:text="|(${#strings.listJoin(activeFilters, '; ')})|">(PSLE 12 (PG3))</span>.
+                Remove a filter above, or <a th:href="@{${clearAllUrl}}">clear all filters</a>.</th:block>
+            <th:block th:unless="${hasFilters and searchCount > 0}">
+                <th:block th:if="${term != ''}">No schools match “<span th:text="${term}">term</span>”.
+                    Check the spelling or try a shorter part of the name.</th:block>
+                <th:block th:if="${term == ''}">No schools match: the dataset is empty.</th:block>
+            </th:block>
+        </div>
+
+        <!--/* displayResults (FR-SEARCH-03, FR-SEARCH-06): one summary card per school */-->
+        <section th:fragment="displayResults" th:if="${totalCount > 0}">
+            <div class="row row-cols-1 row-cols-md-2 g-3 mb-3">
+                <div class="col" th:each="school : ${schools}">
+                    <div th:replace="~{fragments/school-summary-card :: card(${school})}"></div>
+                </div>
+            </div>
+            <nav th:replace="~{fragments/pagination :: pager(${page}, ${totalPages}, ${baseUrl})}"></nav>
+        </section>
+    </th:block>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

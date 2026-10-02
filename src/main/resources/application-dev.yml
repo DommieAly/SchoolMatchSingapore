@@ -1,0 +1,23 @@
+# Local development: H2 database file in .local/h2/ (delete that folder to reset).
+# H2 console: off by default. Turn it on for one run with H2_CONSOLE=true (in .env or the environment), then open
+# http://localhost:8080/h2-console  (JDBC URL jdbc:h2:file:./.local/h2/dev, user sa, no password).
+# It is off by default because the console runs any SQL and does not check the Host header, so a web page using
+# DNS rebinding could reach it while the app runs (only this computer can open it, but a browser tab counts).
+# No AUTO_SERVER: H2 opens no network port; the in-app console above works without one.
+spring:
+  datasource:
+    url: jdbc:h2:file:./.local/h2/dev;MODE=PostgreSQL
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+  h2:
+    console:
+      enabled: ${H2_CONSOLE:false}
+      settings:
+        # Only this computer may open /h2-console. Boot 4.1.1's default is already false (checked in the
+        # spring-boot-h2console jar's configuration metadata); it is set here so nobody turns it on by accident.
+        web-allow-others: false
+  thymeleaf:
+    cache: false

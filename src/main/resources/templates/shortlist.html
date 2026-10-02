@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<!--/* DM 16 Shortlist (login) — ShortlistUI.displayShortlist (FR-SHORTLIST-04..07, NFR-SEC-05).
+       Model: schools (List<School>), missingCodes (codes no longer in the dataset), or unavailable = true.
+       Each card has a Remove button (POST /shortlist/{code}/remove, confirmed in the browser; Cancel = AF-1) and a
+       Compare checkbox that belongs to the compare form through form="compare-form" (GET /compare?codes=…).
+       The design's display operations are the th:fragment names below. */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Your shortlist')}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h1 class="h3 mb-0">Your shortlist</h1>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary btn-sm" th:href="@{/profile}">Back to profile</a>
+            <!--/* selectPlanChoices */-->
+            <a class="btn btn-outline-primary btn-sm" th:href="@{/plan}">Plan my 6 choices</a>
+        </div>
+    </div>
+    <div th:replace="~{fragments/messages :: messages}"></div>
+
+    <!--/* displayServiceUnavailable: the message is the red banner above */-->
+    <section th:fragment="displayServiceUnavailable" th:if="${unavailable}" class="text-center p-4">
+        <a class="btn btn-outline-primary" th:href="@{/shortlist}">Try again</a>
+    </section>
+
+    <th:block th:unless="${unavailable}">
+        <!--/* displayEmptyShortlist (FR-SHORTLIST-07, AF-1) */-->
+        <section th:fragment="displayEmptyShortlist"
+                 th:if="${#lists.isEmpty(schools) and #lists.isEmpty(missingCodes)}"
+                 class="empty-state text-center rounded border p-5">
+            <p class="fw-semibold mb-1">You have not shortlisted any schools yet.</p>
+            <p class="small text-body-secondary mb-3">
+                Open a school and choose "Add to shortlist". Saved schools appear here as summary cards.
+            </p>
+            <a class="btn btn-primary" th:href="@{/schools}">Search schools</a>
+        </section>
+
+        <!--/* displayShortlist (FR-SHORTLIST-04, FR-SHORTLIST-05) */-->
+        <section th:fragment="displayShortlist" th:unless="${#lists.isEmpty(schools)}">
+            <!--/* selectCompare: the checkboxes on the cards belong to this form */-->
+            <form id="compare-form" th:action="@{/compare}" method="get"
+                  class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Compare selected</button>
+                <span class="small text-body-secondary">Tick 2 to 4 schools to compare them side by side.</span>
+            </form>
+            <p class="small text-body-secondary"
+               th:text="${#lists.size(schools) == 1} ? '1 school saved' : |${#lists.size(schools)} schools saved|">
+                3 schools saved</p>
+
+            <div class="row g-3">
+                <div class="col-12 col-md-6 col-xl-4" th:each="school : ${schools}">
+                    <div class="d-flex flex-column h-100 gap-2">
+                        <div class="flex-grow-1">
+                            <div th:replace="~{fragments/school-summary-card :: card(${school})}"></div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center px-1">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" name="codes" th:value="${school.schoolCode}"
+                                       th:id="|compare-${school.schoolCode}|" form="compare-form">
+                                <label class="form-check-label small" th:for="|compare-${school.schoolCode}|">Compare</label>
+                            </div>
+                            <form th:action="@{/shortlist/{code}/remove(code=${school.schoolCode})}" method="post"
+                                  onsubmit="return confirm('Remove this school from your shortlist?');">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">
+                                    Remove<span class="visually-hidden" th:text="| ${school.name}|"> school</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!--/* Shortlisted codes that are no longer in the active dataset (DC-21) */-->
+        <section th:unless="${#lists.isEmpty(missingCodes)}" class="mt-4">
+            <h2 class="h6">Schools no longer in the dataset</h2>
+            <ul class="list-group">
+                <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2"
+                    th:each="code : ${missingCodes}">
+                    <span><code th:text="${code}">old-school-code</code>
+                        <span class="text-body-secondary">School no longer in the dataset</span></span>
+                    <form th:action="@{/shortlist/{code}/remove(code=${code})}" method="post"
+                          onsubmit="return confirm('Remove this school from your shortlist?');">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">Remove</button>
+                    </form>
+                </li>
+            </ul>
+        </section>
+    </th:block>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

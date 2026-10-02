@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<!-- DM-10 SchoolFilter (SchoolFilterUI) -->
+<!--/* SchoolFilterUI.displayFilterCategories (FR-FILTER-01..09, DC-04, DC-15, DC-22, DC-23).
+       The form submits GET /schools (confirmFilters); "Clear all" goes back to /schools?q= (clearAllFilters).
+       Model: params (FilterParams), q, groups (label, param, values, selected, error), radiusOptions,
+       durationOptions, travelModes (value, label), startLocation, returnTo, resultsUrl,
+       clearAllUrl, errors (field → message, maybe empty), and when they apply pgHint and fieldErrors
+       (highlightInvalidFields). */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Filter schools')}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <p class="mb-2"><a th:href="@{${resultsUrl}}">&larr; Back to results</a></p>
+    <h1 class="h3 mb-1">Filter schools</h1>
+    <p class="text-body-secondary" th:if="${q != ''}">Results for “<span th:text="${q}">bishan</span>”</p>
+    <div th:replace="~{fragments/messages :: messages}"></div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <form id="filter-form" method="get" th:action="@{/schools}" data-draft-return="/schools/filter" class="card shadow-sm"
+                  data-loading="Finding schools…">
+                <input type="hidden" name="q" th:value="${params.q()}">
+                <input type="hidden" name="sort" th:value="${params.sort()}" th:if="${params.sort() != null}">
+                <div class="card-body p-4">
+                    <!--/* selectAttributes: OR within a group, AND across groups (FR-FILTER-07) */-->
+                    <h2 class="h5 mb-1">School attributes</h2>
+                    <p class="small text-body-secondary">Tick any number of values. A school must match every group
+                        you use, and at least one value in each group.</p>
+                    <div class="row g-3 mb-4">
+                        <fieldset class="col-12 col-md-6" th:each="group : ${groups}">
+                            <legend class="form-label fs-6 fw-semibold" th:text="${group.label()}">School type</legend>
+                            <p th:if="${#sets.isEmpty(group.values())}" class="small text-body-secondary mb-0">
+                                No values in the current dataset.</p>
+                            <div class="filter-options border rounded p-2" th:unless="${#sets.isEmpty(group.values())}"
+                                 th:classappend="${group.error() != null} ? 'border-danger'">
+                                <div class="form-check" th:each="value, stat : ${group.values()}">
+                                    <input class="form-check-input" type="checkbox"
+                                           th:id="|${group.param()}-${stat.index}|" th:name="${group.param()}"
+                                           th:value="${value}" th:checked="${group.selected().contains(value)}">
+                                    <label class="form-check-label" th:for="|${group.param()}-${stat.index}|"
+                                           th:text="${value}">GOVERNMENT SCHOOL</label>
+                                </div>
+                            </div>
+                            <div th:if="${group.error() != null}" class="is-invalid small text-danger mt-1"
+                                 th:text="${group.error()}">Unknown CCA: X</div>
+                        </fieldset>
+                    </div>
+
+                    <!--/* enterPsleScore (FR-FILTER-03, DC-22) */-->
+                    <h2 class="h5 mb-1">PSLE score</h2>
+                    <p class="small text-body-secondary" id="psle-rule">
+                        A school is shown when your score is the same as or better than (lower than or equal to) the
+                        highest score admitted in its latest range for your posting group. Ranges are from past
+                        years: historical, not a guarantee.</p>
+                    <div class="row g-3 mb-4">
+                        <div class="col-sm-6">
+                            <label for="psle" class="form-label">Your PSLE score (AL)</label>
+                            <input id="psle" name="psle" type="number" min="4" max="32" step="1" class="form-control"
+                                   th:value="${params.psle()}"
+                                   th:classappend="${errors['psle'] != null} ? 'is-invalid'"
+                                   aria-describedby="psle-help psle-rule">
+                            <div class="invalid-feedback" th:if="${errors['psle'] != null}"
+                                 th:text="${errors['psle']}">Enter a whole number from 4 to 32</div>
+                            <div id="psle-help" class="form-text">4 to 32; lower is better.</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="pg" class="form-label">Posting group</label>
+                            <select id="pg" name="pg" class="form-select"
+                                    th:classappend="${errors['pg'] != null} ? 'is-invalid'" aria-describedby="pg-help">
+                                <option value="" th:selected="${params.pg() == null}">Not chosen (PG3 is used)</option>
+                                <option value="3" th:selected="${params.pg() == '3'}">PG3</option>
+                                <option value="2" th:selected="${params.pg() == '2'}">PG2</option>
+                                <option value="1" th:selected="${params.pg() == '1'}">PG1</option>
+                            </select>
+                            <div class="invalid-feedback" th:if="${errors['pg'] != null}"
+                                 th:text="${errors['pg']}">Choose posting group 1, 2 or 3</div>
+                            <div id="pg-help" class="form-text" th:text="${pgHint != null ? pgHint
+                                    : 'A PSLE score needs a posting group; without one, posting group 3 is used.'}">
+                                A PSLE score needs a posting group.</div>
+                        </div>
+                    </div>
+
+                    <!--/* selectProximity (FR-FILTER-05): needs a starting point (right-hand panel) */-->
+                    <h2 class="h5 mb-1">Distance</h2>
+                    <p class="small text-body-secondary">Straight-line distance from your starting point.</p>
+                    <fieldset class="mb-4">
+                        <legend class="visually-hidden">Within</legend>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="radiusKm" id="radius-any" value=""
+                                   th:checked="${params.radiusKm() == null}">
+                            <label class="form-check-label" for="radius-any">Any distance</label>
+                        </div>
+                        <div class="form-check form-check-inline" th:each="radius : ${radiusOptions}">
+                            <input class="form-check-input" type="radio" name="radiusKm" th:id="|radius-${radius}|"
+                                   th:value="${radius}" th:checked="${params.radiusKm() == radius}"
+                                   th:classappend="${errors['radiusKm'] != null} ? 'is-invalid'">
+                            <label class="form-check-label" th:for="|radius-${radius}|" th:text="|${radius} km|">1 km</label>
+                        </div>
+                        <div class="small text-danger" th:if="${errors['radiusKm'] != null}"
+                             th:text="${errors['radiusKm']}">Choose 1, 3 or 5 km</div>
+                    </fieldset>
+
+                    <!--/* selectTransportation (FR-FILTER-06): runs only when the box is ticked (travel=1) */-->
+                    <h2 class="h5 mb-1">Travel time</h2>
+                    <p class="small text-body-secondary">Travel times come from a routing service (Google Maps), so
+                        this filter takes a few seconds and needs a starting point.</p>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label for="mode" class="form-label">Travel by</label>
+                            <select id="mode" name="mode" class="form-select"
+                                    th:classappend="${errors['mode'] != null} ? 'is-invalid'">
+                                <option value="" th:selected="${params.mode() == null}">Choose…</option>
+                                <option th:each="m : ${travelModes}" th:text="${m.label()}"
+                                        th:value="${m.value()}" th:selected="${params.mode() != null and #strings.equalsIgnoreCase(params.mode(), m.value())}">Public transport</option>
+                            </select>
+                            <div class="invalid-feedback" th:if="${errors['mode'] != null}"
+                                 th:text="${errors['mode']}">Choose walk, drive or public transport</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="maxMin" class="form-label">At most</label>
+                            <select id="maxMin" name="maxMin" class="form-select"
+                                    th:classappend="${errors['maxMin'] != null} ? 'is-invalid'">
+                                <option value="" th:selected="${params.maxMin() == null}">Choose…</option>
+                                <option th:each="minutes : ${durationOptions}" th:text="|${minutes} min|"
+                                        th:value="${minutes}" th:selected="${params.maxMin() == minutes}">30 min</option>
+                            </select>
+                            <div class="invalid-feedback" th:if="${errors['maxMin'] != null}"
+                                 th:text="${errors['maxMin']}">Choose 15, 30, 45 or 60 minutes</div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="travel"
+                                       name="travel" value="1" th:checked="${params.travel()}">
+                                <label class="form-check-label" for="travel">Apply the travel-time filter</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-body d-flex flex-wrap gap-2 justify-content-end p-3">
+                    <a class="btn btn-outline-secondary" th:href="@{${clearAllUrl}}">Clear all</a>
+                    <button type="submit" class="btn btn-primary">Apply</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <section class="card shadow-sm mb-4" id="starting-point">
+                <div class="card-body">
+                    <h2 class="h6 mb-2">Starting point</h2>
+                    <p class="small text-body-secondary">Needed for the distance and travel-time filters.</p>
+                    <p class="small text-danger" th:if="${errors['location'] != null}"
+                       th:text="${errors['location']}">Set a starting point to use distance or travel-time filters</p>
+                    <div th:replace="~{fragments/location-picker :: locationPicker(${returnTo}, ${startLocation})}"></div>
+                </div>
+            </section>
+        </div>
+    </div>
+    <div th:replace="~{fragments/loading :: loading('Looking up the address…')}"></div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

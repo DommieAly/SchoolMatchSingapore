@@ -1,0 +1,121 @@
+{
+ "help": "https://data.gov.sg/api/3/action/help_show?name=datastore_search",
+ "success": true,
+ "result": {
+  "resource_id": "d_9aba12b5527843afb0b2e8e4ed6ac6bd",
+  "fields": [
+   {
+    "type": "text",
+    "id": "School_name"
+   },
+   {
+    "type": "text",
+    "id": "school_section"
+   },
+   {
+    "type": "text",
+    "id": "cca_grouping_desc"
+   },
+   {
+    "type": "text",
+    "id": "cca_generic_name"
+   },
+   {
+    "type": "text",
+    "id": "cca_customized_name"
+   },
+   {
+    "type": "int4",
+    "id": "_id"
+   }
+  ],
+  "records": [
+   {
+    "_id": 1,
+    "School_name": "CATHOLIC HIGH SCHOOL",
+    "school_section": "MIXED LEVEL (P1-S4)",
+    "cca_grouping_desc": "ART AND CRAFTS",
+    "cca_generic_name": "CLUBS AND SOCIETIES",
+    "cca_customized_name": "ARTSQUAD"
+   },
+   {
+    "_id": 2,
+    "School_name": "CATHOLIC HIGH SCHOOL",
+    "school_section": "MIXED LEVEL (P1-S4)",
+    "cca_grouping_desc": "ARTISTIC GYMNASTICS",
+    "cca_generic_name": "PHYSICAL SPORTS",
+    "cca_customized_name": null
+   },
+   {
+    "_id": 3,
+    "School_name": "CATHOLIC HIGH SCHOOL",
+    "school_section": "MIXED LEVEL (P1-S4)",
+    "cca_grouping_desc": "BASKETBALL",
+    "cca_generic_name": "PHYSICAL SPORTS",
+    "cca_customized_name": null
+   },
+   {
+    "_id": 4,
+    "School_name": "ST.  HILDA’S SECONDARY SCHOOL",
+    "school_section": "SECONDARY (S1-S5)",
+    "cca_grouping_desc": "ART AND CRAFTS",
+    "cca_generic_name": "CLUBS AND SOCIETIES",
+    "cca_customized_name": null
+   },
+   {
+    "_id": 5,
+    "School_name": "ST.  HILDA’S SECONDARY SCHOOL",
+    "school_section": "SECONDARY (S1-S5)",
+    "cca_grouping_desc": "AUDIO VISUAL AID",
+    "cca_generic_name": "CLUBS AND SOCIETIES",
+    "cca_customized_name": "PA / AVA CLUB"
+   },
+   {
+    "_id": 6,
+    "School_name": "ST.  HILDA’S SECONDARY SCHOOL",
+    "school_section": "SECONDARY (S1-S5)",
+    "cca_grouping_desc": "BADMINTON",
+    "cca_generic_name": "PHYSICAL SPORTS",
+    "cca_customized_name": null
+   },
+   {
+    "_id": 7,
+    "School_name": "HUA YI SECONDARY SCHOOL",
+    "school_section": "SECONDARY (S1-S5)",
+    "cca_grouping_desc": "ART AND CRAFTS",
+    "cca_generic_name": "CLUBS AND SOCIETIES",
+    "cca_customized_name": null
+   },
+   {
+    "_id": 8,
+    "School_name": "HUA YI SECONDARY SCHOOL",
+    "school_section": "SECONDARY (S1-S5)",
+    "cca_grouping_desc": "BADMINTON",
+    "cca_generic_name": "PHYSICAL SPORTS",
+    "cca_customized_name": null
+   },
+   {
+    "_id": 9,
+    "School_name": "ADMIRALTY PRIMARY SCHOOL",
+    "school_section": "PRIMARY",
+    "cca_grouping_desc": "ART AND CRAFTS",
+    "cca_generic_name": "CLUBS AND SOCIETIES",
+    "cca_customized_name": "VISUAL ARTS"
+   },
+   {
+    "_id": 10,
+    "School_name": "HUA YI SECONDARY SCHOOL",
+    "school_section": "JUNIOR COLLEGE",
+    "cca_grouping_desc": "ROWING",
+    "cca_generic_name": "PHYSICAL SPORTS",
+    "cca_customized_name": null
+   }
+  ],
+  "_links": {
+   "start": "/api/action/datastore_search?resource_id=d_9aba12b5527843afb0b2e8e4ed6ac6bd&limit=1000",
+   "next": "/api/action/datastore_search?resource_id=d_9aba12b5527843afb0b2e8e4ed6ac6bd&offset=1000&limit=1000"
+  },
+  "limit": 1000,
+  "total": 10
+ }
+}

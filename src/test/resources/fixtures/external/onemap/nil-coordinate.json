@@ -1,0 +1,31 @@
+{
+  "found": 2,
+  "totalNumPages": 1,
+  "pageNum": 1,
+  "results": [
+    {
+      "SEARCHVAL": "TEST BUILDING WITHOUT COORDINATE",
+      "BLK_NO": "1",
+      "ROAD_NAME": "TEST ROAD",
+      "BUILDING": "TEST BUILDING WITHOUT COORDINATE",
+      "ADDRESS": "1 TEST ROAD SINGAPORE 000001",
+      "POSTAL": "000001",
+      "X": "NIL",
+      "Y": "NIL",
+      "LATITUDE": "NIL",
+      "LONGITUDE": "NIL"
+    },
+    {
+      "SEARCHVAL": "TEST BUILDING",
+      "BLK_NO": "2",
+      "ROAD_NAME": "TEST ROAD",
+      "BUILDING": "NIL",
+      "ADDRESS": "2 TEST ROAD SINGAPORE 000002",
+      "POSTAL": "000002",
+      "X": "29000.0",
+      "Y": "37000.0",
+      "LATITUDE": "1.3500",
+      "LONGITUDE": "103.8400"
+    }
+  ]
+}

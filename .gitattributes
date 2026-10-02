@@ -1,0 +1,5 @@
+# Normalise line endings: LF in the repo and in checkouts, whatever core.autocrlf says (Windows too).
+* text=auto eol=lf
+/mvnw text eol=lf
+*.cmd text eol=crlf
+*.sh text eol=lf

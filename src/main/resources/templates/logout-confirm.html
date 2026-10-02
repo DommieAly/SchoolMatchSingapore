@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!--/* DM 06 LogoutConfirmation — UserProfileUI.selectLogOut / promptLogoutConfirmation (FR-LOGOUT-01..04, DC-03).
+       Cancel keeps the session and goes back to the profile (FR-LOGOUT-04, AF-1); Log out posts to /logout. */-->
+<!-- DM-06 LogoutConfirmation · UserProfileUI -->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Log out')}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+            <div th:replace="~{fragments/messages :: messages}"></div>
+            <div class="card shadow-sm">
+                <div class="card-body p-4 text-center">
+                    <h1 class="h4 mb-2">Log out?</h1>
+                    <p class="text-body-secondary mb-4">You will need to log in again to see your shortlist and plan.</p>
+                    <form method="post" th:action="@{/logout}" class="d-flex justify-content-center gap-2">
+                        <a class="btn btn-outline-secondary" th:href="@{/profile}">Cancel</a>
+                        <button type="submit" class="btn btn-danger">Log out</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<!--/* DM 17 ChoicePlanner (login) — ChoicePlanUI.displayPlan (FR-PLAN-01, FR-PLAN-02, DC-20).
+       Model: plan (ChoicePlan), rows (ChoicePlanUI.ChoiceRow), warnings (List<String>), addableSchools
+       (shortlisted, not in the plan), positions (1..n+1; empty when the plan is full), emptyRanks (n+1..6),
+       shortlistEmpty, safeMargin, maxChoices; or unavailable = true. Every button is a POST that redirects back here.
+       The design's display operations are the th:fragment names below. */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Choice planner')}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <p class="mb-2"><a th:href="@{/shortlist}">&larr; Back to shortlist</a></p>
+    <h1 class="h3 mb-1">Plan your 6 school choices</h1>
+    <p class="text-body-secondary">Put your choices in order and check how safe each one is.</p>
+    <div th:replace="~{fragments/messages :: messages}"></div>
+
+    <div class="row g-4" th:unless="${unavailable}">
+        <div class="col-12 col-lg-8">
+            <!--/* The score and posting group the labels use */-->
+            <p th:if="${plan.basedOnScore != null}" class="mb-3">
+                Labels use PSLE score <strong th:text="${plan.basedOnScore}">12</strong>,
+                posting group <strong th:text="${plan.postingGroup}">3</strong>.
+                <span th:if="${plan.currentProfileScore != null and plan.currentProfilePostingGroup == null}"
+                      class="text-body-secondary"
+                      th:text="|Your profile has no posting group, so posting group ${plan.postingGroup} is used.|">
+                    Your profile has no posting group, so posting group 3 is used.</span>
+                <a th:href="@{/profile}">Edit profile</a>
+            </p>
+            <div th:if="${plan.basedOnScore == null}" class="alert alert-info" role="status">
+                Add your PSLE score in your profile to see SAFE/MATCH/REACH.
+                <a class="alert-link" th:href="@{/profile}">Go to your profile</a>
+            </div>
+
+            <!--/* displayPlan: one row per choice, with Up / Down / Remove */-->
+            <section th:fragment="displayPlan" class="card shadow-sm mb-4">
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th scope="col" class="text-center">Choice</th>
+                            <th scope="col">School</th>
+                            <th scope="col">PSLE AL range</th>
+                            <th scope="col">Chance</th>
+                            <th scope="col" class="text-end">Order</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="row : ${rows}">
+                            <td class="text-center fw-semibold" th:text="${row.rank}">1</td>
+                            <td>
+                                <a th:if="${row.school != null}" th:href="@{/schools/{code}(code=${row.schoolCode})}"
+                                   th:text="${row.school.name}">CATHOLIC HIGH SCHOOL</a>
+                                <th:block th:if="${row.school == null}">
+                                    <code th:text="${row.schoolCode}">old-school-code</code>
+                                    <span class="small text-body-secondary">School no longer in the dataset</span>
+                                </th:block>
+                            </td>
+                            <td>
+                                <span th:if="${row.range != null}"
+                                      th:text="|PG${row.range.postingGroup} ${row.range.lowerScore}–${row.range.upperScore} (${row.range.admissionYear}${row.range.affiliated ? ', affiliated' : ''})|">
+                                    PG3 8–12 (2025)</span>
+                                <span th:if="${row.range == null}" class="text-body-secondary">Not available</span>
+                            </td>
+                            <!--/* displayAdmissionChance (DC-20): green SAFE, amber MATCH, red REACH */-->
+                            <td>
+                                <th:block th:if="${row.chance != null}" th:switch="${row.chance.name()}">
+                                    <span th:case="'SAFE'" class="badge text-bg-success" data-chance="SAFE">SAFE</span>
+                                    <span th:case="'MATCH'" class="badge text-bg-warning" data-chance="MATCH">MATCH</span>
+                                    <span th:case="*" class="badge text-bg-danger" data-chance="REACH">REACH</span>
+                                </th:block>
+                                <span th:if="${row.chance == null}" class="text-body-secondary">Not available</span>
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <form class="d-inline" th:action="@{/plan/choices/{code}/move(code=${row.schoolCode})}"
+                                      method="post">
+                                    <input type="hidden" name="dir" value="up">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary" th:disabled="${row.first}"
+                                            aria-label="Move up">&uarr;</button>
+                                </form>
+                                <form class="d-inline" th:action="@{/plan/choices/{code}/move(code=${row.schoolCode})}"
+                                      method="post">
+                                    <input type="hidden" name="dir" value="down">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary" th:disabled="${row.last}"
+                                            aria-label="Move down">&darr;</button>
+                                </form>
+                                <form class="d-inline" th:action="@{/plan/choices/{code}/remove(code=${row.schoolCode})}"
+                                      method="post">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <!--/* the remaining slots up to 6 */-->
+                        <tr th:each="rank : ${emptyRanks}">
+                            <td class="text-center fw-semibold text-body-secondary" th:text="${rank}">6</td>
+                            <td colspan="4" class="text-body-secondary">Empty: add a school from your shortlist below</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!--/* Add a school (DC-06 addChoice): only shortlisted schools that are not in the plan yet */-->
+            <section class="card card-body mb-4">
+                <h2 class="h6">Add a school</h2>
+                <p th:if="${#lists.isEmpty(positions)}" class="mb-0 text-body-secondary">
+                    Your plan has 6 choices. Remove one to add another.</p>
+                <th:block th:unless="${#lists.isEmpty(positions)}">
+                    <p th:if="${shortlistEmpty}" class="mb-0">
+                        Your shortlist is empty. <a th:href="@{/schools}">Search schools</a> and add them to your shortlist
+                        first.</p>
+                    <p th:if="${!shortlistEmpty and #lists.isEmpty(addableSchools)}" class="mb-0 text-body-secondary">
+                        Every school on your shortlist is already in your plan.
+                        <a th:href="@{/schools}">Find more schools</a></p>
+                    <form th:unless="${#lists.isEmpty(addableSchools)}" th:action="@{/plan/choices}" method="post"
+                          class="row g-2 align-items-end">
+                        <div class="col-12 col-md-7">
+                            <label for="plan-code" class="form-label small">School from your shortlist</label>
+                            <select id="plan-code" name="code" class="form-select" required>
+                                <option th:each="school : ${addableSchools}" th:value="${school.schoolCode}"
+                                        th:text="${school.name}">CATHOLIC HIGH SCHOOL</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label for="plan-rank" class="form-label small">As choice number</label>
+                            <select id="plan-rank" name="rank" class="form-select">
+                                <option th:each="position : ${positions}" th:value="${position}" th:text="${position}"
+                                        th:selected="${positionStat.last}">1</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">Add</button>
+                        </div>
+                    </form>
+                </th:block>
+            </section>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <!--/* displayRiskWarnings (FR-PLAN-02) */-->
+            <section th:fragment="displayRiskWarnings" class="mb-4">
+                <div th:unless="${#lists.isEmpty(warnings)}" class="alert alert-warning" role="status">
+                    <h2 class="h6">Plan check</h2>
+                    <ul class="mb-0 ps-3">
+                        <li th:each="warning : ${warnings}" th:text="${warning}">You have 2 of 6 choices.</li>
+                    </ul>
+                </div>
+                <div th:if="${#lists.isEmpty(warnings)}" class="alert alert-success" role="status">
+                    Plan check: no warnings.
+                </div>
+                <form th:if="${plan.outdated and plan.currentProfileScore != null}" th:action="@{/plan/score}"
+                      method="post">
+                    <button type="submit" class="btn btn-sm btn-outline-primary"
+                            th:text="|Use my current score (${plan.currentProfileScore})|">Use my current score</button>
+                </form>
+            </section>
+
+            <section class="small text-body-secondary">
+                <!--/* DC-20 (proposed) */-->
+                <h2 class="h6 text-body">How the chance is worked out</h2>
+                <p class="mb-1">U = the upper score of the school's latest range for your posting group
+                    (the affiliated range if your primary school is affiliated). A lower AL score is better.</p>
+                <ul class="mb-2">
+                    <li><span class="badge text-bg-success">SAFE</span> your score ≤ U − <span th:text="${safeMargin}">2</span></li>
+                    <li><span class="badge text-bg-warning">MATCH</span> U − <span th:text="${safeMargin}">2</span> &lt; your score ≤ U</li>
+                    <li><span class="badge text-bg-danger">REACH</span> your score &gt; U</li>
+                </ul>
+                <!--/* NFR-DATA-03; the seed snapshot's ranges are made up (DC-34) */-->
+                <div th:if="${seedData}" class="alert alert-warning py-2 mb-0" role="note">
+                    <strong>TEST VALUES – not MOE data.</strong> The seed dataset uses made-up PSLE ranges, so these
+                    labels are only a demo.
+                </div>
+                <p th:unless="${seedData}" class="mb-0">Ranges are historical, not guaranteed: they show past
+                    admission scores, not a promise of a place this year.</p>
+            </section>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "places": [
+    {
+      "id": "ChIJ-bishan-library-test",
+      "displayName": {
+        "text": "Bishan Public Library",
+        "languageCode": "en"
+      },
+      "formattedAddress": "5 Bishan Pl, #01-01, Singapore 579841",
+      "location": {
+        "latitude": 1.3503,
+        "longitude": 103.8486
+      }
+    },
+    {
+      "id": "ChIJ-no-location-test",
+      "displayName": {
+        "text": "Library Without Location"
+      },
+      "formattedAddress": "Somewhere, Singapore"
+    }
+  ]
+}

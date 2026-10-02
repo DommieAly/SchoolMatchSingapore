@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!--/* Error page. Rendered by ErrorPageAdvice (model: status, error, title, message, optional fieldErrors) and by
+       Spring Boot for any other error (model: status, error, path; message may be missing). */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head(${title != null ? title : (error != null ? error : 'Error')})}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-9 col-lg-7 text-center">
+            <p class="display-5 fw-semibold text-body-secondary mb-2" th:text="${status}">404</p>
+            <h1 class="h3 mb-3" th:text="${title != null ? title : (error != null ? error : 'Something went wrong')}">
+                Page not found</h1>
+            <p class="lead" th:if="${message != null and !#strings.isEmpty(message)}" th:text="${message}">
+                No school with this code.</p>
+
+            <p class="text-body-secondary" th:if="${status == 404}">
+                The page or school you asked for does not exist. Check the address, or search again.</p>
+            <p class="text-body-secondary" th:if="${status == 501}">
+                This part of SchoolMatch SG is still being built. The message above says which task it belongs to.</p>
+            <p class="text-body-secondary" th:if="${status == 503}">
+                An outside service did not answer. The rest of the site still works.</p>
+            <p class="text-body-secondary" th:if="${status != null and status >= 500 and status != 501 and status != 503}">
+                Something went wrong on our side. Please try again.</p>
+
+            <div class="text-start" th:if="${fieldErrors != null}">
+                <div th:replace="~{fragments/messages :: messages}"></div>
+            </div>
+
+            <div class="d-flex justify-content-center gap-2 mt-4">
+                <a class="btn btn-primary" th:href="@{/}">Home</a>
+                <a class="btn btn-outline-secondary" th:href="@{/schools}">Search schools</a>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

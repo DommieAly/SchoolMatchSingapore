@@ -1,0 +1,7 @@
+{
+ "code": 0,
+ "data": {
+  "url": "https://s3.example.test/blobs/planning-areas.geojson?X-Amz-Signature=abc%2Bdef"
+ },
+ "errorMsg": ""
+}

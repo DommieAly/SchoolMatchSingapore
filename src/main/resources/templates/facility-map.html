@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--/* DM 15 FacilityMap — FacilityMapUI.displayFacilityMarkers (FR-FACMAP-01..05, FR-FACILITY-02, DC-16).
+       Model: school, facilities (FacilityRow: facility, typeLabel, distanceKm, detailsUrl — those with a map
+       location), foundCount, omittedCount, radiusKm, typesLabel, interactive, markersJson (school + facilities),
+       listUrl, and fieldErrors / serviceUnavailable / schoolNotMappable when something went wrong. */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Facility map')}"></head>
+<body>
+<!-- DM-15 FacilityMap · FacilityMapUI -->
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <p class="mb-2">
+        <a th:href="${listUrl}">&larr; Back to the facilities list</a>
+    </p>
+    <h1 class="h3 mb-1">Facilities around <span th:text="${school.name}">the school</span></h1>
+    <p class="text-body-secondary" th:text="|${typesLabel} within ${radiusKm} km of the school|">
+        Libraries and tuition centres within 3 km of the school</p>
+    <div th:replace="~{fragments/messages :: messages}"></div>
+
+    <div th:if="${schoolNotMappable}" class="alert alert-warning" role="alert">
+        This school has no map location, so nearby facilities cannot be shown.
+        <a th:href="@{/schools/{code}(code=${school.schoolCode})}">Back to the school</a>
+    </div>
+    <div th:if="${serviceUnavailable}" class="alert alert-warning" role="alert">
+        Nearby facility information is temporarily unavailable. Please try again in a few minutes.
+        <a th:href="@{/schools/{code}(code=${school.schoolCode})}">Back to the school</a>
+    </div>
+    <!--/* AF-2: no facility to show */-->
+    <div th:if="${foundCount == 0 and schoolNotMappable == null and serviceUnavailable == null}"
+         class="alert alert-info" role="status"
+         th:text="|No libraries or tuition centres to show within ${radiusKm} km of ${school.name}.|">
+        No libraries or tuition centres to show.</div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <!--/* displayFacilityMarkers / displayMapUnavailable (EX-1) */-->
+            <div th:replace="~{fragments/map-canvas :: mapCanvas(${markersJson}, ${interactive})}"></div>
+            <!--/* legend: facility types can be told apart (UC View Facilities on Map, special requirement) */-->
+            <p class="small mt-2 mb-0 d-flex flex-wrap gap-3" th:if="${interactive}">
+                <span><span class="badge rounded-pill" style="background-color:#0d6efd">S</span> School</span>
+                <span><span class="badge rounded-pill" style="background-color:#198754">L</span> Library</span>
+                <span><span class="badge rounded-pill" style="background-color:#fd7e14">T</span> Tuition centre</span>
+            </p>
+            <p th:if="${omittedCount > 0}" class="small text-body-secondary mt-2 mb-0"
+               th:text="${omittedCount == 1} ? '1 facility has no map location and is not shown on the map.'
+                                            : |${omittedCount} facilities have no map location and are not shown on the map.|">
+                1 facility has no map location.</p>
+        </div>
+        <div class="col-12 col-lg-4">
+            <section class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h6 mb-2">Facilities on this map</h2>
+                    <p th:if="${#lists.isEmpty(facilities)}" class="small text-body-secondary mb-0">None to show.</p>
+                    <ol class="map-list small mb-0 ps-4" th:unless="${#lists.isEmpty(facilities)}">
+                        <li th:each="row : ${facilities}" class="mb-1">
+                            <a th:href="${row.detailsUrl}" th:text="${row.facility.name}">Library</a>
+                            <span class="d-block text-body-secondary"
+                                  th:text="|${row.typeLabel} · ${row.distanceKm} km|">Library · 0.6 km</span>
+                        </li>
+                    </ol>
+                    <p th:if="${googleStub}" class="small mt-2 mb-0">
+                        <span class="badge text-bg-warning">Demo data (stub)</span> Facilities marked (stub) are not real.
+                    </p>
+                </div>
+                <div class="card-footer bg-body small d-flex flex-wrap gap-3">
+                    <a th:href="${listUrl}">Back to the list</a>
+                    <a th:href="@{/schools/{code}(code=${school.schoolCode})}">School details</a>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

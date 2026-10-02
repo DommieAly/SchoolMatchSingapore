@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<!--/*
+  mapCanvas(markersJson, interactive): the map area of a page (FR-MAP-01..05, FR-FACMAP-01..05, FR-ROUTE-07, DC-16).
+    <div th:replace="~{fragments/map-canvas :: mapCanvas(${markersJson}, ${interactive})}"></div>
+  interactive = MapController.displayInteractiveMap(places). When true the browser key goes into data-maps-key and
+  static/js/map.js draws the markers; when false (no key, e.g. stub mode; today's map limit used up; or no valid
+  coordinates) the page shows "Map unavailable" (displayMapUnavailable) and the list on the page still works.
+  The browser shows the same box when Google rejects the key or cannot be reached (UC Display Interactive Map EX-1/2).
+  markersJson = JSON array of sg.schoolmatch.boundary.ui.support.MapMarker.
+  Optional model attribute routePolyline (directions page): an encoded polyline that map.js draws as the route line.
+*/-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="mapCanvas(markersJson, interactive)" class="map-wrapper">
+    <div th:if="${interactive}" id="map" class="map-canvas rounded border" role="region" aria-label="Map"
+         th:attr="data-markers=${markersJson},data-maps-key=${mapsBrowserKey},data-map-id=${mapId},data-route=${routePolyline}"></div>
+    <div id="map-unavailable" class="map-unavailable rounded border" th:classappend="${interactive} ? 'd-none'"
+         role="note">
+        <div>
+            <p class="fw-semibold mb-1">Map unavailable</p>
+            <p class="small text-body-secondary mb-0">
+                The interactive map cannot be shown right now (no Google Maps key on this computer, today's map
+                limit reached, or no place here has a map location). The list on this page still works.
+            </p>
+        </div>
+    </div>
+    <th:block th:if="${interactive}">
+        <script defer th:src="@{/js/GoogleMapsPlatformInterface.js}"></script>
+        <script defer th:src="@{/js/map.js}"></script>
+    </th:block>
+</div>
+</body>
+</html>

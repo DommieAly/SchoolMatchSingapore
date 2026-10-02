@@ -1,0 +1,15 @@
+tc_id,requirement,technique,input,expected_count_or_error
+TC-SEARCH-04-01,FR-SEARCH-04,equivalence class: no term (q missing),,6
+TC-SEARCH-04-02,FR-SEARCH-04,boundary value: empty term (0 characters),"",6
+TC-SEARCH-04-03,FR-SEARCH-04,equivalence class: blank after trimming,"   ",6
+TC-SEARCH-01-01,FR-SEARCH-01,boundary value: 1 character (minimum),c,5
+TC-SEARCH-01-02,FR-SEARCH-01,boundary value: 100 characters (maximum),a*100,0
+TC-SEARCH-01-03,FR-SEARCH-01,boundary value: 101 characters (maximum + 1),a*101,error
+TC-SEARCH-02-01,FR-SEARCH-02,equivalence class: lower-case term,catholic,1
+TC-SEARCH-02-02,FR-SEARCH-02,equivalence class: mixed-case term,cAtHoLiC,1
+TC-SEARCH-02-03,FR-SEARCH-02,equivalence class: substring spanning two words,shan pa,1
+TC-SEARCH-02-04,FR-SEARCH-02,equivalence class: term with punctuation,st. theresa's,1
+TC-SEARCH-02-05,FR-SEARCH-02,equivalence class: spaces around the term are ignored,"  high  ",2
+TC-SEARCH-02-06,FR-SEARCH-02,equivalence class: text found only in an address,street,0
+TC-SEARCH-05-01,FR-SEARCH-05,equivalence class: no school matches,xyz,0
+TC-SEARCH-06-01,FR-SEARCH-06,rule: results in A–Z order,school,4

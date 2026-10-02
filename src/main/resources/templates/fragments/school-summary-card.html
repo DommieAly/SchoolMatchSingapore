@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<!--/*
+  card(school): the School Summary (FR-SEARCH-03, FR-SHORTLIST-05).
+    <div th:replace="~{fragments/school-summary-card :: card(${school})}"></div>
+  Shows name (link to details), type, address, district and the latest non-affiliated PSLE AL range for
+  PG3, PG2 and PG1 (school.getScoreRange(pg, false), DC-22), with the NFR-DATA-03 note, or the
+  "TEST VALUES" warning while the seed snapshot is active (model attribute seedData).
+
+  Optional page attributes (the search page sets them; other pages can leave them out):
+    cardDistanceKm   Map<String, Double>   school code → straight-line km from the starting point (FR-FILTER-05).
+                                           When present, a "Distance" row is shown ("Not available" without a coordinate).
+    cardCommuteMin   Map<String, Integer>  school code → commute minutes from the travel-time filter (FR-FILTER-06)
+    cardCommuteMode  String                "by public transport", "by car" or "walking"
+    cardRanges       Map<String, IndicativePsleScoreRange>  DC-22: with a PSLE filter, the one range that filter
+                                           used (its posting group, affiliated when it applies) instead of PG3/PG2/PG1
+*/-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<article th:fragment="card(school)" class="card school-card h-100">
+    <div class="card-body d-flex flex-column"
+         th:with="km=${cardDistanceKm != null ? cardDistanceKm.get(school.schoolCode) : null},
+                  minutes=${cardCommuteMin != null ? cardCommuteMin.get(school.schoolCode) : null}">
+        <h3 class="h5 card-title mb-1">
+            <a class="link-body-emphasis link-underline-opacity-0 link-underline-opacity-75-hover"
+               th:href="@{/schools/{code}(code=${school.schoolCode})}" th:text="${school.name}">CATHOLIC HIGH SCHOOL</a>
+        </h3>
+        <p class="small text-body-secondary mb-3">
+            <span th:replace="~{fragments/value :: value(${school.schoolType})}">Type</span>
+        </p>
+        <dl class="row small mb-2">
+            <dt class="col-4 fw-normal text-body-secondary">Address</dt>
+            <dd class="col-8 mb-1"><span th:replace="~{fragments/value :: value(${school.address})}"></span></dd>
+            <dt class="col-4 fw-normal text-body-secondary">District</dt>
+            <dd class="col-8 mb-1"><span th:replace="~{fragments/value :: value(${school.planningArea})}"></span></dd>
+            <th:block th:if="${cardDistanceKm != null}">
+                <dt class="col-4 fw-normal text-body-secondary">Distance</dt>
+                <dd class="col-8 mb-1">
+                    <span th:if="${km != null}"
+                          th:text="|${#numbers.formatDecimal(km, 1, 'NONE', 1, 'POINT')} km (straight line)|">
+                        0.6 km (straight line)</span>
+                    <span th:if="${km == null}" class="text-body-secondary">Not available</span>
+                </dd>
+            </th:block>
+            <th:block th:if="${cardCommuteMin != null}">
+                <dt class="col-4 fw-normal text-body-secondary">Travel time</dt>
+                <dd class="col-8 mb-1">
+                    <span th:if="${minutes != null}" th:text="|${minutes} min ${cardCommuteMode}|">
+                        17 min by public transport</span>
+                    <span th:if="${minutes == null}" class="text-body-secondary">Not available</span>
+                </dd>
+            </th:block>
+            <dt class="col-4 fw-normal text-body-secondary">PSLE AL</dt>
+            <!--/* DC-22: with a PSLE filter, the range it used; otherwise the non-affiliated PG3/PG2/PG1 ranges */-->
+            <dd class="col-8 mb-0" th:if="${cardRanges != null}"
+                th:with="filterRange=${cardRanges.get(school.schoolCode)}">
+                <span th:if="${filterRange != null}" th:text="${filterRange.describe()}">PG3 8–12 (2025, non-affiliated)</span>
+                <span th:if="${filterRange == null}" class="text-body-secondary">Not available</span>
+            </dd>
+            <dd class="col-8 mb-0" th:if="${cardRanges == null}"
+                th:with="hasRange=${school.getScoreRange(3, false).isPresent()
+                                    or school.getScoreRange(2, false).isPresent()
+                                    or school.getScoreRange(1, false).isPresent()}">
+                <span th:unless="${hasRange}" class="text-body-secondary">Not available</span>
+                <ul th:if="${hasRange}" class="list-inline mb-0">
+                    <th:block th:each="pg : ${#numbers.sequence(3, 1, -1)}">
+                        <th:block th:with="range=${school.getScoreRange(pg, false).orElse(null)}">
+                            <li th:if="${range != null}" class="list-inline-item"
+                                th:text="|PG${range.postingGroup} ${range.lowerScore}–${range.upperScore} (${range.admissionYear})|">
+                                PG3 8–12 (2025)</li>
+                        </th:block>
+                    </th:block>
+                </ul>
+            </dd>
+        </dl>
+        <!--/* seedData (LayoutModelAdvice): the seed snapshot's ranges are made up (DC-34) */-->
+        <p th:if="${seedData}" class="small text-warning-emphasis mt-auto mb-0">
+            <strong>TEST VALUES – not MOE data.</strong> Seed PSLE ranges are made up.</p>
+        <p th:unless="${seedData}" class="small text-body-secondary mt-auto mb-0">PSLE ranges from past years: historical, not guaranteed.</p>
+    </div>
+</article>
+</body>
+</html>

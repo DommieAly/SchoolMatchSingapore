@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<!--/* DM 12 NearbyFacilities / DM 13 FacilityFilter — NearbyFacilitiesUI.applyFacilityFilter
+       (FR-FACILITY-01..06, FR-FACFILTER-01..04, DC-24).
+       Model: school, facilityTypes, typeLabels (plural), typeNames (singular), selectedTypes, radiusOptions,
+       radiusKm, filtersActive, pageUrl and mapUrl (same filters), schoolHasLocation, and either facilities + distances (placeId → km)
+       [+ noFacilitiesMessage] or serviceUnavailable. googleStub comes from LayoutModelAdvice.
+       The design's display operations are the sections marked below. */-->
+<!-- DM-12 NearbyFacilities / DM-13 FacilityFilter (NearbyFacilitiesUI) -->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Nearby facilities')}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <p class="mb-2"><a th:href="@{/schools/{code}(code=${school.schoolCode})}">&larr; <span th:text="${school.name}">School</span></a></p>
+    <h1 class="h3 mb-1">
+        Libraries and tuition centres nearby
+        <span th:if="${googleStub}" class="badge text-bg-warning align-middle fs-6">Demo data (stub)</span>
+    </h1>
+    <p class="text-body-secondary">Measured from <span th:text="${school.name}">the school</span> (straight-line distance).</p>
+    <div th:replace="~{fragments/messages :: messages}"></div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-4 order-lg-2">
+            <!--/* displayFacilityFilters (DM 13): the form submits to this page (applyFacilityFilter) */-->
+            <form th:fragment="displayFacilityFilters" method="get"
+                  th:action="@{/schools/{code}/facilities(code=${school.schoolCode})}" class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h6 mb-3">Filter</h2>
+                    <fieldset class="mb-3">
+                        <legend class="form-label fs-6">Type</legend>
+                        <div class="form-check" th:each="facilityType : ${facilityTypes}">
+                            <input class="form-check-input" type="checkbox" name="type" th:value="${facilityType}"
+                                   th:id="|type-${facilityType}|" th:checked="${#sets.contains(selectedTypes, facilityType)}">
+                            <label class="form-check-label" th:for="|type-${facilityType}|"
+                                   th:text="${typeLabels.get(facilityType)}">Libraries</label>
+                        </div>
+                        <p class="small text-danger mb-0" th:if="${fieldErrors != null and fieldErrors['type'] != null}"
+                           th:text="${fieldErrors['type']}">Choose libraries or tuition centres</p>
+                    </fieldset>
+                    <fieldset class="mb-3">
+                        <legend class="form-label fs-6">Within</legend>
+                        <div class="form-check form-check-inline" th:each="radius : ${radiusOptions}">
+                            <input class="form-check-input" type="radio" name="radiusKm" th:value="${radius}"
+                                   th:id="|radius-${radius}|" th:checked="${radius == radiusKm}">
+                            <label class="form-check-label" th:for="|radius-${radius}|" th:text="|${radius} km|">1 km</label>
+                        </div>
+                        <p class="small text-danger mb-0" th:if="${fieldErrors != null and fieldErrors['radiusKm'] != null}"
+                           th:text="${fieldErrors['radiusKm']}">Choose 1, 2 or 3 km</p>
+                    </fieldset>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                        <a class="btn btn-outline-secondary btn-sm"
+                           th:href="@{/schools/{code}/facilities(code=${school.schoolCode})}">Clear all</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-12 col-lg-8 order-lg-1">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <!--/* active filters (FR-FACFILTER-03) */-->
+                <p class="mb-0 small">
+                    <span class="text-body-secondary">Showing:</span>
+                    <span class="badge text-bg-light border" th:each="facilityType : ${selectedTypes}"
+                          th:text="${typeLabels.get(facilityType)}">Libraries</span>
+                    <span class="badge text-bg-light border" th:text="|within ${radiusKm} km|">within 3 km</span>
+                    <a th:if="${filtersActive}" class="ms-1"
+                       th:href="@{/schools/{code}/facilities(code=${school.schoolCode})}">Clear all</a>
+                </p>
+                <a class="btn btn-sm btn-outline-secondary" th:href="${mapUrl}"
+                   th:if="${facilities != null and !facilities.isEmpty()}">View on map</a>
+            </div>
+
+            <!--/* displayServiceUnavailable (EX-1): the banner above holds the message */-->
+            <div th:if="${serviceUnavailable}" class="empty-state text-center rounded border p-5">
+                <p class="mb-3">The list cannot be loaded right now.</p>
+                <div class="d-flex justify-content-center gap-2">
+                    <a class="btn btn-sm btn-primary" th:href="${pageUrl}">Try again</a>
+                    <a class="btn btn-sm btn-outline-secondary" th:href="@{/schools/{code}(code=${school.schoolCode})}">Back to school details</a>
+                </div>
+            </div>
+
+            <!--/* displayNoNearbyFacilities (AF-1, FR-FACILITY-06) */-->
+            <div th:if="${noFacilitiesMessage != null}" class="empty-state text-center rounded border p-5">
+                <p class="fw-semibold mb-0" th:text="${noFacilitiesMessage}">No libraries or tuition centres found near the school.</p>
+            </div>
+
+            <!--/* displayFacilities: one Facility Summary per row, nearest first (FR-FACILITY-04, FR-FACILITY-05) */-->
+            <ol th:if="${facilities != null and !facilities.isEmpty()}" class="list-group list-group-numbered shadow-sm">
+                <li class="list-group-item d-flex flex-wrap justify-content-between align-items-start gap-2"
+                    th:each="facility : ${facilities}">
+                    <div class="ms-2 me-auto">
+                        <a class="fw-semibold"
+                           th:href="@{/facilities/{id}(id=${facility.placeId}, from=${school.schoolCode})}"
+                           th:text="${facility.name}">Bishan Public Library</a>
+                        <span class="badge text-bg-secondary ms-1"
+                              th:text="${facility.facilityType != null ? typeNames[facility.facilityType] : 'Type not available'}">Library</span>
+                        <div class="small text-body-secondary">
+                            <span th:replace="~{fragments/value :: value(${facility.address})}"></span>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-semibold" th:text="|${#numbers.formatDecimal(distances[facility.placeId], 1, 1)} km|">0.6 km</div>
+                        <a class="small"
+                           th:href="@{/directions(to=${'facility:' + facility.placeId}, from=${'/schools/' + school.schoolCode + '/facilities'})}">Directions</a>
+                    </div>
+                </li>
+            </ol>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,349 @@
+{
+ "help": "https://data.gov.sg/api/3/action/help_show?name=datastore_search",
+ "success": true,
+ "result": {
+  "resource_id": "d_688b934f82c1059ed0a6993d2a829089",
+  "fields": [
+   {
+    "type": "text",
+    "id": "school_name"
+   },
+   {
+    "type": "text",
+    "id": "url_address"
+   },
+   {
+    "type": "text",
+    "id": "address"
+   },
+   {
+    "type": "text",
+    "id": "postal_code"
+   },
+   {
+    "type": "text",
+    "id": "telephone_no"
+   },
+   {
+    "type": "text",
+    "id": "telephone_no_2"
+   },
+   {
+    "type": "text",
+    "id": "fax_no"
+   },
+   {
+    "type": "text",
+    "id": "fax_no_2"
+   },
+   {
+    "type": "text",
+    "id": "email_address"
+   },
+   {
+    "type": "text",
+    "id": "mrt_desc"
+   },
+   {
+    "type": "text",
+    "id": "bus_desc"
+   },
+   {
+    "type": "text",
+    "id": "principal_name"
+   },
+   {
+    "type": "text",
+    "id": "first_vp_name"
+   },
+   {
+    "type": "text",
+    "id": "second_vp_name"
+   },
+   {
+    "type": "text",
+    "id": "third_vp_name"
+   },
+   {
+    "type": "text",
+    "id": "fourth_vp_name"
+   },
+   {
+    "type": "text",
+    "id": "fifth_vp_name"
+   },
+   {
+    "type": "text",
+    "id": "sixth_vp_name"
+   },
+   {
+    "type": "text",
+    "id": "dgp_code"
+   },
+   {
+    "type": "text",
+    "id": "zone_code"
+   },
+   {
+    "type": "text",
+    "id": "type_code"
+   },
+   {
+    "type": "text",
+    "id": "nature_code"
+   },
+   {
+    "type": "text",
+    "id": "session_code"
+   },
+   {
+    "type": "text",
+    "id": "mainlevel_code"
+   },
+   {
+    "type": "text",
+    "id": "sap_ind"
+   },
+   {
+    "type": "text",
+    "id": "autonomous_ind"
+   },
+   {
+    "type": "text",
+    "id": "gifted_ind"
+   },
+   {
+    "type": "text",
+    "id": "ip_ind"
+   },
+   {
+    "type": "text",
+    "id": "mothertongue1_code"
+   },
+   {
+    "type": "text",
+    "id": "mothertongue2_code"
+   },
+   {
+    "type": "text",
+    "id": "mothertongue3_code"
+   },
+   {
+    "type": "int4",
+    "id": "_id"
+   }
+  ],
+  "records": [
+   {
+    "_id": 1,
+    "school_name": "ADMIRALTY PRIMARY SCHOOL",
+    "url_address": "https://admiraltypri.moe.edu.sg/",
+    "address": "11 WOODLANDS CIRCLE   ",
+    "postal_code": "738907",
+    "telephone_no": "63620598",
+    "telephone_no_2": "na",
+    "fax_no": "63627512",
+    "fax_no_2": "na",
+    "email_address": "admiralty_ps@moe.edu.sg",
+    "mrt_desc": "Admiralty Station",
+    "bus_desc": "965, 964, 913",
+    "principal_name": "MR CHEN ZHONGYI",
+    "first_vp_name": "MADAM CHAN YEE CHIN WILNA",
+    "second_vp_name": "MR HAMRI BIN A JALIL",
+    "third_vp_name": "na",
+    "fourth_vp_name": "na",
+    "fifth_vp_name": "na",
+    "sixth_vp_name": "na",
+    "dgp_code": "WOODLANDS",
+    "zone_code": "NORTH",
+    "type_code": "GOVERNMENT SCHOOL",
+    "nature_code": "CO-ED SCHOOL",
+    "session_code": "FULL DAY",
+    "mainlevel_code": "PRIMARY",
+    "sap_ind": "No",
+    "autonomous_ind": "No",
+    "gifted_ind": "No",
+    "ip_ind": "No",
+    "mothertongue1_code": "CHINESE",
+    "mothertongue2_code": "MALAY",
+    "mothertongue3_code": "TAMIL"
+   },
+   {
+    "_id": 2,
+    "school_name": "ANGLO-CHINESE JUNIOR COLLEGE",
+    "url_address": "https://acjc.moe.edu.sg",
+    "address": "25 DOVER CLOSE EAST   ",
+    "postal_code": "139745",
+    "telephone_no": "67750511",
+    "telephone_no_2": "na",
+    "fax_no": "67775479",
+    "fax_no_2": "na",
+    "email_address": "acjc@acjc.edu.sg",
+    "mrt_desc": "Buona Vista",
+    "bus_desc": "74, 95, 100, 105, 106, 111, 145, 147, 191, 196, 198, 602",
+    "principal_name": "MADAM KOH MING- LI VALARIE",
+    "first_vp_name": "MR ANG YUAN PENG",
+    "second_vp_name": "MS QUEK SI MIN",
+    "third_vp_name": "MADAM LIM SING THOE",
+    "fourth_vp_name": "na",
+    "fifth_vp_name": "na",
+    "sixth_vp_name": "na",
+    "dgp_code": "QUEENSTOWN",
+    "zone_code": "WEST",
+    "type_code": "GOVERNMENT-AIDED SCH",
+    "nature_code": "CO-ED SCHOOL",
+    "session_code": "FULL DAY",
+    "mainlevel_code": "JUNIOR COLLEGE",
+    "sap_ind": "No",
+    "autonomous_ind": "No",
+    "gifted_ind": "No",
+    "ip_ind": "No",
+    "mothertongue1_code": "CHINESE",
+    "mothertongue2_code": "na",
+    "mothertongue3_code": "na"
+   },
+   {
+    "_id": 3,
+    "school_name": "CATHOLIC HIGH SCHOOL",
+    "url_address": "http://www.catholichigh.moe.edu.sg",
+    "address": "9 BISHAN STREET 22   ",
+    "postal_code": "579767",
+    "telephone_no": "64582177 (Secondary)",
+    "telephone_no_2": "64589869 (Primary)",
+    "fax_no": "64561322 (Secondary)",
+    "fax_no_2": "64593938 (Primary)",
+    "email_address": "chs@moe.edu.sg",
+    "mrt_desc": "BISHAN MRT",
+    "bus_desc": "13, 52, 54, 88, 156, 162, 162M, 410",
+    "principal_name": "MADAM TEO YVONNE",
+    "first_vp_name": "MISS LOW PEI LIN BEVERLY",
+    "second_vp_name": "MADAM CHUA HUI PIN",
+    "third_vp_name": "MR TAY YUAN ZHUANG",
+    "fourth_vp_name": "MISS WONG MEI YING, DEBBIE",
+    "fifth_vp_name": "MR FONG KOK WAI",
+    "sixth_vp_name": "na",
+    "dgp_code": "BISHAN",
+    "zone_code": "NORTH",
+    "type_code": "GOVERNMENT-AIDED SCH",
+    "nature_code": "BOYS' SCHOOL",
+    "session_code": "SINGLE SESSION",
+    "mainlevel_code": "MIXED LEVEL (P1-S4)",
+    "sap_ind": "Yes",
+    "autonomous_ind": "Yes",
+    "gifted_ind": "Yes",
+    "ip_ind": "Yes",
+    "mothertongue1_code": "CHINESE",
+    "mothertongue2_code": "na",
+    "mothertongue3_code": "na"
+   },
+   {
+    "_id": 4,
+    "school_name": "CHIJ ST. THERESA'S CONVENT",
+    "url_address": "http://www.chijsttheresasconvent.moe.edu.sg",
+    "address": "160 LOWER DELTA ROAD   ",
+    "postal_code": "99138",
+    "telephone_no": "64775777",
+    "telephone_no_2": "na",
+    "fax_no": "64775700",
+    "fax_no_2": "na",
+    "email_address": "chijstcs@moe.edu.sg",
+    "mrt_desc": "HARBOURFRONT MRT, TIONG BAHRU MRT",
+    "bus_desc": "65, 121, 123, 123M, 124, 131, 131M, 195, 195A, 272, 855",
+    "principal_name": "MADAM TAN MEI MEI JENNY",
+    "first_vp_name": "MISS WEE MEI YEN JANICE",
+    "second_vp_name": "MISS OH SEE MOEY",
+    "third_vp_name": "MR YEO NGEE YANG",
+    "fourth_vp_name": "na",
+    "fifth_vp_name": "na",
+    "sixth_vp_name": "na",
+    "dgp_code": "BUKIT MERAH",
+    "zone_code": "SOUTH",
+    "type_code": "GOVERNMENT-AIDED SCH",
+    "nature_code": "GIRLS' SCHOOL",
+    "session_code": "SINGLE SESSION",
+    "mainlevel_code": "SECONDARY (S1-S5)",
+    "sap_ind": "No",
+    "autonomous_ind": "No",
+    "gifted_ind": "No",
+    "ip_ind": "No",
+    "mothertongue1_code": "CHINESE",
+    "mothertongue2_code": "MALAY",
+    "mothertongue3_code": "TAMIL"
+   },
+   {
+    "_id": 5,
+    "school_name": "HUA YI SECONDARY SCHOOL",
+    "url_address": "http://www.huayisec.moe.edu.sg",
+    "address": "60 JURONG WEST ST 42   ",
+    "postal_code": "649371",
+    "telephone_no": "65634568",
+    "telephone_no_2": "na",
+    "fax_no": "65634505",
+    "fax_no_2": "na",
+    "email_address": "hyss@moe.edu.sg",
+    "mrt_desc": "LAKESIDE MRT, CHINESE GARDEN MRT",
+    "bus_desc": "49, 98, 98B, 98M, 99, 157, 185, 187, 198, 198A, 334, 335, 502",
+    "principal_name": "DR. LIM SIEW YEE",
+    "first_vp_name": "MR NG JOO KOON",
+    "second_vp_name": "MS CHOO WAN XIAN",
+    "third_vp_name": "MADAM LYE YOKE PHENG",
+    "fourth_vp_name": "na",
+    "fifth_vp_name": "na",
+    "sixth_vp_name": "na",
+    "dgp_code": "JURONG WEST",
+    "zone_code": "WEST",
+    "type_code": "GOVERNMENT SCHOOL",
+    "nature_code": "CO-ED SCHOOL",
+    "session_code": "SINGLE SESSION",
+    "mainlevel_code": "SECONDARY (S1-S5)",
+    "sap_ind": "No",
+    "autonomous_ind": "No",
+    "gifted_ind": "No",
+    "ip_ind": "No",
+    "mothertongue1_code": "CHINESE",
+    "mothertongue2_code": "MALAY",
+    "mothertongue3_code": "TAMIL"
+   },
+   {
+    "_id": 6,
+    "school_name": "ST. HILDA'S SECONDARY SCHOOL",
+    "url_address": "http://www.sthildassec.moe.edu.sg",
+    "address": "2 TAMPINES STREET 82   ",
+    "postal_code": "528986",
+    "telephone_no": "63055277",
+    "telephone_no_2": "na",
+    "fax_no": "67865011",
+    "fax_no_2": "na",
+    "email_address": "shss@moe.edu.sg",
+    "mrt_desc": "TAMPINES MRT, TAMPINES WEST MRT",
+    "bus_desc": "22, 129, 293, 298",
+    "principal_name": "MR LEW KING LUN JULIAN",
+    "first_vp_name": "MADAM SO MUN YEE",
+    "second_vp_name": "MR GOH WEE SIONG JARED",
+    "third_vp_name": "MR LOY WEE JIN",
+    "fourth_vp_name": "na",
+    "fifth_vp_name": "na",
+    "sixth_vp_name": "na",
+    "dgp_code": "TAMPINES",
+    "zone_code": "EAST",
+    "type_code": "GOVERNMENT-AIDED SCH",
+    "nature_code": "CO-ED SCHOOL",
+    "session_code": "SINGLE SESSION",
+    "mainlevel_code": "SECONDARY (S1-S5)",
+    "sap_ind": "No",
+    "autonomous_ind": "No",
+    "gifted_ind": "No",
+    "ip_ind": "No",
+    "mothertongue1_code": "CHINESE",
+    "mothertongue2_code": "MALAY",
+    "mothertongue3_code": "TAMIL"
+   }
+  ],
+  "_links": {
+   "start": "/api/action/datastore_search?resource_id=d_688b934f82c1059ed0a6993d2a829089&limit=1000",
+   "next": "/api/action/datastore_search?resource_id=d_688b934f82c1059ed0a6993d2a829089&offset=1000&limit=1000"
+  },
+  "limit": 1000,
+  "total": 6
+ }
+}

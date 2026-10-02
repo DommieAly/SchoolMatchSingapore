@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!--/*
+  pager(page, totalPages, baseUrl): Bootstrap pagination, shown only when there is more than one page.
+    <nav th:replace="~{fragments/pagination :: pager(${page}, ${totalPages}, ${baseUrl})}"></nav>
+  page is 1-based. baseUrl is an already-encoded local URL, e.g. "/schools?q=bishan"; the fragment adds "page=N".
+  Shows the first and last page, two pages either side of the current one, and "…" for gaps.
+*/-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<nav th:fragment="pager(page, totalPages, baseUrl)" th:if="${totalPages != null and totalPages > 1}"
+     aria-label="Result pages">
+    <ul class="pagination justify-content-center flex-wrap">
+        <li class="page-item" th:classappend="${page <= 1} ? 'disabled'">
+            <a class="page-link" th:href="@{${baseUrl}(page=${page - 1})}" th:if="${page > 1}">Previous</a>
+            <span class="page-link" th:unless="${page > 1}">Previous</span>
+        </li>
+        <th:block th:each="p : ${#numbers.sequence(1, totalPages)}">
+            <li class="page-item" th:if="${p == 1 or p == totalPages or (p >= page - 2 and p <= page + 2)}"
+                th:classappend="${p == page} ? 'active'">
+                <a class="page-link" th:href="@{${baseUrl}(page=${p})}" th:text="${p}"
+                   th:aria-current="${p == page} ? 'page'">1</a>
+            </li>
+            <li class="page-item disabled" th:if="${(p == page - 3 and p > 1) or (p == page + 3 and p < totalPages)}">
+                <span class="page-link">…</span>
+            </li>
+        </th:block>
+        <li class="page-item" th:classappend="${page >= totalPages} ? 'disabled'">
+            <a class="page-link" th:href="@{${baseUrl}(page=${page + 1})}" th:if="${page < totalPages}">Next</a>
+            <span class="page-link" th:unless="${page < totalPages}">Next</span>
+        </li>
+    </ul>
+</nav>
+</body>
+</html>

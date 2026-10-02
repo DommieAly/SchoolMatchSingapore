@@ -1,0 +1,13 @@
+tc_id,requirement,technique,input,expected
+TC-FACFILTER-01-01,FR-FACFILTER-01,boundary value: radius 0 km (below the smallest option),0;ALL,error
+TC-FACFILTER-01-02,FR-FACFILTER-01,boundary value: radius 1 km (smallest option),1;ALL,L1|T1
+TC-FACFILTER-01-03,FR-FACFILTER-01,equivalence class: radius 2 km,2;ALL,L1|T1|L2
+TC-FACFILTER-01-04,FR-FACFILTER-01,boundary value: radius 3 km (largest option),3;ALL,L1|T1|L2|T2|L3
+TC-FACFILTER-01-05,FR-FACFILTER-01,boundary value: radius 4 km (above the largest option),4;ALL,error
+TC-FACFILTER-01-06,FR-FACFILTER-01,equivalence class: radius 5 km (old design value; DC-24),5;ALL,error
+TC-FACFILTER-02-01,FR-FACFILTER-02,type filter: libraries only,3;LIBRARY,L1|L2|L3
+TC-FACFILTER-02-02,FR-FACFILTER-02,type AND radius: tuition centres within 1 km,1;TUITION_CENTRE,T1
+TC-FACFILTER-02-03,FR-FACFILTER-02,both types selected = every type,2;LIBRARY+TUITION_CENTRE,L1|T1|L2
+TC-FACFILTER-04-01,FR-FACFILTER-04,clear all: no type selected = every type within 3 km,3;,L1|T1|L2|T2|L3
+TC-FACILITY-05-01,FR-FACILITY-05,sort by distance: nearest first across both types,3;ALL,L1|T1|L2|T2|L3
+TC-FACILITY-03-01,FR-FACILITY-03,boundary: a facility 3.5 km away is never listed,3;LIBRARY,L1|L2|L3

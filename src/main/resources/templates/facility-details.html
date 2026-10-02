@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<!--/* DM 14 FacilityDetails — FacilityDetailsUI.displayFacilityDetails (FR-FACDETAIL-01..03).
+       Model: placeId, school + from (school code; both null without a valid ?from=), directionsFrom (this page),
+       and either facility, typeName, openingHours (list of lines), websiteLink, coordinateText, distanceText,
+       or serviceUnavailable. Every missing value goes through the value fragment, which shows
+       "Not available" (displayUnavailable, FR-FACDETAIL-03). googleStub comes from LayoutModelAdvice. */-->
+<!-- DM-14 FacilityDetails (FacilityDetailsUI) -->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head(${facility != null and facility.name != null ? facility.name : 'Facility details'})}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <p class="mb-2" th:if="${from != null}">
+        <a th:href="@{/schools/{code}/facilities(code=${from})}">&larr; Back to facilities</a>
+    </p>
+    <h1 class="h3 mb-1">
+        <span th:text="${facility != null and facility.name != null ? facility.name : 'Facility details'}">Bishan Public Library</span>
+        <span th:if="${googleStub}" class="badge text-bg-warning align-middle fs-6">Demo data (stub)</span>
+    </h1>
+    <p class="text-body-secondary" th:if="${school != null}">Near <a th:href="@{/schools/{code}(code=${school.schoolCode})}"
+            th:text="${school.name}">CATHOLIC HIGH SCHOOL</a></p>
+    <div th:replace="~{fragments/messages :: messages}"></div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <!--/* displayServiceUnavailable: the banner above holds the message */-->
+            <section th:if="${serviceUnavailable}" class="empty-state text-center rounded border p-5">
+                <p class="mb-3">The details cannot be loaded right now.</p>
+                <a class="btn btn-sm btn-primary" th:href="${directionsFrom}">Try again</a>
+            </section>
+
+            <!--/* Facility Details fields (FR-FACDETAIL-02) */-->
+            <section class="card shadow-sm" th:if="${facility != null}">
+                <div class="card-body p-4">
+                    <dl class="row mb-4">
+                        <dt class="col-sm-4">Name</dt>
+                        <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${facility.name})}"></span></dd>
+                        <dt class="col-sm-4">Type</dt>
+                        <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${typeName})}"></span></dd>
+                        <dt class="col-sm-4">Address</dt>
+                        <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${facility.address})}"></span></dd>
+                        <dt class="col-sm-4">Telephone</dt>
+                        <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${facility.telephone})}"></span></dd>
+                        <dt class="col-sm-4">Website</dt>
+                        <dd class="col-sm-8">
+                            <a th:if="${websiteLink}" th:href="${facility.website}" th:text="${facility.website}"
+                               target="_blank" rel="noopener">website</a>
+                            <th:block th:unless="${websiteLink}">
+                                <span th:replace="~{fragments/value :: value(${facility.website})}"></span>
+                            </th:block>
+                        </dd>
+                        <dt class="col-sm-4">Opening hours</dt>
+                        <dd class="col-sm-8">
+                            <ul class="list-unstyled mb-0" th:if="${!openingHours.isEmpty()}">
+                                <li th:each="line : ${openingHours}" th:text="${line}">Monday: 10:00 AM – 9:00 PM</li>
+                            </ul>
+                            <th:block th:if="${openingHours.isEmpty()}">
+                                <span th:replace="~{fragments/value :: value(null)}"></span>
+                            </th:block>
+                        </dd>
+                        <dt class="col-sm-4">Location</dt>
+                        <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${coordinateText})}"></span></dd>
+                        <dt class="col-sm-4">Distance from school</dt>
+                        <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${distanceText})}"></span></dd>
+                    </dl>
+                    <!--/* selectGetDirections (FR-ROUTE-01, T-43) */-->
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-primary"
+                           th:href="@{/directions(to=${'facility:' + facility.placeId}, from=${directionsFrom})}">Get directions</a>
+                        <a class="btn btn-outline-secondary" th:if="${from != null}"
+                           th:href="@{/schools/{code}/facilities(code=${from})}">Back to facilities</a>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

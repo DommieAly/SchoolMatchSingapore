@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<!--/* About the data (not a dialog-map state) — HomeUI.displayDataSources, GET /about/data (NFR-DATA-01, NFR-DATA-03,
+       DC-09). Model: manifest (SnapshotManifest), dataset (SchoolDataCache), fullSnapshot, effectiveDate, importedAt
+       (formatted, Singapore time), counts (sorted map), sources (List<HomeUI.DataSourceRow>); seedData from
+       LayoutModelAdvice. The licence notice wording is required by the Singapore Open Data Licence v1.0. */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('About the data')}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <h1 class="h3 mb-1">About the school data</h1>
+    <p class="text-body-secondary">The app reads one checked snapshot of the school data. This page shows which one,
+        and where its data came from.</p>
+    <div th:replace="~{fragments/messages :: messages}"></div>
+
+    <div th:if="${seedData}" class="alert alert-warning" role="note">
+        <strong>TEST VALUES – not MOE data.</strong> This is the small seed snapshot: its PSLE ranges are made up for
+        testing.
+    </div>
+
+    <div class="row g-4">
+        <section class="col-12 col-lg-6">
+            <h2 class="h5">Active snapshot</h2>
+            <dl class="row mb-0">
+                <dt class="col-sm-5">Version</dt>
+                <dd class="col-sm-7 font-monospace" th:text="${manifest.version}">2026-10-02.1</dd>
+
+                <dt class="col-sm-5">Kind</dt>
+                <dd class="col-sm-7" th:text="${fullSnapshot} ? 'Full import' : 'Seed (small test snapshot)'">Full import</dd>
+
+                <dt class="col-sm-5">Effective date</dt>
+                <dd class="col-sm-7"><span th:replace="~{fragments/value :: value(${effectiveDate})}"></span></dd>
+
+                <dt class="col-sm-5">Imported</dt>
+                <dd class="col-sm-7"><span th:replace="~{fragments/value :: value(${importedAt})}"></span></dd>
+
+                <dt class="col-sm-5">Validation status</dt>
+                <dd class="col-sm-7">
+                    <span class="badge"
+                          th:classappend="${dataset != null and dataset.validationStatus != null
+                                           and dataset.validationStatus.name() == 'PASSED'} ? 'text-bg-success' : 'text-bg-warning'"
+                          th:text="${dataset != null and dataset.validationStatus != null ? dataset.validationStatus
+                                    : manifest.validationStatus}">PASSED_WITH_WARNINGS</span>
+                </dd>
+            </dl>
+
+            <h2 class="h5 mt-4">Counts</h2>
+            <table class="table table-sm w-auto">
+                <tbody>
+                <tr th:each="count : ${counts}">
+                    <th scope="row" class="fw-normal" th:text="${count.key}">schools</th>
+                    <td class="text-end" th:text="${count.value}">147</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <h2 class="h5 mt-4">PSLE ranges</h2>
+            <p class="small mb-1" th:text="${manifest.notes}">No PSLE ranges yet.</p>
+            <p class="small text-body-secondary">PSLE ranges are historical (the scores of students posted in past
+                years), not a guarantee of a place.</p>
+        </section>
+
+        <section class="col-12 col-lg-6">
+            <h2 class="h5">Sources</h2>
+            <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                <tr><th scope="col">Source</th><th scope="col">Dataset id</th><th scope="col">Downloaded</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="source : ${sources}">
+                    <td th:text="${source.name}">General information of schools</td>
+                    <td class="font-monospace small text-break" th:text="${source.datasetId}">d_688b…</td>
+                    <td class="small"><span th:replace="~{fragments/value :: value(${source.downloadedAt})}"></span></td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+
+            <h2 class="h5 mt-4">Licences and credits</h2>
+            <ul class="small">
+                <li th:each="source : ${sources}" th:if="${source.licensed}">
+                    <span th:text="|Contains information from ${source.name} accessed on ${source.downloadedOn != null
+                                   ? source.downloadedOn : 'an unknown date'} from data.gov.sg which is made available under the terms of the|">Contains
+                        information from General information of schools accessed on 2 Oct 2026 from data.gov.sg which
+                        is made available under the terms of the</span>
+                    <a href="https://data.gov.sg/open-data-licence" rel="noopener" target="_blank">Singapore Open Data Licence version 1.0</a>
+                    (https://data.gov.sg/open-data-licence).
+                </li>
+                <li>School coordinates and address search: OneMap, Singapore Land Authority.</li>
+                <li>Maps, routes and nearby places: Google Maps Platform (not stored in this snapshot).</li>
+            </ul>
+        </section>
+    </div>
+
+    <section class="mt-4" th:if="${!#lists.isEmpty(manifest.warnings)}">
+        <h2 class="h5">Warnings from the import</h2>
+        <p class="small text-body-secondary">Warnings do not stop the app; they list data the team still has to check.</p>
+        <ul class="small">
+            <li th:each="warning : ${manifest.warnings}" th:text="${warning}">school-code-slug: 147 warnings</li>
+        </ul>
+    </section>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<!--/* DM 18 Compare Schools (login) — ComparisonUI.displayComparison (FR-COMPARE-01, DC-07, DC-28).
+       Model: schools (2–4 columns, in the order chosen), rows (ComparisonUI.CompareRow: label, values, differs).
+       highlightDifferences: a row whose values differ gets class table-warning and data-differs="true".
+       Missing values show "Not available" (AF-2). Each column header links to the school's details (DC-08). */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Compare schools')}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <p class="mb-2"><a th:href="@{/shortlist}">&larr; Back to shortlist</a></p>
+    <h1 class="h3 mb-1">Compare schools</h1>
+    <p class="text-body-secondary">
+        Highlighted rows <span class="badge text-bg-warning">differ</span> between the schools.
+    </p>
+    <div th:replace="~{fragments/messages :: messages}"></div>
+
+    <div th:fragment="highlightDifferences" class="table-responsive card shadow-sm">
+        <table class="table table-bordered align-middle mb-0 compare-table">
+            <thead>
+            <tr>
+                <th scope="col">Field</th>
+                <th scope="col" th:each="school : ${schools}">
+                    <a th:href="@{/schools/{code}(code=${school.schoolCode})}" th:text="${school.name}">CATHOLIC HIGH SCHOOL</a>
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${rows}" th:classappend="${row.differs} ? 'table-warning'"
+                th:attr="data-differs=${row.differs}">
+                <th scope="row" class="fw-normal text-body-secondary" th:text="${row.label}">School type</th>
+                <td th:each="cell : ${row.values}" class="small">
+                    <!--/* long lists (CCAs, programmes) scroll inside the cell */-->
+                    <div style="max-height: 12rem; overflow-y: auto;"><span th:replace="~{fragments/value :: value(${cell})}"></span></div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!--/* NFR-DATA-03; the seed snapshot's ranges are made up (DC-34) */-->
+    <div th:if="${seedData}" class="alert alert-warning small mt-3" role="note">
+        <strong>TEST VALUES – not MOE data.</strong> The seed dataset uses made-up PSLE ranges.
+        Do not use them to choose a school.
+    </div>
+    <p th:unless="${seedData}" class="small text-body-secondary mt-3">
+        PSLE AL ranges are the latest non-affiliated ranges from past years (a lower score is better):
+        historical, not guaranteed.
+    </p>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<!--/* DM 22 RecommendationCriteria (+ DM 23 RecommendationLoading overlay), login — RecommendationUI.displayCriteriaForm
+       / submitCriteria (FR-REC-01, DC-07, DC-20, DC-23). Model: criteria (MatchCriteria), travelModes, durationOptions,
+       ccaOptions, programmeOptions, startLocation, returnTo, weights, fieldErrors (always present, maybe empty;
+       NFR-USE-03), flashError (EX-1), missingProfileFields (only when the profile is incomplete, AF-1).
+       The form has data-loading, so loading.js shows the overlay while the POST runs (DM 23, NFR-PERF-03). */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Get recommendations')}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <h1 class="h3 mb-1">Get school recommendations</h1>
+    <p class="text-body-secondary">We rank schools by PSLE fit, commute time, CCAs and programmes, and explain each
+        score.</p>
+    <div th:replace="~{fragments/messages :: messages}"></div>
+
+    <div th:if="${missingProfileFields != null}" class="alert alert-info" role="status">
+        <p class="fw-semibold mb-1">Complete your profile to get recommendations faster.</p>
+        <p class="mb-2">Your profile has no <span th:text="${#strings.listJoin(missingProfileFields, ', ')}">PSLE
+            score</span> yet. You can fill them in below for this search, or save them in your profile.</p>
+        <a class="btn btn-sm btn-outline-primary" th:href="@{/profile}">Go to my profile</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <form method="post" th:action="@{/recommendations}" th:object="${criteria}" data-draft-return="/recommendations" class="card shadow-sm"
+                  data-loading="Ranking schools and checking commute times…" novalidate>
+                <div class="card-body p-4 row g-3">
+                    <div class="col-sm-6">
+                        <label for="psleScore" class="form-label">PSLE score (AL, 4–32)</label>
+                        <input th:field="*{psleScore}" type="number" class="form-control" min="4" max="32"
+                               th:classappend="${fieldErrors.containsKey('psleScore')} ? 'is-invalid'"
+                               aria-describedby="psleScore-help">
+                        <div id="psleScore-help" class="form-text">Lower is better.</div>
+                        <div class="invalid-feedback" th:if="${fieldErrors.containsKey('psleScore')}"
+                             th:text="${fieldErrors['psleScore']}">Enter a whole number from 4 to 32</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label for="postingGroup" class="form-label">Posting group</label>
+                        <select th:field="*{postingGroup}" class="form-select"
+                                th:classappend="${fieldErrors.containsKey('postingGroup')} ? 'is-invalid'">
+                            <option value="">Choose…</option>
+                            <option value="3">PG3</option>
+                            <option value="2">PG2</option>
+                            <option value="1">PG1</option>
+                        </select>
+                        <div class="invalid-feedback" th:if="${fieldErrors.containsKey('postingGroup')}"
+                             th:text="${fieldErrors['postingGroup']}">Choose posting group 1, 2 or 3</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label for="travelMode" class="form-label">Travel by</label>
+                        <select th:field="*{travelMode}" class="form-select"
+                                th:classappend="${fieldErrors.containsKey('travelMode')} ? 'is-invalid'">
+                            <option value="">Choose…</option>
+                            <option th:each="mode : ${travelModes}" th:value="${mode}"
+                                    th:text="${mode.name() == 'TRANSIT' ? 'Public transport'
+                                              : #strings.capitalize(#strings.toLowerCase(mode))}">Walk</option>
+                        </select>
+                        <div class="invalid-feedback" th:if="${fieldErrors.containsKey('travelMode')}"
+                             th:text="${fieldErrors['travelMode']}">Choose walk, drive or public transport</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label for="maxCommuteMin" class="form-label">Longest commute</label>
+                        <select th:field="*{maxCommuteMin}" class="form-select"
+                                th:classappend="${fieldErrors.containsKey('maxCommuteMin')} ? 'is-invalid'">
+                            <option value="">Choose…</option>
+                            <option th:each="minutes : ${durationOptions}" th:value="${minutes}"
+                                    th:text="|${minutes} min|">30 min</option>
+                        </select>
+                        <div class="invalid-feedback" th:if="${fieldErrors.containsKey('maxCommuteMin')}"
+                             th:text="${fieldErrors['maxCommuteMin']}">Choose 15, 30, 45 or 60 minutes</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="preferredCCAs" class="form-label">CCAs you like (optional)</label>
+                        <select th:field="*{preferredCCAs}" class="form-select" multiple size="6">
+                            <option th:each="cca : ${ccaOptions}" th:value="${cca}" th:text="${cca}">BADMINTON</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="preferredProgrammes" class="form-label">Programmes you like (optional)</label>
+                        <select th:field="*{preferredProgrammes}" class="form-select" multiple size="6">
+                            <option th:each="programme : ${programmeOptions}" th:value="${programme}"
+                                    th:text="${programme}">Art</option>
+                        </select>
+                    </div>
+                    <p class="col-12 form-text mt-1">Hold Ctrl (Windows) or Cmd (Mac) to choose more than one.
+                        With no CCA or programme chosen, that factor is left out of the score.</p>
+                    <p class="col-12 small mb-0"
+                       th:classappend="${fieldErrors.containsKey('startLocation')} ? 'text-danger fw-semibold'">
+                        <th:block th:if="${startLocation != null}">Commute times are measured from
+                            <strong th:text="${startLocation.inputText != null ? startLocation.inputText : 'your location'}">home</strong>.
+                        </th:block>
+                        <th:block th:if="${startLocation == null}">Set a starting point (on the right) first.</th:block>
+                    </p>
+                </div>
+                <div class="card-footer bg-body d-flex justify-content-end p-3">
+                    <button type="submit" class="btn btn-primary">Get recommendations</button>
+                </div>
+            </form>
+        </div>
+        <div class="col-12 col-lg-4">
+            <section class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h6 mb-2">Starting point</h2>
+                    <p class="small text-body-secondary">Commute times are measured from here. The home address in
+                        your profile is used unless you choose another place.</p>
+                    <div th:replace="~{fragments/location-picker :: locationPicker(${returnTo}, ${startLocation})}"></div>
+                </div>
+            </section>
+            <section class="small">
+                <h2 class="h6">How schools are scored</h2>
+                <p class="text-body-secondary mb-2">Only schools with PSLE range data for your posting group can be
+                    recommended. PSLE ranges are historical, not a guarantee.</p>
+                <table class="table table-sm w-auto">
+                    <thead>
+                    <tr><th scope="col">Factor</th><th scope="col" class="text-end">Weight</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="weight : ${weights}">
+                        <td th:text="${#strings.replace(weight.key, '_', ' ')}">PSLE FIT</td>
+                        <td class="text-end" th:text="${#numbers.formatPercent(weight.value, 1, 0)}">40%</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+    </div>
+    <div th:replace="~{fragments/loading :: loading('Ranking schools…')}"></div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

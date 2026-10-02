@@ -1,0 +1,16 @@
+# Dataset import run (no web server), DC-12, owner B.
+# DatasetImportRunner (@Profile("import")) calls SchoolDataController.importDataset() once and exits with code 0
+# (PASSED / PASSED_WITH_WARNINGS) or 1 (FAILED). It reads the live data.gov.sg and OneMap APIs and writes a new
+# snapshot folder to app.dataset.import-output-dir (blank = app.dataset.dir). ACTIVE is changed only when
+# app.dataset.activate-on-import=true and validation did not fail. See data/README.md.
+spring:
+  main:
+    web-application-type: none
+
+# Google is not used by the import, so it keeps GOOGLE_MODE from .env (stub by default).
+app:
+  external:
+    onemap:
+      mode: live
+    datagovsg:
+      mode: live

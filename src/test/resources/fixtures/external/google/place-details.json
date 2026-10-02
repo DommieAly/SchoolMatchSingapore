@@ -1,0 +1,21 @@
+{
+  "id": "ChIJ-bishan-library-test",
+  "displayName": {
+    "text": "Bishan Public Library",
+    "languageCode": "en"
+  },
+  "formattedAddress": "5 Bishan Pl, #01-01, Singapore 579841",
+  "location": {
+    "latitude": 1.3503,
+    "longitude": 103.8486
+  },
+  "nationalPhoneNumber": "6332 3255",
+  "websiteUri": "https://www.nlb.gov.sg/",
+  "regularOpeningHours": {
+    "openNow": true,
+    "weekdayDescriptions": [
+      "Monday: 10:00 AM – 9:00 PM",
+      "Tuesday: 10:00 AM – 9:00 PM"
+    ]
+  }
+}
