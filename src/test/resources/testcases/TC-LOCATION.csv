@@ -1,0 +1,9 @@
+tc_id,requirement,technique,input,expected
+TC-LOCATION-01,FR-ROUTE-02,equivalence class: no address (field missing),,error
+TC-LOCATION-02,FR-ROUTE-02,boundary value: empty address (0 characters),"",error
+TC-LOCATION-03,FR-ROUTE-02,equivalence class: blank after trimming,"   ",error
+TC-LOCATION-04,FR-ROUTE-02,boundary value: 1 character (minimum),a,search
+TC-LOCATION-05,FR-ROUTE-02,boundary value: 200 characters (maximum),a*200,search
+TC-LOCATION-06,FR-ROUTE-02,boundary value: 201 characters (maximum + 1),a*201,error
+TC-LOCATION-07,FR-FILTER-04,equivalence class: postal code with spaces around it,"  579767  ",search
+TC-LOCATION-08,FR-FILTER-04,equivalence class: street name,Bishan Street 22,search

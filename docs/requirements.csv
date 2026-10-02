@@ -1,0 +1,104 @@
+id,type,text,use_case,dm_states,ui_class,control_method,owner
+FR-REG-01,FR,"A guest can register with a username, email, password and password confirmation",Register,DM-03,RegisterUI,AccountController.register,A
+FR-REG-02,FR,Registration requires every field and a valid email address,Register,DM-03,RegisterUI,AccountController.register,A
+FR-REG-03,FR,Registration is rejected when the password and its confirmation differ,Register,DM-03,RegisterUI,RegisterUI.submitRegistration (form check),A
+FR-REG-04,FR,Registration is rejected when the username or email is already used,Register,DM-03,RegisterUI,AccountController.register; AccountController.isDuplicate,A
+FR-REG-05,FR,On success the system creates the account and shows the login page,Register,DM-03; DM-02,RegisterUI,AccountController.register,A
+FR-LOGIN-01,FR,A user can log in with a username or email plus a password,Log In,DM-02,LoginUI,AuthController.login,A
+FR-LOGIN-02,FR,Login requires both fields,Log In,DM-02,LoginUI,LoginUI.submitLogin (form check); AuthController.login,A
+FR-LOGIN-03,FR,The system authenticates the credentials against the stored Account,Log In,DM-02,LoginUI,AuthController.login; Account.verifyPassword,A
+FR-LOGIN-04,FR,On success the system creates an authenticated session and shows the main page,Log In,DM-02; DM-04,LoginUI,AuthController.login,A
+FR-LOGIN-05,FR,On failure the system shows a generic error message and creates no session,Log In,DM-02,LoginUI,AuthController.login,A
+FR-LOGOUT-01,FR,An authenticated user can log out,Log Out,DM-05; DM-06,UserProfileUI,AuthController.logout,A
+FR-LOGOUT-02,FR,Logout invalidates the session and clears local authentication data (the session cookie),Log Out,DM-06,UserProfileUI,AuthController.logout; AuthenticatedSession.invalidate,A
+FR-LOGOUT-03,FR,After logout the user is treated as unauthenticated and redirected to HomePage (Guest) (DC-03),Log Out,DM-06; DM-01,UserProfileUI,AuthController.logout,A
+FR-LOGOUT-04,FR,Cancelling the logout keeps the session,Log Out,DM-06; DM-05,UserProfileUI,-,A
+FR-SEARCH-01,FR,The school name search field accepts 1-100 characters; a blank term means no term (DC-02),Search for Schools,DM-07; DM-08,SchoolSearchUI,SchoolController.searchSchools; SchoolController.validateSearchTerm,C
+FR-SEARCH-02,FR,Search matches school names case-insensitively and by partial match,Search for Schools,DM-08,SchoolSearchUI,SchoolController.searchSchools; School.matchesName,C
+FR-SEARCH-03,FR,Each result shows a School Summary,Search for Schools,DM-08,SchoolSearchUI,SchoolController.searchSchools,C
+FR-SEARCH-04,FR,"An empty search shows the default list: all schools A-Z, paged (DC-02)",Search for Schools,DM-07; DM-08,SchoolSearchUI,SchoolController.searchSchools,C
+FR-SEARCH-05,FR,"When no school matches, the system shows a no-matches message",Search for Schools,DM-07; DM-08,SchoolSearchUI,SchoolController.searchSchools,C
+FR-SEARCH-06,FR,Results are listed in alphabetical order,Search for Schools,DM-08,SchoolSearchUI,SchoolController.searchSchools; SchoolController.sortResults,C
+FR-FILTER-01,FR,"The user can filter the Current Result Set by school attributes, PSLE score, proximity and transportation",Filter Schools,DM-10; DM-08,SchoolFilterUI,FilterController.applyFilters,C
+FR-FILTER-02,FR,"Attribute filters cover school type, programme and CCA, plus district (DC-04)",Filter Schools,DM-10,SchoolFilterUI,FilterController.getFilterOptions; SchoolAttributeFilter.matches,C
+FR-FILTER-03,FR,The PSLE filter takes an integer score from 4 to 32 and keeps schools whose applicable range admits it (DC-22),Filter Schools,DM-10,SchoolFilterUI,FilterController.applyFilters; PsleScoreFilter.matches,C
+FR-FILTER-04,FR,The proximity reference location comes from the device or is entered manually,Filter Schools,DM-10; DM-19,SchoolFilterUI; DirectionsUI,LocationController.getDeviceLocation; LocationController.resolveAddress; LocationController.findCandidates,C; D
+FR-FILTER-05,FR,"The proximity radius is 1, 3 or 5 km",Filter Schools,DM-10,SchoolFilterUI,ProximityFilter.isValid; ProximityFilter.matches,C
+FR-FILTER-06,FR,"Transportation criteria: travel mode and maximum travel time (15, 30, 45 or 60 min)",Filter Schools,DM-10,SchoolFilterUI,FilterController.applyFilters; TransportationFilter.matches; DirectionsController.getCommuteTimes,C; D
+FR-FILTER-07,FR,Several filters combine with AND (values inside one category combine with OR),Filter Schools,DM-10; DM-08,SchoolFilterUI,FilterController.applyFilters; CurrentResultSet.applyFilters,C
+FR-FILTER-08,FR,The active filters are shown,Filter Schools,DM-08; DM-10,SchoolFilterUI; SchoolSearchUI,Filter.describe,C
+FR-FILTER-09,FR,Clearing the filters restores the unfiltered results,Filter Schools,DM-10; DM-08,SchoolFilterUI,FilterController.clearFilters,C
+FR-SCHOOL-01,FR,Selecting a school shows its details,View School Details,DM-08; DM-09,SchoolDetailsUI,SchoolController.getSchoolDetails,C
+FR-SCHOOL-02,FR,The details page shows every School Details field,View School Details,DM-09,SchoolDetailsUI,SchoolController.getSchoolDetails,C
+FR-SCHOOL-03,FR,Fields without data are marked as not available,View School Details,DM-09,SchoolDetailsUI,- (fragments/value.html),C
+FR-SHORTLIST-01,FR,A logged-in user can add a school to their shortlist,Add School to Shortlist,DM-09,SchoolDetailsUI; ShortlistUI,ShortlistController.addSchool,F
+FR-SHORTLIST-02,FR,A school appears at most once in a shortlist,Add School to Shortlist,DM-09,SchoolDetailsUI,ShortlistController.addSchool; Shortlist.addSchool,F
+FR-SHORTLIST-03,FR,The shortlist is tied to the user's account,Add School to Shortlist,DM-09; DM-16,ShortlistUI,ShortlistController.addSchool; AuthController.getAccount,F
+FR-SHORTLIST-04,FR,The user can view their shortlist,View Shortlisted Schools,DM-16,ShortlistUI,ShortlistController.getShortlistedSchools,F
+FR-SHORTLIST-05,FR,The shortlist shows a School Summary for each school,View Shortlisted Schools,DM-16,ShortlistUI,ShortlistController.getShortlistedSchools,F
+FR-SHORTLIST-06,FR,The user can remove a school from the shortlist,Remove School from Shortlist,DM-16,ShortlistUI,ShortlistController.removeSchool,F
+FR-SHORTLIST-07,FR,An empty shortlist shows an empty-shortlist message,View Shortlisted Schools,DM-16,ShortlistUI,ShortlistController.getShortlistedSchools,F
+FR-MAP-01,FR,The current result set can be shown as markers on a map,View Schools on Map,DM-08; DM-11,SchoolMapUI,MapController.showSchoolsOnMap,D
+FR-MAP-02,FR,The map is provided by Google Maps Platform,Display Interactive Map,DM-11,SchoolMapUI,MapController.displayInteractiveMap,D
+FR-MAP-03,FR,There is one marker per school with a valid coordinate,View Schools on Map,DM-11,SchoolMapUI,MapController.showSchoolsOnMap,D
+FR-MAP-04,FR,"The user can pan, zoom and select markers",Display Interactive Map,DM-11,SchoolMapUI,- (static/js/GoogleMapsPlatformInterface.js),D
+FR-MAP-05,FR,A selected marker shows the school's information,View Schools on Map,DM-11; DM-09,SchoolMapUI,- (static/js/map.js),D
+FR-MAP-06,FR,The user can show or hide planning-area (district) boundaries,View Schools on Map,DM-11,SchoolMapUI,MapController.toggleDistricts,D
+FR-MAP-07,FR,Toggling the districts keeps the school markers,View Schools on Map,DM-11,SchoolMapUI,MapController.toggleDistricts,D
+FR-FACILITY-01,FR,The user can view facilities near a school,View Nearby Facilities,DM-09; DM-12,NearbyFacilitiesUI,FacilityController.getNearbyFacilities,E
+FR-FACILITY-02,FR,The school's location is the reference point,View Nearby Facilities,DM-12,NearbyFacilitiesUI,FacilityController.getNearbyFacilities,E
+FR-FACILITY-03,FR,Facilities are searched within the selected radius,View Nearby Facilities,DM-12; DM-13,NearbyFacilitiesUI,FacilityController.filterFacilities; FacilityFilterCriteria.matches,E
+FR-FACILITY-04,FR,Each facility shows a Facility Summary,View Nearby Facilities,DM-12,NearbyFacilitiesUI,FacilityController.getNearbyFacilities,E
+FR-FACILITY-05,FR,Facilities are ordered by distance,View Nearby Facilities,DM-12,NearbyFacilitiesUI,FacilityController.sortByDistance,E
+FR-FACILITY-06,FR,"When no facility is nearby, the system says so",View Nearby Facilities,DM-12,NearbyFacilitiesUI,FacilityController.getNearbyFacilities,E
+FR-FACFILTER-01,FR,"The user can filter facilities by type and radius (1, 2 or 3 km, DC-24)",View Nearby Facilities,DM-13,NearbyFacilitiesUI,FacilityController.filterFacilities; FacilityFilterCriteria.isValid,E
+FR-FACFILTER-02,FR,Facility filters combine with AND,View Nearby Facilities,DM-13,NearbyFacilitiesUI,FacilityFilterCriteria.matches,E
+FR-FACFILTER-03,FR,The active facility filters are shown,View Nearby Facilities,DM-13,NearbyFacilitiesUI,-,E
+FR-FACFILTER-04,FR,The user can clear all facility filters,View Nearby Facilities,DM-13; DM-12,NearbyFacilitiesUI,FacilityController.getNearbyFacilities,E
+FR-FACDETAIL-01,FR,Selecting a facility shows its details,View Facility Details,DM-12; DM-14,FacilityDetailsUI,FacilityController.getFacilityDetails,E
+FR-FACDETAIL-02,FR,The details page shows every Facility Details field,View Facility Details,DM-14,FacilityDetailsUI,FacilityController.getFacilityDetails,E
+FR-FACDETAIL-03,FR,Fields without data are marked as not available,View Facility Details,DM-14,FacilityDetailsUI,- (fragments/value.html),E
+FR-FACMAP-01,FR,Facilities can be shown as markers on a map,View Facilities on Map,DM-12; DM-15,FacilityMapUI,MapController.showFacilitiesOnMap,D; E
+FR-FACMAP-02,FR,The facility map is provided by Google Maps Platform,Display Interactive Map,DM-15,FacilityMapUI,MapController.displayInteractiveMap,D; E
+FR-FACMAP-03,FR,There is one marker per facility with a valid coordinate,View Facilities on Map,DM-15,FacilityMapUI,MapController.showFacilitiesOnMap,D; E
+FR-FACMAP-04,FR,The markers match the facility results shown in the list,View Facilities on Map,DM-15,FacilityMapUI,MapController.showFacilitiesOnMap,D; E
+FR-FACMAP-05,FR,Facilities with invalid coordinates are left out without blocking the others,View Facilities on Map,DM-15,FacilityMapUI,MapController.showFacilitiesOnMap; Place.hasValidCoordinate,D; E
+FR-ROUTE-01,FR,The user can request directions to a school or facility,Get Directions,DM-09; DM-14; DM-19,DirectionsUI,DirectionsController.getDirections,D
+FR-ROUTE-02,FR,The starting location comes from the device or is entered manually,Get Directions,DM-19,DirectionsUI,LocationController.getDeviceLocation; LocationController.resolveAddress; LocationController.findCandidates,D
+FR-ROUTE-03,FR,The selected facility or school is the destination,Get Directions,DM-19,DirectionsUI,DirectionsController.getDirections,D; E
+FR-ROUTE-04,FR,"Travel modes are walk, drive and public transport (TRANSIT, DC-01)",Get Directions,DM-19; DM-21,DirectionsUI,DirectionsController.getDirections,D
+FR-ROUTE-05,FR,The route request is sent to Google Maps Platform,Calculate Route,DM-20,DirectionsUI,DirectionsController.calculateRoute; GoogleMapsPlatformInterface.computeRoute,E
+FR-ROUTE-06,FR,The system processes the route response,Calculate Route,DM-20,DirectionsUI,DirectionsController.validateRoute,E
+FR-ROUTE-07,FR,"The directions show distance, duration and step-by-step instructions",Get Directions,DM-21,DirectionsUI,DirectionsController.getDirections,D
+FR-ROUTE-08,FR,"When no route is found, the system says so and shows no partial route",Calculate Route,DM-20; DM-19,DirectionsUI,DirectionsController.validateRoute; Route.unavailable,E
+FR-DATA-01,FR,Every stored record has a unique identifier,-,-,-,Account.accountId; School.schoolCode; Facility.placeId; SnapshotValidator,A; B
+FR-DATA-02,FR,The system stores and retrieves account data,Register; Log In; Manage Profile,-,-,AccountRepository; UserProfileRepository,A
+FR-DATA-03,FR,The system stores and retrieves school data,Search for Schools; View School Details,-,-,SchoolDataController.getSchools; SchoolDataController.getSchool,B
+FR-DATA-04,FR,The system stores and retrieves facility data,View Nearby Facilities; View Facility Details,-,-,FacilityController (FacilityDataCache),E
+FR-DATA-05,FR,A shortlist entry links one account to one school,Add School to Shortlist,-,-,Shortlist; ShortlistRepository,F
+FR-DATA-06,FR,Only valid coordinates are stored,-,-,-,Coordinate; SnapshotValidator,B
+FR-DATA-07,FR,Search and filtering never change stored data,Search for Schools; Filter Schools,-,-,SchoolController.searchSchools; FilterController.applyFilters,C
+FR-PROFILE-01,FR,"A logged-in user can view and edit their profile: display name, PSLE score, posting group, primary school, home address (looked up with OneMap; several matches → choose one), preferred CCAs and programmes, travel mode and longest commute [proposed id]",Manage Profile,DM-05,UserProfileUI,ProfileController.getProfile; ProfileController.saveProfile; LocationController.findCandidates,A
+FR-REC-01,FR,"A logged-in user can get up to 10 ranked school recommendations with a reason for every factor, based on criteria prefilled from their profile [proposed id]",Get School Recommendations,DM-22; DM-23; DM-24,RecommendationUI,RecommendationController.recommend; ProfileController.getProfile; DirectionsController.getCommuteTimes,B
+FR-COMPARE-01,FR,A logged-in user can compare 2 to 4 schools from their shortlist side by side; rows that differ are highlighted [proposed id],Compare Schools,DM-16; DM-18,ComparisonUI,ShortlistController.compareSchools,F
+FR-PLAN-01,FR,"A logged-in user can plan up to 6 ordered school choices, each labelled SAFE, MATCH or REACH [proposed id]",Plan School Choices,DM-17,ChoicePlanUI,ChoicePlanController.getPlan; ChoicePlanController.addChoice; ChoicePlanController.reorderChoices; ChoicePlanController.removeChoice; SchoolChoice.assess,F
+FR-PLAN-02,FR,"The choice plan shows risk warnings (no SAFE choice, more than 3 REACH, fewer than 6 choices, a choice without range data, a score that changed since the plan was made) [proposed id]",Plan School Choices,DM-17,ChoicePlanUI,ChoicePlanController.assessPlan; ChoicePlan.getRiskWarnings,F
+NFR-PERF-01,NFR,A school name search returns results in under 1 second,Search for Schools,DM-08,SchoolSearchUI,SchoolController.searchSchools,C
+NFR-PERF-02,NFR,"Filtering returns results in under 2 seconds, not counting external services",Filter Schools,DM-10; DM-08,SchoolFilterUI,FilterController.applyFilters,C
+NFR-PERF-03,NFR,A loading indicator is shown while waiting for external services,Get Directions; Get School Recommendations,DM-20; DM-23,DirectionsUI; RecommendationUI,- (static/js/loading.js),D; B
+NFR-SEC-01,NFR,Passwords are never stored in plain text,Register,DM-03,RegisterUI,AccountController.hashPassword,A
+NFR-SEC-02,NFR,Passwords are hashed with a secure algorithm (BCrypt),Register; Log In,DM-02; DM-03,RegisterUI; LoginUI,AccountController.hashPassword; Account.verifyPassword,A
+NFR-SEC-03,NFR,Credentials and location data travel over encrypted connections,Log In; Get Directions,-,-,"- (outbound calls use HTTPS; browser to server needs HTTPS plus app.session.cookie-secure=true outside localhost, not done yet)",A
+NFR-SEC-04,NFR,Password input is masked,Register; Log In,DM-02; DM-03,RegisterUI; LoginUI,-,A
+NFR-SEC-05,NFR,A shortlist is visible only to its owner,View Shortlisted Schools,DM-16,ShortlistUI,ShortlistController.getShortlistedSchools; AuthController.getAccount,F
+NFR-SEC-06,NFR,The app asks for permission before using the device location,Get Directions; Filter Schools,DM-19; DM-10,DirectionsUI,- (static/js/DeviceLocationInterface.js requestPermission),D
+NFR-USE-01,NFR,Pages are usable on the target screen sizes (desktop and tablet),all,all,all UI classes,-,A
+NFR-USE-02,NFR,Controls are clearly labelled,all,all,all UI classes,-,A
+NFR-USE-03,NFR,Invalid input and failures get clear feedback,all,all,all UI classes,- (highlightInvalidFields and display...Unavailable operations),A
+NFR-DATA-01,NFR,School data is served from the active validated dataset; its version and date are shown in the footer (DC-09),all,all,- (layout.html footer),SchoolDataController.getActiveDataset,B
+NFR-DATA-02,NFR,"Map, proximity and route features use only valid coordinates",View Schools on Map; Filter Schools; Get Directions,DM-10; DM-11; DM-19,SchoolMapUI; SchoolFilterUI; DirectionsUI,Place.hasValidCoordinate; SnapshotValidator,B
+NFR-DATA-03,NFR,"PSLE ranges are shown as historical, not guaranteed",View School Details; Plan School Choices; Get School Recommendations,DM-09; DM-17; DM-24,SchoolDetailsUI; ChoicePlanUI; RecommendationUI,-,C
+NFR-MAIN-01,NFR,"The system is built from modular components (boundary, control, entity)",-,-,-,- (ArchitectureTest),A
+NFR-MAIN-02,NFR,External services are reached only through integration components,-,-,-,DataGovSgInterface; GoogleMapsPlatformInterface; OneMapInterface (ArchitectureTest),A
+NFR-SCALE-01,NFR,More school and facility records need no architecture change,-,-,-,SchoolDataCache; FacilityDataCache,B
+NFR-SCALE-02,NFR,More users need no redesign,-,-,-,- (login state in the database; small page state such as the start location and the last recommendations in the servlet session),A

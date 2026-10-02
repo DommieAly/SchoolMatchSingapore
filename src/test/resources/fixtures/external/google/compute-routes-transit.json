@@ -1,0 +1,41 @@
+{
+  "routes": [
+    {
+      "distanceMeters": 5321,
+      "duration": "1234s",
+      "polyline": {
+        "encodedPolyline": "kxkGa}lyRoAcBuCaE"
+      },
+      "legs": [
+        {
+          "steps": [
+            {
+              "distanceMeters": 250,
+              "navigationInstruction": {
+                "maneuver": "DEPART",
+                "instructions": "Walk to Bishan Int"
+              },
+              "travelMode": "WALK"
+            },
+            {
+              "distanceMeters": 4900,
+              "navigationInstruction": {
+                "instructions": "Bus towards Toa Payoh Int"
+              },
+              "travelMode": "TRANSIT",
+              "transitDetails": {
+                "transitLine": {
+                  "nameShort": "52"
+                }
+              }
+            },
+            {
+              "distanceMeters": 171,
+              "travelMode": "WALK"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

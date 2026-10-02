@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!--/* DM 11 SchoolMap — SchoolMapUI.displaySchoolMarkers (FR-MAP-01..07, DC-15, DC-16); district layer from
+       GET /api/districts (SchoolMapUI.toggleDistrictLayer).
+       Model: q, chips (label + removeUrl), notAppliedChips, hiddenFields, resultCount, schools (those with a map location),
+       omittedCount, interactive, markersJson, resultsUrl, filterUrl, startLocation, usesStartingPoint, psleActive,
+       fieldErrors / notice when something went wrong. */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('School map')}"></head>
+<body>
+<!-- DM-11 SchoolMap · SchoolMapUI -->
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+        <div>
+            <h1 class="h3 mb-1">Schools on the map</h1>
+            <p class="text-body-secondary mb-0"
+               th:text="|${#lists.size(schools)} of ${resultCount} schools shown|">10 of 10 schools shown</p>
+        </div>
+        <form method="get" th:action="@{/schools/map}" class="d-flex gap-2" role="search">
+            <label for="map-q" class="visually-hidden">School name</label>
+            <input id="map-q" name="q" type="search" maxlength="100" class="form-control" placeholder="School name"
+                   th:value="${q}">
+            <input th:each="field : ${hiddenFields}" type="hidden" th:name="${field.name}" th:value="${field.value}">
+            <button type="submit" class="btn btn-outline-primary">Show</button>
+        </form>
+    </div>
+
+    <!--/* active filters (FR-FILTER-08); removing one stays on the map */-->
+    <div th:unless="${#lists.isEmpty(chips) and (notAppliedChips == null or #lists.isEmpty(notAppliedChips))}"
+         class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <span class="small text-body-secondary" th:unless="${#lists.isEmpty(chips)}">Filters:</span>
+        <span th:each="chip : ${chips}" class="badge rounded-pill text-bg-light border d-inline-flex align-items-center gap-1">
+            <span th:text="${chip.label}">Type: GOVERNMENT SCHOOL</span>
+            <a th:href="${chip.removeUrl}" class="link-secondary text-decoration-none"
+               th:aria-label="|Remove filter ${chip.label}|">&times;</a>
+        </span>
+        <th:block th:if="${notAppliedChips != null and !#lists.isEmpty(notAppliedChips)}">
+            <span class="small text-body-secondary">Not applied:</span>
+            <span th:each="chip : ${notAppliedChips}"
+                  class="badge rounded-pill text-bg-light border border-warning d-inline-flex align-items-center gap-1">
+                <span th:text="${chip.label}">Within 3 km</span>
+                <a th:href="${chip.removeUrl}" class="link-secondary text-decoration-none"
+                   th:aria-label="|Remove filter ${chip.label}|">&times;</a>
+            </span>
+        </th:block>
+        <a th:href="${filterUrl}" class="small">Change filters</a>
+    </div>
+    <p th:if="${startLocation != null and usesStartingPoint}" class="small text-body-secondary">
+        Distances and travel times are from <span th:text="${startLocation.inputText}">200 BISHAN ROAD</span>.
+    </p>
+
+    <div th:replace="~{fragments/messages :: messages}"></div>
+    <div th:if="${notice != null}" class="alert alert-warning" role="status" th:text="${notice}">
+        Travel-time filter is temporarily unavailable.</div>
+
+    <!--/* AF-1: no school to show */-->
+    <div th:if="${#lists.isEmpty(schools)}" class="alert alert-info" role="status">
+        <p class="fw-semibold mb-1">No schools to show on the map.</p>
+        <p class="mb-0">No school in these results has a map location, or no school matches.
+            <a th:href="${resultsUrl}">Back to the result list</a> or <a th:href="${filterUrl}">change the filters</a>.</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <!--/* displaySchoolMarkers / displayMapUnavailable (EX-1) */-->
+            <div th:replace="~{fragments/map-canvas :: mapCanvas(${markersJson}, ${interactive})}"></div>
+
+            <!--/* toggleDistrictLayer (FR-MAP-06, FR-MAP-07): the browser loads /api/districts; markers stay */-->
+            <div class="form-check form-switch mt-3">
+                <input th:if="${interactive}" class="form-check-input" type="checkbox" role="switch"
+                       id="district-layer" aria-describedby="district-status">
+                <input th:unless="${interactive}" class="form-check-input" type="checkbox" role="switch"
+                       id="district-layer" disabled aria-describedby="district-status">
+                <label class="form-check-label" for="district-layer">Show planning areas</label>
+                <span id="district-status" class="small text-body-secondary ms-2" role="status"
+                      th:text="${interactive} ? 'Hover over an area to see its name.'
+                                            : 'Needs the interactive map.'">Hover over an area to see its name.</span>
+            </div>
+            <p th:if="${omittedCount > 0}" class="small text-body-secondary mt-2 mb-0"
+               th:text="${omittedCount == 1} ? '1 school has no map location and is not shown on the map (it is still in the list of results).'
+                                            : |${omittedCount} schools have no map location and are not shown on the map (they are still in the list of results).|">
+                1 school has no map location.</p>
+            <p th:if="${psleActive}" class="small text-body-secondary mt-2 mb-0">
+                The PSLE filter uses past cut-off ranges: they are historical, not a guarantee.
+                <strong th:if="${seedData}">These ranges are TEST VALUES – not MOE data.</strong>
+            </p>
+        </div>
+        <div class="col-12 col-lg-4">
+            <section class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h6 mb-2">Schools on this map</h2>
+                    <p th:if="${#lists.isEmpty(schools)}" class="small text-body-secondary mb-0">No schools to show.</p>
+                    <ol class="map-list small mb-0 ps-4" th:unless="${#lists.isEmpty(schools)}">
+                        <li th:each="school : ${schools}" class="mb-1">
+                            <a th:href="@{/schools/{code}(code=${school.schoolCode})}" th:text="${school.name}">School</a>
+                            <span class="d-block text-body-secondary">District:
+                                <span th:replace="~{fragments/value :: value(${school.planningArea})}"></span></span>
+                        </li>
+                    </ol>
+                </div>
+                <div class="card-footer bg-body small d-flex flex-wrap gap-3">
+                    <a th:href="${resultsUrl}">Back to results</a>
+                    <a th:href="${filterUrl}">Filters</a>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

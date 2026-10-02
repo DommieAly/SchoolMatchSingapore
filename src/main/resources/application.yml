@@ -1,0 +1,108 @@
+# SchoolMatch SG — shared settings. Profile files (application-<profile>.yml) override these.
+# Keys and modes come from environment variables or a local .env file (never commit keys).
+spring:
+  application:
+    name: schoolmatch
+  profiles:
+    default: dev
+  config:
+    import: optional:file:.env[.properties]
+  jpa:
+    open-in-view: false
+  thymeleaf:
+    cache: true            # dev turns this off so template edits show on refresh
+
+# Spring Boot Actuator: only health and info are reachable over HTTP (/actuator/health, /actuator/info).
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  info:
+    env:
+      enabled: true        # show the info.* values below on /actuator/info
+
+info:
+  app:                     # filled in from pom.xml at build time (Maven resource filtering, @...@)
+    name: "@project.name@"
+    description: "@project.description@"
+    version: "@project.version@"
+    java: "@java.version@"
+
+server:
+  error:
+    whitelabel:
+      enabled: false
+  servlet:
+    session:
+      tracking-modes: cookie   # never put ;jsessionid=… in URLs (the HTTP session holds flash messages and the start location)
+      cookie:
+        same-site: lax
+
+# Bound to sg.schoolmatch.config.AppProperties (every value also has a default there).
+app:
+  external:                # "live" = real API calls; "stub" (or empty) = offline made-up / sample data
+    google:
+      mode: ${GOOGLE_MODE:stub}
+    onemap:
+      mode: ${ONEMAP_MODE:stub}
+    datagovsg:
+      mode: stub
+    budget:                # daily limit for LIVE Google calls = floor(monthly-free × safety ÷ 30), at least 1
+      safety: 0.8
+      monthly-free:        # UNVERIFIED placeholders: owner E checks the free tier in Google Cloud Console
+        routes: 5000
+        route-matrix-elements: 5000
+        places-search: 5000
+        place-details: 1000
+        map-loads: 10000
+  google:
+    server-key: ${GOOGLE_MAPS_SERVER_KEY:}     # Routes + Places, server side only
+    browser-key: ${GOOGLE_MAPS_BROWSER_KEY:}   # Maps JavaScript API, HTTP-referrer restricted
+    map-id: ${GOOGLE_MAPS_MAP_ID:}
+    matrix-batch-size: 100
+    routes-base-url: https://routes.googleapis.com
+    places-base-url: https://places.googleapis.com
+  onemap:
+    base-url: https://www.onemap.gov.sg
+  datagovsg:
+    api-key: ${DATAGOVSG_API_KEY:}
+    base-url: https://data.gov.sg                    # datastore_search
+    open-api-base-url: https://api-open.data.gov.sg  # poll-download (planning-area GeoJSON)
+  http:                    # timeouts for every outside call (config/RestClientConfig)
+    connect-timeout: 5s
+    read-timeout: 15s
+  dataset:
+    dir: data/snapshots    # data/snapshots/ACTIVE names the snapshot folder to load
+    recheck-after: 1h
+    import-output-dir: ""  # where the importer writes a new snapshot; empty = dir
+    activate-on-import: false   # true = a successful import also updates ACTIVE
+    curated-dir: data/curated   # hand-maintained CSVs read by the importer (CuratedCsvReader, @Value)
+  session:
+    cookie-name: SM_SESSION
+    idle-timeout: 30m
+    cleanup-interval: 1h   # how often logged-out and expired login sessions are deleted (AuthController, DC-73)
+    cookie-secure: false   # set true whenever the app is served over HTTPS (NFR-SEC-03)
+  facility:
+    cache-ttl: 24h         # radius options (1/2/3 km) are FacilityFilterCriteria constants (DC-24)
+  recommendation:
+    weights:
+      psle-fit: 0.4
+      commute: 0.3
+      cca: 0.15
+      programme: 0.15
+    commute-candidates: 20
+    top-n: 10
+    psle-fit:              # PSLE_FIT score per label (docs/recommendation-scoring.md)
+      match: 1.0
+      safe: 0.7
+      reach-near: 0.3
+    reach-near-margin: 2   # a REACH school still counts while score <= U + 2
+  search:
+    page-size: 20
+  transport-filter:        # travel-time filter (FilterController): straight-line pre-check before routing
+    max-speed-kmh:         # a school farther than speed x time is not sent to the routing service
+      walk: 6
+      transit: 45
+      drive: 80
+    max-routed-schools: 150   # at most this many (nearest) schools per routing request

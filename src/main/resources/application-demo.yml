@@ -1,0 +1,16 @@
+# Demo / presentation run: its own H2 file. Google mode comes from GOOGLE_MODE in .env, like dev:
+# set GOOGLE_MODE=live (and the keys) in .env on the demo laptop. The "live" default below only applies
+# when GOOGLE_MODE is not set at all (no .env); live then needs GOOGLE_MAPS_SERVER_KEY or start-up stops.
+spring:
+  datasource:
+    url: jdbc:h2:file:./.local/h2/demo;MODE=PostgreSQL
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+app:
+  external:
+    google:
+      mode: ${GOOGLE_MODE:live}

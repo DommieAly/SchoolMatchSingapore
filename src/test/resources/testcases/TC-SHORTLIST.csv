@@ -1,0 +1,10 @@
+tc_id,requirement,technique,input,expected
+TC-COMPARE-01-01,FR-COMPARE-01,boundary value: no school chosen,,error
+TC-COMPARE-01-02,FR-COMPARE-01,boundary value: 1 school (one below the minimum),catholic-high-school,error
+TC-COMPARE-01-03,FR-COMPARE-01,boundary value: 2 schools (minimum),catholic-high-school;raffles-institution,ok
+TC-COMPARE-01-04,FR-COMPARE-01,equivalence class: 3 schools,catholic-high-school;raffles-institution;tampines-secondary-school,ok
+TC-COMPARE-01-05,FR-COMPARE-01,boundary value: 4 schools (maximum),catholic-high-school;raffles-institution;tampines-secondary-school;anglican-high-school,ok
+TC-COMPARE-01-06,FR-COMPARE-01,boundary value: 5 schools (one above the maximum),catholic-high-school;raffles-institution;tampines-secondary-school;anglican-high-school;westwood-secondary-school,error
+TC-COMPARE-01-07,FR-COMPARE-01,equivalence class: the same school twice counts once,catholic-high-school;catholic-high-school,error
+TC-COMPARE-01-08,NFR-SEC-05,equivalence class: a school that is not on this member's shortlist,catholic-high-school;bishan-park-secondary-school,error
+TC-COMPARE-01-09,FR-COMPARE-01,equivalence class: a shortlisted school that is no longer in the dataset,catholic-high-school;closed-secondary-school,error

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<!--/*
+  locationPicker(returnTo, location): choose the starting / reference location (FR-FILTER-04, FR-ROUTE-02, DC-11, DC-23).
+    <div th:replace="~{fragments/location-picker :: locationPicker(${returnTo}, ${startLocation})}"></div>
+  returnTo = local path to come back to (checked like login's next). location = current ReferenceLocation or null;
+  when null the picker reads it from the HTTP session itself (ReferenceLocationStore.CURRENT), and it always reads
+  the candidate list from there (ReferenceLocationStore.CANDIDATES), so a page only passes returnTo.
+  Forms post to DirectionsUI: /location (typed address), /location/device (browser position, asked only after the
+  click, NFR-SEC-06), /location/choose (one of up to 5 matches), /location/clear (Clear; candidatesOnly=true for
+  "None of these"). After a failed search the flash attribute locationAddress refills the address field.
+  When the page sets model attribute startFromProfile=true and passes the profile's home address as location while
+  the session has no starting point, the picker labels it "(home address from your profile)" and hides Clear.
+  A form on the page marked data-draft-return="/path" is copied into returnTo as the user edits it
+  (static/js/draft-return.js), so setting a starting point keeps what the user typed there.
+  Only one picker per page (element ids). Include fragments/loading on the page for the "Looking up" overlay.
+*/-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="locationPicker(returnTo, location)" class="location-picker"
+     th:with="current=${location != null ? location : session['sm.referenceLocation']},
+              candidates=${session['sm.locationCandidates']},
+              fromProfile=${startFromProfile == true and location != null and session['sm.referenceLocation'] == null}">
+    <div th:if="${current != null}" class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <span class="small text-body-secondary">Starting point:</span>
+        <strong class="small" th:text="${current.inputText != null ? current.inputText : 'Your current location'}">
+            200 BISHAN ROAD</strong>
+        <!--/* the profile's home address: Clear could not remove it, so it is labelled instead (change it on Profile) */-->
+        <span th:if="${fromProfile}" class="small text-body-secondary">(home address from your profile)</span>
+        <form th:unless="${fromProfile}" method="post" th:action="@{/location/clear}" class="ms-auto">
+            <input type="hidden" name="returnTo" th:value="${returnTo}">
+            <button type="submit" class="btn btn-link btn-sm p-0">Clear</button>
+        </form>
+    </div>
+    <p th:if="${current == null}" class="small text-body-secondary mb-3">
+        No starting point yet. Enter an address or postal code, or use your current location.
+    </p>
+
+    <!--/* DC-11: several matches — the user picks one (selectLocationCandidate) */-->
+    <div th:if="${candidates != null and !#lists.isEmpty(candidates)}" class="border rounded p-3 mb-3 bg-body">
+        <form method="post" th:action="@{/location/choose}">
+            <input type="hidden" name="returnTo" th:value="${returnTo}">
+            <fieldset>
+                <legend class="small fw-semibold mb-2">Several places match. Choose one:</legend>
+                <div class="form-check" th:each="candidate, stat : ${candidates}">
+                    <input class="form-check-input" type="radio" name="index" th:value="${stat.index}"
+                           th:id="|location-candidate-${stat.index}|" th:checked="${stat.first}">
+                    <label class="form-check-label small" th:for="|location-candidate-${stat.index}|"
+                           th:text="${candidate.inputText}">9 BISHAN STREET 22</label>
+                </div>
+            </fieldset>
+            <button type="submit" class="btn btn-primary btn-sm mt-2">Use this place</button>
+        </form>
+        <form method="post" th:action="@{/location/clear}" class="mt-2">
+            <input type="hidden" name="returnTo" th:value="${returnTo}">
+            <input type="hidden" name="candidatesOnly" value="true">
+            <button type="submit" class="btn btn-link btn-sm p-0">None of these</button>
+        </form>
+    </div>
+
+    <form method="post" th:action="@{/location}" class="mb-2" data-loading="Looking up the address…">
+        <input type="hidden" name="returnTo" th:value="${returnTo}">
+        <label for="location-address" class="form-label small">Address or postal code</label>
+        <div class="input-group">
+            <input id="location-address" name="address" type="text" class="form-control" maxlength="200" required
+                   autocomplete="street-address" placeholder="e.g. 579767 or Bishan Street 22"
+                   th:value="${locationAddress}">
+            <button type="submit" class="btn btn-outline-primary">Use address</button>
+        </div>
+        <p class="form-text mb-0">Addresses are looked up with OneMap (Singapore Land Authority).</p>
+    </form>
+
+    <form method="post" th:action="@{/location/device}">
+        <input type="hidden" name="returnTo" th:value="${returnTo}">
+        <input type="hidden" name="latitude">
+        <input type="hidden" name="longitude">
+        <button type="button" class="btn btn-link btn-sm px-0" data-device-location>Use my current location</button>
+        <p class="form-text mt-0 mb-0" data-device-status>Your browser asks for permission first.</p>
+    </form>
+    <script defer th:src="@{/js/DeviceLocationInterface.js}"></script>
+    <script defer th:src="@{/js/draft-return.js}"></script>
+</div>
+</body>
+</html>

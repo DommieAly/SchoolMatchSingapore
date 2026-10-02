@@ -1,0 +1,24 @@
+# Tests (@ActiveProfiles("test")): in-memory database, offline stubs, the small fixture snapshot.
+spring:
+  datasource:
+    url: jdbc:h2:mem:test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+app:
+  external:
+    google:
+      mode: stub
+    onemap:
+      mode: stub
+    datagovsg:
+      mode: stub
+  google:
+    server-key: ""
+    browser-key: ""
+    map-id: ""
+  dataset:
+    snapshot-location: classpath:fixtures/snapshot-mini/

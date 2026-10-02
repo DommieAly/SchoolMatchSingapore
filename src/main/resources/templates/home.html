@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<!--/* DM 01 HomePage (Guest) / DM 04 HomePage (Authenticated) — HomeUI.displayHomePage.
+       Shared fragments come from layout.html and fragments/ ([ui]). `loggedIn` is added by LayoutModelAdvice. */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Home')}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4" th:fragment="displayHomePage">
+    <!--/* Banners, e.g. "You have logged out." after POST /logout (DC-03, FR-LOGOUT-03) */-->
+    <div th:replace="~{fragments/messages :: messages}"></div>
+
+    <!--/* selectSearchSchools: the main entry point for guests and members (FR-SEARCH-01) */-->
+    <section class="py-5 text-center">
+        <h1 class="display-6 mb-3">Find a secondary school in Singapore</h1>
+        <p class="lead text-muted mb-4">Search by school name, then compare details, PSLE ranges and travel options.</p>
+        <form class="row justify-content-center g-2" th:action="@{/schools}" method="get" role="search">
+            <div class="col-12 col-md-7">
+                <label for="home-q" class="visually-hidden">School name</label>
+                <input id="home-q" name="q" type="search" maxlength="100" class="form-control form-control-lg"
+                       placeholder="School name, e.g. Catholic High" autocomplete="off">
+            </div>
+            <div class="col-12 col-md-auto">
+                <button type="submit" class="btn btn-primary btn-lg w-100">Search</button>
+            </div>
+        </form>
+        <p class="mt-3 mb-0"><a th:href="@{/schools}">Browse all schools A–Z</a></p>
+    </section>
+
+    <!--/* Guest block: selectLogin, selectRegister */-->
+    <section th:unless="${loggedIn}" class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="h5 card-title">Planning your six choices?</h2>
+                    <p class="card-text">Log in to keep a shortlist, plan your choices and get recommendations.</p>
+                    <a class="btn btn-outline-primary me-2" th:href="@{/login}">Log in</a>
+                    <a class="btn btn-outline-secondary" th:href="@{/register}">Register</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!--/* Member block (DM 04 HomePage (Authenticated)): selectGetRecommendations, selectProfile */-->
+    <section th:if="${loggedIn}" class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="h5 card-title"
+                        th:text="${userName != null} ? |Welcome back, ${userName}| : 'Welcome back'">Welcome back</h2>
+                    <p class="card-text">Continue planning your six choices.</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-primary" th:href="@{/recommendations}">Get recommendations</a>
+                        <a class="btn btn-outline-primary" th:href="@{/shortlist}">My shortlist</a>
+                        <a class="btn btn-outline-primary" th:href="@{/plan}">Plan my 6 choices</a>
+                        <a class="btn btn-outline-secondary" th:href="@{/profile}">Profile</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

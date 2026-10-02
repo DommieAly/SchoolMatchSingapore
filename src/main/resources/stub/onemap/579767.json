@@ -1,0 +1,19 @@
+{
+  "found": 1,
+  "totalNumPages": 1,
+  "pageNum": 1,
+  "results": [
+    {
+      "SEARCHVAL": "CATHOLIC HIGH SCHOOL",
+      "BLK_NO": "9",
+      "ROAD_NAME": "BISHAN STREET 22",
+      "BUILDING": "CATHOLIC HIGH SCHOOL",
+      "ADDRESS": "9 BISHAN STREET 22 CATHOLIC HIGH SCHOOL SINGAPORE 579767",
+      "POSTAL": "579767",
+      "X": "29288.96962798759",
+      "Y": "37402.03034235723",
+      "LATITUDE": "1.354525170657562",
+      "LONGITUDE": "103.8449008048039"
+    }
+  ]
+}

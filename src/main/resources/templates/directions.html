@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!--/* DM 21 Directions — DirectionsUI.selectTravelMode, displayDirections (FR-ROUTE-07, DC-05).
+       Model: to, from, destination, destinationUrl, startLocation, mode, modeLabel, modes (ModeOption list with
+       url), route, distanceKm ("2.4"), durationText ("12 min"), steps (StepView list), changeUrl, cancelUrl,
+       interactive, markersJson (start + destination), routePolyline (only with an interactive map). */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Directions')}"></head>
+<body>
+<!-- DM-21 Directions · DirectionsUI -->
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <p class="mb-2"><a th:href="${changeUrl}">&larr; Change starting point or travel mode</a></p>
+    <h1 class="h3 mb-1">Directions</h1>
+    <p class="text-body-secondary">
+        To <a th:href="${destinationUrl}" class="fw-semibold" th:text="${destination.name}">school</a>
+        from <strong th:text="${startLocation.inputText != null ? startLocation.inputText : 'your starting point'}">start</strong>
+    </p>
+    <div th:replace="~{fragments/messages :: messages}"></div>
+
+    <!--/* selectTravelMode: switch mode without entering the start again (the overlay shows while it loads) */-->
+    <ul class="nav nav-pills mb-4" aria-label="Travel mode">
+        <li class="nav-item" th:each="option : ${modes}">
+            <a class="nav-link" th:classappend="${option.mode == mode} ? 'active'"
+               th:aria-current="${option.mode == mode} ? 'page'"
+               th:href="${option.url}" data-loading="Finding the route…"
+               th:text="${option.label}">Walk</a>
+        </li>
+    </ul>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-5 order-lg-2">
+            <!--/* displayDirections (FR-ROUTE-07): distance, duration, steps */-->
+            <section class="card shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <dl class="row mb-3">
+                        <dt class="col-5">Travel by</dt>
+                        <dd class="col-7" th:text="${modeLabel}">Walk</dd>
+                        <dt class="col-5">Distance</dt>
+                        <dd class="col-7">
+                            <span th:replace="~{fragments/value :: value(${distanceKm != null ? distanceKm + ' km' : null})}"></span>
+                        </dd>
+                        <dt class="col-5">Travel time</dt>
+                        <dd class="col-7"><span th:replace="~{fragments/value :: value(${durationText})}"></span></dd>
+                    </dl>
+                    <h2 class="h6">Steps</h2>
+                    <ol class="list-group list-group-numbered small mb-0">
+                        <li class="list-group-item d-flex justify-content-between align-items-start gap-3"
+                            th:each="step : ${steps}">
+                            <span class="me-auto">
+                                <span th:replace="~{fragments/value :: value(${step.instruction})}"></span>
+                            </span>
+                            <span class="text-body-secondary text-nowrap" th:if="${step.distance != null}"
+                                  th:text="${step.distance}">350 m</span>
+                        </li>
+                    </ol>
+                    <p class="small text-body-secondary mt-3 mb-0">
+                        <th:block th:unless="${googleStub}">Estimated by Google Maps Platform.</th:block>
+                        Check the route before you travel.
+                        <span th:if="${googleStub}" class="d-block mt-1">
+                            <span class="badge text-bg-warning">Demo data (stub)</span>
+                            Straight-line estimate, not real directions.
+                        </span>
+                    </p>
+                </div>
+            </section>
+            <a class="btn btn-outline-secondary" th:href="${cancelUrl}">
+                Back to <span th:text="${destination.name}">the school</span></a>
+        </div>
+        <div class="col-12 col-lg-7 order-lg-1">
+            <!--/* the map draws Route.encodedPolyline (DC-05) between the start (A) and the destination */-->
+            <div th:replace="~{fragments/map-canvas :: mapCanvas(${markersJson}, ${interactive})}"></div>
+        </div>
+    </div>
+    <div th:replace="~{fragments/loading :: loading('Finding the route…')}"></div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<!--/* DM 24 Recommendation (login) — RecommendationUI.displayRecommendations (FR-REC-01, DC-20, NFR-DATA-03).
+       Model: recommendations (List<Recommendation>, ranked; empty = AF-2), criteria (MatchCriteria), travelModeLabel,
+       weights (Map<MatchFactor, Double>), topN, resultId; seedData from LayoutModelAdvice.
+       Each row: rank, school (link to details, DC-08), total score, commute minutes and the reason of every factor
+       (displayRecommendations + displayReasons). */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Recommendations')}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <p class="mb-2"><a th:href="@{/recommendations}">&larr; Refine criteria</a></p>
+    <h1 class="h3 mb-1">Recommended schools</h1>
+    <p class="text-body-secondary">
+        For PSLE <strong th:text="${criteria.psleScore}">12</strong>
+        (PG<span th:text="${criteria.postingGroup}">3</span>),
+        from <strong th:text="${criteria.startLocation != null and criteria.startLocation.inputText != null
+                                 ? criteria.startLocation.inputText : 'your starting point'}">home</strong>,
+        <span th:text="${#strings.toLowerCase(travelModeLabel)}">public transport</span>,
+        at most <span th:text="${criteria.maxCommuteMin}">45</span> min.
+        Up to <span th:text="${topN}">10</span> schools, best match first.
+    </p>
+    <div th:replace="~{fragments/messages :: messages}"></div>
+
+    <div class="alert alert-warning small" role="note" th:if="${seedData}">
+        <strong>TEST VALUES – not MOE data.</strong> The seed dataset uses made-up PSLE ranges, so these
+        recommendations are for testing only.
+    </div>
+    <p class="small text-body-secondary" th:unless="${seedData}">
+        PSLE ranges are historical (the scores of students posted in past years), not a guarantee of a place.
+    </p>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <div th:if="${#lists.isEmpty(recommendations)}" class="empty-state text-center rounded border p-5 mb-4">
+                <p class="fw-semibold mb-1">No school matches your criteria.</p>
+                <p class="small text-body-secondary mb-3">Try a longer commute, another way to travel, or check your
+                    PSLE score and posting group. Only schools with PSLE range data can be recommended.</p>
+                <a class="btn btn-outline-primary btn-sm" th:href="@{/recommendations}">Refine criteria</a>
+            </div>
+
+            <ol class="list-unstyled mb-4" th:unless="${#lists.isEmpty(recommendations)}">
+                <li th:each="rec : ${recommendations}" class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap align-items-baseline gap-2 mb-2">
+                            <span class="badge text-bg-primary" th:text="|#${rec.rank}|">#1</span>
+                            <h2 class="h5 mb-0">
+                                <a th:href="@{/schools/{code}(code=${rec.school.schoolCode})}"
+                                   th:text="${rec.school.name}">CATHOLIC HIGH SCHOOL</a>
+                            </h2>
+                            <span class="ms-auto fw-semibold"
+                                  th:text="|Score ${#numbers.formatDecimal(rec.totalScore * 100, 1, 0)} / 100|">Score 85 / 100</span>
+                        </div>
+                        <p class="small text-body-secondary mb-2">
+                            <span th:text="${rec.school.planningArea != null ? rec.school.planningArea : ''}">BISHAN</span>
+                            · Commute:
+                            <th:block th:if="${rec.commuteMin != null}"><span th:text="|${rec.commuteMin} min|">25 min</span></th:block>
+                            <span th:if="${rec.commuteMin == null}" class="text-body-secondary">Not available</span>
+                        </p>
+                        <ul class="small mb-0">
+                            <li th:each="component : ${rec.components}">
+                                <span class="fw-semibold" th:text="${#strings.replace(component.factor, '_', ' ')} + ':'">PSLE FIT:</span>
+                                <span th:text="${component.reason}">PSLE 12 is within the 2025 PG3 range 8–12 → MATCH</span>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+            </ol>
+            <a class="btn btn-outline-primary" th:href="@{/recommendations}">Refine criteria</a>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <section class="small">
+                <h2 class="h6">How schools are scored (proposed, docs/recommendation-scoring.md)</h2>
+                <p class="text-body-secondary mb-2">Total = weighted average of the factors that count. PSLE fit:
+                    <span th:text="|MATCH ${#numbers.formatDecimal(psleFit.match, 1, 1)}, SAFE ${#numbers.formatDecimal(psleFit.safe, 1, 1)}, REACH within ${reachNearMargin} points ${#numbers.formatDecimal(psleFit.reachNear, 1, 1)}.|">MATCH 1.0, SAFE 0.7, REACH within 2 points 0.3.</span> Commute: 1 − time ÷ your limit. A factor without a
+                    preference or a known commute time is left out and the other weights are rescaled.</p>
+                <table class="table table-sm w-auto">
+                    <thead>
+                    <tr><th scope="col">Factor</th><th scope="col" class="text-end">Weight</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="weight : ${weights}">
+                        <td th:text="${#strings.replace(weight.key, '_', ' ')}">PSLE FIT</td>
+                        <td class="text-end" th:text="${#numbers.formatPercent(weight.value, 1, 0)}">40%</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

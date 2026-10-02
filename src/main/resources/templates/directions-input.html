@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<!--/* DM 19 DirectionsInput (+ DM 20 DirectionsLoading overlay) — DirectionsUI.selectGetDirections and, when the
+       route cannot be shown, DirectionsUI.selectTravelMode (FR-ROUTE-01..04, FR-ROUTE-08, NFR-SEC-06, DC-11, DC-23).
+       Model: to, from, destination (School or Facility) or null, destinationUrl, destinationMappable,
+       startLocation, modes (ModeOption list), mode (selected), returnTo (for the picker), cancelUrl,
+       and flashError / fieldErrors (no starting point, no route, service down). */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Get directions')}"></head>
+<body>
+<!-- DM-19 DirectionsInput · DirectionsUI -->
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <h1 class="h3 mb-3">Get directions</h1>
+    <div th:replace="~{fragments/messages :: messages}"></div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <section class="card shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h2 class="h6 text-body-secondary mb-1">To</h2>
+                    <th:block th:if="${destination != null}">
+                        <p class="fs-5 mb-1">
+                            <a th:href="${destinationUrl}" th:text="${destination.name}">CATHOLIC HIGH SCHOOL</a>
+                        </p>
+                        <p class="small text-body-secondary mb-0"
+                           th:text="${destination.address != null ? destination.address : 'Address not available'}">
+                            9 BISHAN STREET 22</p>
+                        <div th:unless="${destinationMappable}" class="alert alert-warning small mt-3 mb-0" role="alert">
+                            This place has no map location, so directions cannot be calculated.
+                        </div>
+                    </th:block>
+                    <p class="mb-0" th:if="${destination == null}">
+                        No destination chosen. Open a school or facility and choose "Get directions".
+                        <a th:href="@{/schools}">Search schools</a>
+                    </p>
+                </div>
+            </section>
+
+            <!--/* requestStartingLocation / enterManualLocation / selectLocationCandidate (FR-ROUTE-02, AF-1) */-->
+            <section class="card shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h2 class="h6 text-body-secondary mb-3">From</h2>
+                    <div th:replace="~{fragments/location-picker :: locationPicker(${returnTo}, ${startLocation})}"></div>
+                </div>
+            </section>
+
+            <!--/* selectTravelMode (FR-ROUTE-04) → GET /directions?to=&mode=&from= (the overlay shows while it loads) */-->
+            <form method="get" th:action="@{/directions}" class="card shadow-sm" data-loading="Finding the route…"
+                  th:if="${destination != null and destinationMappable}">
+                <input type="hidden" name="to" th:value="${to}">
+                <input th:if="${from != null}" type="hidden" name="from" th:value="${from}">
+                <div class="card-body p-4">
+                    <fieldset>
+                        <legend class="h6 text-body-secondary mb-3">Travel by</legend>
+                        <div class="btn-group flex-wrap" role="group" aria-label="Travel mode">
+                            <th:block th:each="option : ${modes}">
+                                <input type="radio" class="btn-check" name="mode" th:value="${option.mode}"
+                                       th:id="|mode-${option.mode}|" th:checked="${option.mode == mode}">
+                                <label class="btn btn-outline-primary" th:for="|mode-${option.mode}|"
+                                       th:text="${option.label}">Walk</label>
+                            </th:block>
+                        </div>
+                    </fieldset>
+                    <p th:if="${startLocation == null}" class="form-text mb-0 mt-2">
+                        Set a starting point above first.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary">Show route</button>
+                        <a class="btn btn-outline-secondary" th:href="${cancelUrl}">Cancel</a>
+                    </div>
+                </div>
+            </form>
+            <p th:unless="${destination != null and destinationMappable}">
+                <a class="btn btn-outline-secondary" th:href="${cancelUrl}">Back</a>
+            </p>
+        </div>
+        <div class="col-12 col-lg-4">
+            <aside class="card shadow-sm">
+                <div class="card-body small">
+                    <h2 class="h6">About directions</h2>
+                    <p class="mb-2">Routes and travel times come from Google Maps Platform and are estimates.</p>
+                    <p class="mb-0">Your starting point is kept only for this browser session and is never saved
+                        to your account. Your device location is used only after you click "Use my current location"
+                        and allow it in the browser.</p>
+                    <p th:if="${googleStub}" class="mb-0 mt-2">
+                        <span class="badge text-bg-warning">Demo data (stub)</span>
+                        Routes are straight-line estimates, not real directions.
+                    </p>
+                </div>
+            </aside>
+        </div>
+    </div>
+    <div th:replace="~{fragments/loading :: loading('Finding the route…')}"></div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<!--/*
+  value(v): prints v, or a grey "Not available" when v is null or blank (FR-SCHOOL-03, FR-FACDETAIL-03).
+  Use it for every optional text or number:
+    <span th:replace="~{fragments/value :: value(${school.email})}"></span>
+  For lists, join them first, e.g. value(${#strings.setJoin(school.ccas, ', ')}).
+*/-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="value(v)"
+          th:with="missing=${v == null or #strings.isEmpty(#strings.trim(v))}"><th:block
+        th:unless="${missing}" th:text="${v}">value</th:block><span
+        th:if="${missing}" class="text-body-secondary">Not available</span></th:block>
+</body>
+</html>

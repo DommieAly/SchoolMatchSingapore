@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<!--/* DM 05 UserProfile — UserProfileUI.displayUserProfile / submitProfile (FR-PROFILE-01, DC-27).
+       Model: form (UserProfileUI.ProfileForm), account, profileComplete, homeLocationSaved, travelModes (mode → label),
+       commuteOptions, ccaOptions, programmeOptions, fieldErrors, optional homeCandidates (several address matches),
+       flashMessage / flashError. One form saves everything; Cancel reloads the saved profile (AF-1). */-->
+<!-- DM-05 UserProfile · UserProfileUI -->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Your profile')}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4">
+    <h1 class="h3 mb-1">Your profile</h1>
+    <p class="text-body-secondary small mb-3" th:if="${account != null}">
+        Logged in as <span th:text="${account.username}">alice_01</span>
+        (<span th:text="${account.email}">alice@example.com</span>)
+    </p>
+    <div th:replace="~{fragments/messages :: messages}"></div>
+    <div th:unless="${profileComplete}" class="alert alert-info small" role="status">
+        To get school recommendations, fill in your PSLE score, posting group, home address and usual travel mode.
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <form method="post" th:action="@{/profile}" th:object="${form}" novalidate>
+
+                <section class="card shadow-sm mb-4">
+                    <div class="card-body p-4 row g-3">
+                        <h2 class="h5 mb-0">About the student</h2>
+                        <div class="col-12">
+                            <label for="displayName" class="form-label">Display name</label>
+                            <input th:field="*{displayName}" type="text" class="form-control" maxlength="50"
+                                   aria-describedby="name-help"
+                                   th:classappend="${fieldErrors?.get('displayName') != null} ? 'is-invalid'">
+                            <div class="invalid-feedback" th:text="${fieldErrors?.get('displayName')}">Error</div>
+                            <div id="name-help" class="form-text">Shown in the menu bar. Up to 50 characters.</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="psleScore" class="form-label">PSLE score (AL)</label>
+                            <input th:field="*{psleScore}" type="number" class="form-control" min="4" max="32" step="1"
+                                   inputmode="numeric" aria-describedby="psle-help"
+                                   th:classappend="${fieldErrors?.get('psleScore') != null} ? 'is-invalid'">
+                            <div class="invalid-feedback" th:text="${fieldErrors?.get('psleScore')}">Error</div>
+                            <div id="psle-help" class="form-text">A whole number from 4 (best) to 32.</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="postingGroup" class="form-label">Posting group</label>
+                            <select th:field="*{postingGroup}" class="form-select" aria-describedby="pg-help"
+                                    th:classappend="${fieldErrors?.get('postingGroup') != null} ? 'is-invalid'">
+                                <option value="">Not set</option>
+                                <option value="3">Posting Group 3</option>
+                                <option value="2">Posting Group 2</option>
+                                <option value="1">Posting Group 1</option>
+                            </select>
+                            <div class="invalid-feedback" th:text="${fieldErrors?.get('postingGroup')}">Error</div>
+                            <div id="pg-help" class="form-text">From your PSLE results slip.</div>
+                        </div>
+                        <div class="col-12">
+                            <label for="primarySchool" class="form-label">Primary school</label>
+                            <input th:field="*{primarySchool}" type="text" class="form-control" maxlength="100"
+                                   aria-describedby="primary-help"
+                                   th:classappend="${fieldErrors?.get('primarySchool') != null} ? 'is-invalid'">
+                            <div class="invalid-feedback" th:text="${fieldErrors?.get('primarySchool')}">Error</div>
+                            <div id="primary-help" class="form-text">
+                                Used to pick the affiliated PSLE range where a secondary school has one.
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card shadow-sm mb-4">
+                    <div class="card-body p-4 row g-3">
+                        <h2 class="h5 mb-0">Home</h2>
+                        <div class="col-12">
+                            <label for="homeAddress" class="form-label">Home address or postal code</label>
+                            <input th:field="*{homeAddress}" type="text" class="form-control" maxlength="200"
+                                   autocomplete="street-address" aria-describedby="home-help"
+                                   th:classappend="${fieldErrors?.get('homeAddress') != null} ? 'is-invalid'">
+                            <div class="invalid-feedback" th:text="${fieldErrors?.get('homeAddress')}">Error</div>
+                            <div id="home-help" class="form-text">
+                                The starting point for commute times. Looked up with OneMap; only the matching
+                                location is kept.
+                                <span th:if="${homeLocationSaved}" class="text-success">Location found.</span>
+                            </div>
+                        </div>
+                        <fieldset class="col-12" th:if="${homeCandidates != null}">
+                            <legend class="form-label fs-6">Which address is yours?</legend>
+                            <div class="list-group">
+                                <label class="list-group-item d-flex gap-2"
+                                       th:each="candidate, it : ${homeCandidates}">
+                                    <input type="radio" name="homeChoice" th:value="${it.index}"
+                                           class="form-check-input flex-shrink-0">
+                                    <span th:text="${candidate.inputText}">9 BISHAN STREET 22 SINGAPORE 579767</span>
+                                </label>
+                            </div>
+                            <div class="form-text">Choose one, then press Save profile. Your other changes are kept.</div>
+                        </fieldset>
+                    </div>
+                </section>
+
+                <section class="card shadow-sm mb-4">
+                    <div class="card-body p-4 row g-3">
+                        <h2 class="h5 mb-0">Preferences</h2>
+                        <div class="col-md-6">
+                            <label for="preferredCCAs" class="form-label">CCAs</label>
+                            <select th:field="*{preferredCCAs}" class="form-select" multiple size="8"
+                                    aria-describedby="multi-help"
+                                    th:classappend="${fieldErrors?.get('preferredCCAs') != null} ? 'is-invalid'">
+                                <option th:each="cca : ${ccaOptions}" th:value="${cca}" th:text="${cca}">BADMINTON</option>
+                            </select>
+                            <div class="invalid-feedback" th:text="${fieldErrors?.get('preferredCCAs')}">Error</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="preferredProgrammes" class="form-label">Programmes</label>
+                            <select th:field="*{preferredProgrammes}" class="form-select" multiple size="8"
+                                    aria-describedby="multi-help"
+                                    th:classappend="${fieldErrors?.get('preferredProgrammes') != null} ? 'is-invalid'">
+                                <option th:each="programme : ${programmeOptions}" th:value="${programme}"
+                                        th:text="${programme}">Applied Learning Programme</option>
+                            </select>
+                            <div class="invalid-feedback" th:text="${fieldErrors?.get('preferredProgrammes')}">Error</div>
+                        </div>
+                        <p id="multi-help" class="col-12 form-text mt-1">
+                            Hold Ctrl (Windows) or Cmd (Mac) to choose more than one, or to unselect one.
+                        </p>
+                        <div class="col-sm-6">
+                            <label for="travelMode" class="form-label">Usual travel mode</label>
+                            <select th:field="*{travelMode}" class="form-select"
+                                    th:classappend="${fieldErrors?.get('travelMode') != null} ? 'is-invalid'">
+                                <option value="">Not set</option>
+                                <option th:each="mode : ${travelModes}" th:value="${mode.key}"
+                                        th:text="${mode.value}">Public transport</option>
+                            </select>
+                            <div class="invalid-feedback" th:text="${fieldErrors?.get('travelMode')}">Error</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="maxCommuteMin" class="form-label">Longest acceptable commute</label>
+                            <select th:field="*{maxCommuteMin}" class="form-select"
+                                    th:classappend="${fieldErrors?.get('maxCommuteMin') != null} ? 'is-invalid'">
+                                <option value="">Not set</option>
+                                <option th:each="minutes : ${commuteOptions}" th:value="${minutes}"
+                                        th:text="|${minutes} minutes|">45 minutes</option>
+                            </select>
+                            <div class="invalid-feedback" th:text="${fieldErrors?.get('maxCommuteMin')}">Error</div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Save profile</button>
+                    <a class="btn btn-outline-secondary" th:href="@{/profile}">Cancel</a>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <nav class="card shadow-sm" aria-label="Your pages">
+                <div class="list-group list-group-flush">
+                    <a class="list-group-item list-group-item-action" th:href="@{/shortlist}">My shortlist</a>
+                    <a class="list-group-item list-group-item-action" th:href="@{/plan}">Plan my 6 choices</a>
+                    <a class="list-group-item list-group-item-action" th:href="@{/recommendations}">Get recommendations</a>
+                    <a class="list-group-item list-group-item-action" th:href="@{/logout}">Log out</a>
+                </div>
+            </nav>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

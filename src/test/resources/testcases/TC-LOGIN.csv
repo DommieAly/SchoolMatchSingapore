@@ -1,0 +1,16 @@
+tc_id,requirement,technique,input,expected
+TC-LOGIN-01-01,FR-LOGIN-01,equivalence class: username and correct password,identifier=alice_01;password=Passw0rd,session
+TC-LOGIN-01-02,FR-LOGIN-01,equivalence class: email and correct password,identifier=alice@example.com;password=Passw0rd,session
+TC-LOGIN-01-03,FR-LOGIN-01,equivalence class: username in another case,identifier=ALICE_01;password=Passw0rd,session
+TC-LOGIN-01-04,FR-LOGIN-01,equivalence class: email in another case,identifier=Alice@Example.COM;password=Passw0rd,session
+TC-LOGIN-01-05,FR-LOGIN-01,equivalence class: spaces around the identifier are ignored,identifier=  alice_01 ;password=Passw0rd,session
+TC-LOGIN-02-01,FR-LOGIN-02,equivalence class: identifier missing,identifier=;password=Passw0rd,error:identifier
+TC-LOGIN-02-02,FR-LOGIN-02,equivalence class: password missing,identifier=alice_01;password=,error:password
+TC-LOGIN-02-03,FR-LOGIN-02,rule: both missing fields are reported at once,identifier=;password=,error:identifier|password
+TC-LOGIN-02-04,FR-LOGIN-02,equivalence class: identifier only spaces,identifier=   ;password=Passw0rd,error:identifier
+TC-LOGIN-05-01,FR-LOGIN-05,equivalence class: wrong password,identifier=alice_01;password=Passw0rD,error:login
+TC-LOGIN-05-02,FR-LOGIN-05,equivalence class: unknown username,identifier=nobody;password=Passw0rd,error:login
+TC-LOGIN-05-03,FR-LOGIN-05,equivalence class: unknown email,identifier=nobody@example.com;password=Passw0rd,error:login
+TC-LOGIN-05-04,FR-LOGIN-05,equivalence class: INACTIVE account with the correct password,identifier=bob_inactive;password=Passw0rd,error:login
+TC-LOGIN-05-05,FR-LOGIN-05,equivalence class: an identifier with @ is looked up as an email only,identifier=alice_01@;password=Passw0rd,error:login
+TC-LOGIN-05-06,FR-LOGIN-05,boundary value: password longer than BCrypt's 72 bytes,identifier=alice_01;password={a*80},error:login

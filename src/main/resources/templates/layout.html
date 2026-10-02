@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!--/*
+  Shared layout fragments (plain Thymeleaf, no layout dialect). Every page is built like this:
+
+    <head th:replace="~{layout :: head('Page title')}"></head>
+    <body>
+    <nav th:replace="~{layout :: navbar}"></nav>
+    <main class="container py-4"> … </main>
+    <footer th:replace="~{layout :: footer}"></footer>
+    </body>
+
+  Model attributes come from LayoutModelAdvice: loggedIn, userName (when logged in), datasetLabel, seedData,
+  dataAccessedOn, googleStub, mapsBrowserKey, mapId, currentPath.
+  Bootstrap 5.3.8 is loaded from jsdelivr with Subresource Integrity hashes.
+*/-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head th:fragment="head(title)">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="|${title} · SchoolMatch SG|">SchoolMatch SG</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+          integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+            crossorigin="anonymous"></script>
+    <script defer th:src="@{/js/loading.js}"></script>
+</head>
+
+<body>
+
+<!--/* Navigation: Home, Search, Map, Shortlist; Log in/Register for guests; "Hi, <name>", Profile and Log out for
+       members (the Log Out use case: the button is visible on every page while logged in). */-->
+<nav th:fragment="navbar" class="navbar navbar-expand-md bg-body border-bottom shadow-sm sticky-top"
+     aria-label="Main navigation">
+    <div class="container">
+        <a class="navbar-brand fw-semibold" th:href="@{/}">SchoolMatch <span class="text-primary">SG</span></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-nav"
+                aria-controls="main-nav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="main-nav"
+             th:with="path=${currentPath != null ? currentPath : ''},
+                      onHome=${path == '/'},
+                      onMap=${path == '/schools/map'},
+                      onSearch=${!onMap and #strings.startsWith(path, '/schools')},
+                      onShortlist=${#strings.startsWith(path, '/shortlist')},
+                      onProfile=${#strings.startsWith(path, '/profile')}">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${onHome} ? 'active'" th:aria-current="${onHome} ? 'page'"
+                       th:href="@{/}">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${onSearch} ? 'active'" th:aria-current="${onSearch} ? 'page'"
+                       th:href="@{/schools}">Search</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${onMap} ? 'active'" th:aria-current="${onMap} ? 'page'"
+                       th:href="@{/schools/map}">Map</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${onShortlist} ? 'active'"
+                       th:aria-current="${onShortlist} ? 'page'" th:href="@{/shortlist}">Shortlist</a>
+                </li>
+            </ul>
+            <div class="d-flex flex-column flex-md-row gap-2 pb-2 pb-md-0" th:unless="${loggedIn}">
+                <a class="btn btn-outline-primary btn-sm" th:href="@{/login}">Log in</a>
+                <a class="btn btn-primary btn-sm" th:href="@{/register}">Register</a>
+            </div>
+            <div class="d-flex flex-column flex-md-row align-items-md-center gap-2 pb-2 pb-md-0" th:if="${loggedIn}">
+                <span class="navbar-text small me-md-1" th:if="${userName != null}"
+                      th:text="|Hi, ${userName}|">Hi, alice_01</span>
+                <a class="btn btn-outline-primary btn-sm" th:classappend="${onProfile} ? 'active'"
+                   th:href="@{/profile}">Profile</a>
+                <a class="btn btn-outline-secondary btn-sm" th:href="@{/logout}">Log out</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!--/* Footer: dataset version and date (DC-09), data credits, link to GET /about/data, stub badge. */-->
+<footer th:fragment="footer" class="site-footer border-top bg-body py-3 mt-4 small">
+    <div class="container d-flex flex-column flex-lg-row gap-2 justify-content-between">
+        <div>
+            <span th:text="${datasetLabel != null ? datasetLabel : 'Dataset not loaded'}">Dataset 0000-seed</span>
+            <span th:if="${googleStub}" class="badge text-bg-warning ms-1"
+                  title="Google Maps Platform runs in stub mode: routes and facilities are made-up demo data">Demo data (stub)</span>
+        </div>
+        <div class="text-body-secondary">
+            School data: <a href="https://data.gov.sg" rel="noopener" target="_blank">data.gov.sg</a> (Ministry of Education)
+            · Address search: <a href="https://www.onemap.gov.sg" rel="noopener" target="_blank">OneMap</a> (Singapore Land Authority)
+            · Maps and routes: Google Maps Platform
+            · <a th:href="@{/about/data}" href="/about/data">About the data</a>
+        </div>
+    </div>
+    <div class="container text-body-secondary mt-1">
+        Contains information from MOE school datasets (general information of schools, CCAs, subjects offered) and
+        URA's Master Plan 2019 Planning Area Boundary<span th:if="${dataAccessedOn != null}"
+            th:text="' accessed on ' + ${dataAccessedOn}"> accessed on 30 Sep 2026</span> from data.gov.sg which is made
+        available under the terms of the
+        <a href="https://data.gov.sg/open-data-licence" rel="noopener" target="_blank">Singapore Open Data Licence version 1.0</a>.
+    </div>
+</footer>
+
+</body>
+</html>

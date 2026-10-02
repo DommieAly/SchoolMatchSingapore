@@ -1,0 +1,15 @@
+tc_id,requirement,technique,input,expected
+TC-ROUTE-06-01,FR-ROUTE-06,equivalence class: valid route (3 steps numbered 1..3),valid,available
+TC-ROUTE-08-01,FR-ROUTE-08,equivalence class: Google finds no route,no-route,unavailable
+TC-ROUTE-06-02,FR-ROUTE-06,boundary value: distance 0 m,distance-0,unavailable
+TC-ROUTE-06-03,FR-ROUTE-06,boundary value: distance 1 m,distance-1,available
+TC-ROUTE-06-04,FR-ROUTE-06,boundary value: duration 0 s,duration-0,unavailable
+TC-ROUTE-06-05,FR-ROUTE-06,boundary value: duration 1 s,duration-1,available
+TC-ROUTE-06-06,FR-ROUTE-06,invalid route: no steps,no-steps,unavailable
+TC-ROUTE-06-07,FR-ROUTE-06,invalid route: steps numbered 1 and 3 (gap),step-gap,unavailable
+TC-ROUTE-06-08,FR-ROUTE-06,invalid route: a step without an instruction,blank-step,unavailable
+TC-ROUTE-02-01,FR-ROUTE-02,invalid input: no starting point (EX-2),no-origin,error:location
+TC-ROUTE-02-02,FR-ROUTE-02,invalid input: starting point outside Singapore (EX-2),origin-outside,error:location
+TC-ROUTE-03-01,FR-ROUTE-03,invalid input: destination without a coordinate (EX-2),destination-no-coordinate,error:destination
+TC-ROUTE-04-01,FR-ROUTE-04,invalid input: no travel mode,no-mode,error:mode
+TC-ROUTE-05-01,FR-ROUTE-05,external failure: Google cannot be reached (EX-1),google-down,error:service

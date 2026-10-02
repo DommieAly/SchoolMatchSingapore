@@ -1,0 +1,46 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### SchoolMatch ###
+# Local secrets and keys (copy .env.example to .env)
+.env
+# Local H2 databases (delete this folder to reset your data)
+.local/
+# Raw downloads made by the dataset importer
+data/raw/
+*.log
+.DS_Store
+# Python bytecode from data/tools scripts
+__pycache__/
+*.pyc

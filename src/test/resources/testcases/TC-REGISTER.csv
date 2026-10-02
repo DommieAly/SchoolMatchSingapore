@@ -1,0 +1,35 @@
+tc_id,requirement,technique,input,expected
+TC-REG-01-01,FR-REG-01,equivalence class: every field valid,,ok
+TC-REG-02-01,FR-REG-02,boundary value: username 2 characters (minimum - 1),username=ab,error:username
+TC-REG-02-02,FR-REG-02,boundary value: username 3 characters (minimum),username=abc,ok
+TC-REG-02-03,FR-REG-02,boundary value: username 30 characters (maximum),username={a*30},ok
+TC-REG-02-04,FR-REG-02,boundary value: username 31 characters (maximum + 1),username={a*31},error:username
+TC-REG-02-05,FR-REG-02,equivalence class: username with letters digits and underscore,username=Alice_2026,ok
+TC-REG-02-06,FR-REG-02,equivalence class: username with a space,username=ali ce,error:username
+TC-REG-02-07,FR-REG-02,equivalence class: username with a hyphen,username=alice-01,error:username
+TC-REG-02-08,FR-REG-02,equivalence class: username missing,username=,error:username
+TC-REG-02-09,FR-REG-02,equivalence class: email without @,email=alice.example.com,error:email
+TC-REG-02-10,FR-REG-02,equivalence class: email with two @,email=alice@home@example.com,error:email
+TC-REG-02-11,FR-REG-02,equivalence class: email with a space,email=alice smith@example.com,error:email
+TC-REG-02-12,FR-REG-02,boundary value: email with an empty local part,email=@example.com,error:email
+TC-REG-02-13,FR-REG-02,boundary value: email with an empty domain,email=alice@,error:email
+TC-REG-02-14,FR-REG-02,equivalence class: email missing,email=,error:email
+TC-REG-02-15,FR-REG-02,boundary value: shortest valid email (one character each side),email=a@b,ok
+TC-REG-02-16,FR-REG-02,boundary value: password 7 characters (minimum - 1),password=Passw0r,error:password
+TC-REG-02-17,FR-REG-02,boundary value: password 8 characters (minimum),password=Passw0rd,ok
+TC-REG-02-18,FR-REG-02,boundary value: password 64 characters (maximum),password=Aa1{a*61},ok
+TC-REG-02-19,FR-REG-02,boundary value: password 65 characters (maximum + 1),password=Aa1{a*62},error:password
+TC-REG-02-20,FR-REG-02,equivalence class: password without an upper-case letter,password=passw0rd,error:password
+TC-REG-02-21,FR-REG-02,equivalence class: password without a lower-case letter,password=PASSW0RD,error:password
+TC-REG-02-22,FR-REG-02,equivalence class: password without a digit,password=Password,error:password
+TC-REG-02-23,FR-REG-02,equivalence class: password with a non-ASCII letter (DC-19),password=Passw0rdé,error:password
+TC-REG-02-24,FR-REG-02,equivalence class: password with spaces and symbols (printable ASCII),password=My pass 1!,ok
+TC-REG-02-25,FR-REG-02,equivalence class: password missing,password=,error:password
+TC-REG-02-26,FR-REG-02,rule: every invalid field is reported at once (AF-1),username=ab;email=alice;password=short,error:username|email|password
+TC-REG-03-01,FR-REG-03,equivalence class: confirmation differs from the password,confirm=Passw0rD,error:confirm
+TC-REG-03-02,FR-REG-03,equivalence class: confirmation missing,confirm=,error:confirm
+TC-REG-03-03,FR-REG-03,rule: a mismatch is reported together with the other errors,username=ab;confirm=Other123,error:username|confirm
+TC-REG-04-01,FR-REG-04,equivalence class: username already registered,username=taken_user,error:username
+TC-REG-04-02,FR-REG-04,equivalence class: username already registered in another case,username=TAKEN_User,error:username
+TC-REG-04-03,FR-REG-04,equivalence class: email already registered in another case,email=Taken@Example.COM,error:email
+TC-REG-04-04,FR-REG-04,rule: username and email both already registered,username=taken_user;email=taken@example.com,error:username|email

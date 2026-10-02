@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<!--/*
+  messages: banners at the top of a page. Include with
+    <div th:replace="~{fragments/messages :: messages}"></div>
+  It reads these model attributes (names in sg.schoolmatch.boundary.ui.support.PageMessages):
+    flashMessage  info banner, usually a flash attribute set before a redirect ("Profile saved.")
+    flashError    red banner
+    fieldErrors   Map<String, String> field → message, e.g. InvalidInputException.getFieldErrors() (NFR-USE-03)
+  Pages can also highlight a single field: th:classappend="${fieldErrors?.get('q') != null} ? 'is-invalid'"
+  plus <div class="invalid-feedback" th:text="${fieldErrors?.get('q')}"> (safe when fieldErrors is absent).
+*/-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="messages" class="page-messages">
+    <div th:if="${flashMessage != null}" class="alert alert-info alert-dismissible fade show" role="status">
+        <span th:text="${flashMessage}">Profile saved.</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${flashError != null}" class="alert alert-danger" role="alert" th:text="${flashError}">Error</div>
+    <div th:if="${fieldErrors != null and !#maps.isEmpty(fieldErrors)}" class="alert alert-danger" role="alert">
+        <p class="fw-semibold mb-1">Please check your input:</p>
+        <ul class="mb-0">
+            <li th:each="fieldError : ${fieldErrors}" th:text="${fieldError.value}">Enter 1–100 characters</li>
+        </ul>
+    </div>
+</div>
+</body>
+</html>
