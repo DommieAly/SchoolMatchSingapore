@@ -1,4 +1,4 @@
-# Validation report — 2026-10-03.5
+# Validation report — 2026-10-04.1
 
 - Status: **PASSED_WITH_WARNINGS**
 - Errors: 0
@@ -10,6 +10,7 @@
 - subject-spellings-merged: 32
 - cca-join-miss: 2
 - geocode-outcome-matched: 146
+- transport-overrides-applied: 9
 - district-mismatch: 2
 - geocode-outcome-override: 1
 

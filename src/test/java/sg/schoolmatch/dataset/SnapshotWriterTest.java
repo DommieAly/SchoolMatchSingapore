@@ -122,6 +122,16 @@ class SnapshotWriterTest {
 
     @Test
     @Tag("NFR-DATA-01")
+    @DisplayName("TC-SnapshotWriter-09: ranges in schools.json carry no derived 'complete' field (DC-85, @JsonIgnore)")
+    void noCompleteField() throws IOException {
+        Path folder = write("2026-10-02.1", mini.records());
+
+        String json = Files.readString(folder.resolve(SnapshotReader.SCHOOLS_FILE));
+        assertThat(json).contains("\"lowerScore\"").doesNotContain("\"complete\"");
+    }
+
+    @Test
+    @Tag("NFR-DATA-01")
     @DisplayName("TC-SnapshotWriter-04: an existing version folder is never overwritten")
     void refusesExistingFolder() throws IOException {
         Files.createDirectories(out.resolve("2026-10-02.1"));

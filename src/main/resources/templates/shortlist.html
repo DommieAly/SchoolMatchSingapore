@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <!--/* DM 16 Shortlist (login) — ShortlistUI.displayShortlist (FR-SHORTLIST-04..07, NFR-SEC-05).
-       Model: schools (List<School>), missingCodes (codes no longer in the dataset), or unavailable = true.
+       Model: schools (List<School>), missingCodes (codes no longer in the dataset), missingNames (their last-known
+       names, code → name, DC-86), or unavailable = true.
        Each card has a Remove button (POST /shortlist/{code}/remove, confirmed in the browser; Cancel = AF-1) and a
        Compare checkbox that belongs to the compare form through form="compare-form" (GET /compare?codes=…).
        The design's display operations are the th:fragment names below. */-->
@@ -79,7 +80,11 @@
             <ul class="list-group">
                 <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2"
                     th:each="code : ${missingCodes}">
-                    <span><code th:text="${code}">old-school-code</code>
+                    <span><!--/* DC-86: the last-known name, when the database still has the school row */-->
+                        <th:block th:if="${missingNames != null and missingNames.get(code) != null}">
+                            <strong th:text="${missingNames.get(code)}">OLD SCHOOL NAME</strong>
+                        </th:block>
+                        <code th:text="${code}">old-school-code</code>
                         <span class="text-body-secondary">School no longer in the dataset</span></span>
                     <form th:action="@{/shortlist/{code}/remove(code=${code})}" method="post"
                           onsubmit="return confirm('Remove this school from your shortlist?');">

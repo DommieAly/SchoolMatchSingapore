@@ -14,11 +14,14 @@ What it fetches (no API keys needed):
      (the hit whose BUILDING matches the school name)
 
 Then it computes each school's planning area (ray casting), keeps and simplifies the 3 planning areas,
-adds TEST PSLE ranges (not MOE data!) and writes:
+adds TEST PSLE ranges (not MOE data!) and writes snapshot format 2 (DC-84: "formatVersion": 2, MOE's bus and
+MRT texts as "busServices" / "mrtStations" lists, split like the Java TransportLists):
   data/snapshots/0000-seed/{manifest.json, schools.json, districts.geojson}
   data/snapshots/ACTIVE                               (only if missing, or with --activate)
   src/test/resources/fixtures/snapshot-mini/          (identical copy of 0000-seed)
   src/test/resources/fixtures/snapshot-broken/<rule>/ (copy of snapshot-mini with exactly one defect)
+  src/test/resources/fixtures/snapshot-broken/format-1/ (snapshot-mini in the old format 1, refused by the app)
+  src/test/resources/fixtures/snapshot-broken/transport-list-padded/ (an MRT station repeated with a trailing space)
   src/main/resources/stub/onemap/*.json               (recorded OneMap responses for StubOneMap)
 
 Every network call is retried once. If a source is still unreachable the script stops:
@@ -68,7 +71,11 @@ STUB_ONEMAP_SEARCHES = ["579767", "catholic high school", "bishan"]
 VERSION = "0000-seed"
 SIMPLIFY_TOLERANCE_DEG = 0.0001   # about 11 m
 MAX_DISTRICTS_BYTES = 300_000
-BROKEN_RULES = ["duplicate-code", "bad-coordinate", "bad-psle-range", "missing-name", "unknown-planning-area"]
+BROKEN_RULES = ["duplicate-code", "bad-coordinate", "bad-psle-range", "missing-name", "unknown-planning-area",
+                "transport-list", "moe-text-format", "too-long", "duplicate-name"]
+FORMAT_VERSION = 2   # SnapshotManifest.FORMAT_VERSION (DC-84)
+BUS_SERVICE = re.compile(r"^[A-Z]{0,2}[0-9]{1,3}[A-Za-z]?$")    # TransportLists.BUS_SERVICE
+MRT_FORBIDDEN = [":", " - ", " and ", "&", "campus", ","]          # TransportLists.MRT_FORBIDDEN (ignoring case)
 
 _last_call = {}   # host -> time of last request (rate limiting)
 
@@ -211,6 +218,71 @@ def simplify_geometry(geometry, tol):
     if geometry["type"] == "Polygon":
         return {"type": "Polygon", "coordinates": polys[0]}
     return {"type": "MultiPolygon", "coordinates": polys}
+
+
+def split_list(text):
+    """DC-84, as TransportLists.split: split on commas, trim, drop empty and repeated pieces."""
+    elements = []
+    for piece in (text or "").split(","):
+        piece = piece.strip()
+        if piece and piece not in elements:
+            elements.append(piece)
+    return elements
+
+
+def check_transport(school):
+    """The seed has no transport-overrides.csv: stop when a text does not split into clean elements."""
+    bad = [e for e in school["busServices"] if not BUS_SERVICE.match(e)]
+    bad += [e for e in school["mrtStations"] if any(f in e.lower() for f in MRT_FORBIDDEN)]
+    bad += [e for e in school["busServices"] + school["mrtStations"] if e != e.strip()]   # outer white space
+    if bad:
+        sys.exit(f"STOP: {school['schoolCode']} has bus/MRT text that is not a plain list: {bad}")
+
+
+def broken_schools(schools, rule):
+    """A copy of the seed schools with exactly the one defect of validator rule `rule`."""
+    broken = copy.deepcopy(schools)
+    target = broken[0]
+    if rule == "duplicate-code":
+        broken[1]["schoolCode"] = target["schoolCode"]
+    elif rule == "bad-coordinate":
+        target["latitude"], target["longitude"] = 40.0, 100.0   # a real place, but not in Singapore
+    elif rule == "bad-psle-range":
+        r = target["scoreRanges"][0]
+        r["lowerScore"], r["upperScore"] = r["upperScore"] + 2, r["lowerScore"]   # lower > upper
+    elif rule == "missing-name":
+        target["name"] = None
+    elif rule == "unknown-planning-area":
+        target["planningAreaCode"] = "XX"
+    elif rule == "transport-list":
+        target["busServices"] = target["busServices"] + ["243G/W"]   # two services in one element
+    elif rule == "moe-text-format":
+        r = target["scoreRanges"][0]
+        r["moeText"] = f"{r['lowerScore']} to {r['upperScore']}"   # not MOE's "lower - upper" form
+    elif rule == "too-long":
+        target["telephone"] = "6" * 41   # the database column holds 40 characters
+    elif rule == "duplicate-name":
+        broken[1]["name"] = target["name"]
+    return broken
+
+
+def format_1(manifest, schools):
+    """The same snapshot in the old format 1: no formatVersion, bus and MRT lists as one ", " text each."""
+    old_manifest = {k: v for k, v in manifest.items() if k != "formatVersion"}
+    renamed = {"mrtStations": "nearestMrt", "busServices": "busInfo"}
+    old_schools = [{renamed.get(k, k): (", ".join(v) or None) if k in renamed else v for k, v in s.items()}
+                   for s in schools]
+    return old_manifest, old_schools
+
+
+def transport_list_padded(schools):
+    """A copy of the seed schools in which the first school with an MRT station lists that station again with a
+    trailing space. The loader trims each element, so the two would clash in pk_school_mrt_station; the validator's
+    transport-list rule must refuse it (TC-SnapshotValidator-20)."""
+    broken = copy.deepcopy(schools)
+    target = next(s for s in broken if s["mrtStations"])
+    target["mrtStations"] = target["mrtStations"] + [target["mrtStations"][0] + " "]
+    return broken
 
 
 def write_json(path, data):
@@ -357,8 +429,8 @@ def main():
             "schoolType": clean(row["type_code"]),
             "planningAreaCode": area_of[name]["PLN_AREA_C"],
             "planningAreaName": area_of[name]["PLN_AREA_N"],
-            "nearestMrt": clean(row["mrt_desc"]),
-            "busInfo": clean(row["bus_desc"]),
+            "mrtStations": split_list(clean(row["mrt_desc"])),
+            "busServices": split_list(clean(row["bus_desc"])),
             "sessionType": clean(row["session_code"]),
             "schoolNature": clean(row["nature_code"]),
             "programmes": subjects[name],
@@ -369,8 +441,10 @@ def main():
         })
     for i, s in enumerate(schools):
         s["scoreRanges"] = test_ranges(i, s["schoolCode"])
+        check_transport(s)
 
     manifest = {
+        "formatVersion": FORMAT_VERSION,
         "kind": "seed",
         "version": VERSION,
         "effectiveDate": args.date,
@@ -416,20 +490,17 @@ def main():
         folder = fixtures / "snapshot-broken" / rule
         shutil.rmtree(folder, ignore_errors=True)
         shutil.copytree(mini, folder)
-        broken = copy.deepcopy(schools)
-        target = broken[0]
-        if rule == "duplicate-code":
-            broken[1]["schoolCode"] = target["schoolCode"]
-        elif rule == "bad-coordinate":
-            target["latitude"], target["longitude"] = 40.0, 100.0   # a real place, but not in Singapore
-        elif rule == "bad-psle-range":
-            r = target["scoreRanges"][0]
-            r["lowerScore"], r["upperScore"] = r["upperScore"] + 2, r["lowerScore"]   # lower > upper
-        elif rule == "missing-name":
-            target["name"] = None
-        elif rule == "unknown-planning-area":
-            target["planningAreaCode"] = "XX"
-        write_json(folder / "schools.json", broken)
+        write_json(folder / "schools.json", broken_schools(schools, rule))
+    folder = fixtures / "snapshot-broken" / "format-1"
+    shutil.rmtree(folder, ignore_errors=True)
+    shutil.copytree(mini, folder)
+    old_manifest, old_schools = format_1(manifest, schools)
+    write_json(folder / "manifest.json", old_manifest)
+    write_json(folder / "schools.json", old_schools)
+    folder = fixtures / "snapshot-broken" / "transport-list-padded"
+    shutil.rmtree(folder, ignore_errors=True)
+    shutil.copytree(mini, folder)
+    write_json(folder / "schools.json", transport_list_padded(schools))
 
     # 10. Recorded OneMap responses for StubOneMap (file name = normalised search text)
     stub_dir = root / "src" / "main" / "resources" / "stub" / "onemap"
@@ -439,7 +510,7 @@ def main():
         write_json(stub_dir / (stub_key(text) + ".json"), response)
 
     print(f"Wrote {seed} ({len(schools)} schools, {len(features)} districts, "
-          f"districts.geojson {size} bytes), snapshot-mini, {len(BROKEN_RULES)} broken fixtures, "
+          f"districts.geojson {size} bytes), snapshot-mini, {len(BROKEN_RULES) + 2} broken fixtures, "
           f"{len(STUB_ONEMAP_SEARCHES)} OneMap stubs.")
 
 

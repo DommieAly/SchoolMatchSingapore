@@ -31,5 +31,20 @@ class ActiveSnapshotIsValidTest {
         assertThat(active.schools()).isNotEmpty();
         assertThat(active.version()).as("manifest version = folder named in ACTIVE")
                 .isEqualTo(SnapshotReader.readActiveVersion(Path.of("data/snapshots")));
+        assertThat(active.manifest().formatVersion()).isEqualTo(SnapshotManifest.FORMAT_VERSION);
+    }
+
+    @Test
+    @Tag("NFR-DATA-01")
+    @Tag("FR-DATA-03")
+    @DisplayName("TC-ActiveSnapshot-02: the seed data/snapshots/0000-seed is format 2 and passes validation")
+    void seedSnapshotIsValid() {
+        LoadedSnapshot seed = reader(Map.of()).read(Path.of("data/snapshots/0000-seed").toUri().toString());
+
+        ValidationReport report = new SnapshotValidator().validate(seed);
+
+        assertThat(report.isUsable()).as(report.toString()).isTrue();
+        assertThat(seed.manifest().formatVersion()).isEqualTo(SnapshotManifest.FORMAT_VERSION);
+        assertThat(seed.records()).allMatch(r -> !r.busServices().isEmpty() && !r.mrtStations().isEmpty());
     }
 }

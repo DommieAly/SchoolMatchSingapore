@@ -6,8 +6,11 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -77,6 +80,42 @@ public class SnapshotReader {
         return new LoadedSnapshot(base, manifest, records, schools, districts);
     }
 
+    /**
+     * SHA-256 (64 lower-case hex digits) of {@code manifest.json}, byte 0, {@code schools.json}, byte 0,
+     * {@code districts.geojson} in {@code folderLocation}, exactly as the files are on disk. The loader stores it as
+     * {@code dataset_version.content_sha256} and reloads only when it changes (docs/database-design.md, section 6.2).
+     * {@code .gitattributes} keeps LF line endings, so Windows and Mac checkouts give the same hash.
+     */
+    public String contentSha256(String folderLocation) {
+        String base = withSlash(folderLocation);
+        MessageDigest sha;
+        try {
+            sha = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is missing from this Java runtime", e);
+        }
+        String[] files = {MANIFEST_FILE, SCHOOLS_FILE, DISTRICTS_FILE};
+        for (int i = 0; i < files.length; i++) {
+            if (i > 0) {
+                sha.update((byte) 0);
+            }
+            try (InputStream in = open(base, files[i])) {
+                byte[] buffer = new byte[64 * 1024];
+                for (int n = in.read(buffer); n >= 0; n = in.read(buffer)) {
+                    sha.update(buffer, 0, n);
+                }
+            } catch (IOException e) {
+                throw new UncheckedIOException("Cannot read " + base + files[i], e);
+            }
+        }
+        return HexFormat.of().formatHex(sha.digest());
+    }
+
+    /** {@link #contentSha256(String)} of the folder {@code snapshot} was read from. */
+    public String contentSha256(LoadedSnapshot snapshot) {
+        return contentSha256(snapshot.location());
+    }
+
     /** The version named in {@code dir/ACTIVE} (its first non-blank line). */
     public static String readActiveVersion(Path dir) {
         Path active = dir.resolve(ACTIVE_FILE);
@@ -140,7 +179,8 @@ public class SnapshotReader {
     }
 
     /**
-     * Record → School. Blank strings become null; a coordinate that cannot exist becomes null.
+     * Record → School. Blank strings become null; a coordinate that cannot exist becomes null; the bus and MRT
+     * lists are joined into one text each ({@link TransportLists#join}).
      * Public for the importer, which validates its records before writing them (DC-12).
      */
     public static School toSchool(SchoolRecord r) {
@@ -152,8 +192,9 @@ public class SnapshotReader {
         school.setEmail(blankToNull(r.email()));
         school.setSchoolType(blankToNull(r.schoolType()));
         school.setPlanningArea(blankToNull(r.planningAreaName()));
-        school.setNearestMrt(blankToNull(r.nearestMrt()));
-        school.setBusInfo(blankToNull(r.busInfo()));
+        // DC-84: School keeps its Lab 2 String attributes; the format-2 lists are joined with ", " for display.
+        school.setNearestMrt(TransportLists.join(nonBlank(r.mrtStations())));
+        school.setBusInfo(TransportLists.join(nonBlank(r.busServices())));
         school.setSessionType(blankToNull(r.sessionType()));
         school.setSchoolNature(blankToNull(r.schoolNature()));
         school.setProgrammes(nonBlank(r.programmes()));

@@ -21,6 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.servlet.http.Cookie;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -123,6 +124,28 @@ class ChoicePlanUITest {
                 .contains("PSLE score <strong>12</strong>", "posting group <strong>3</strong>")
                 .contains("Empty: add a school from your shortlist below");
         assertThat(between(html, "WESTWOOD SECONDARY SCHOOL", "</tr>")).contains("Not available");
+    }
+
+    @Test
+    @Tag("FR-PLAN-02")
+    @Tag("FR-DATA-05")
+    @DisplayName("TC-ChoicePlanUI-13: a choice that left the dataset shows its last-known name next to its code (open decision 3)")
+    void displayPlan_choiceLeftDatasetShowsLastKnownName() throws Exception {
+        ChoicePlan plan = plan(12, 3, tampines, TestSchools.named("closed-secondary-school", "CLOSED"));
+        plan.resolveSchools(Map.of("tampines-secondary-school", tampines));
+        when(choicePlanController.getPlan(SESSION)).thenReturn(plan);
+        when(choicePlanController.assessPlan(plan)).thenReturn(List.of());
+        when(shortlistController.getShortlistedSchools(SESSION)).thenReturn(List.of(tampines));
+        when(shortlistController.getLastKnownNames(List.of("closed-secondary-school")))
+                .thenReturn(Map.of("closed-secondary-school", "CLOSED SECONDARY SCHOOL"));
+
+        String html = mvc.perform(get("/plan").cookie(member()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(between(html, "<strong>CLOSED SECONDARY SCHOOL</strong>", "</tr>"))
+                .contains("<code>closed-secondary-school</code>", "School no longer in the dataset")
+                .doesNotContain("href=\"/schools/closed-secondary-school\"");
     }
 
     @Test

@@ -6,6 +6,10 @@
 spring:
   main:
     web-application-type: none
+  datasource:              # the import writes only the JSON snapshot; an in-memory database is enough
+    url: jdbc:h2:mem:import;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password: ""
 
 # Google is not used by the import, so it keeps GOOGLE_MODE from .env (stub by default).
 app:
@@ -14,3 +18,7 @@ app:
       mode: live
     datagovsg:
       mode: live
+  dataset:
+    # Read no snapshot at start-up and leave the database alone: a new validator rule that refuses the current ACTIVE
+    # must not stop the importer that would fix it (docs/database-design.md, section 6.3).
+    load-on-startup: false

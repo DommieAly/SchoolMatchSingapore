@@ -22,7 +22,22 @@
 		<java.version>21</java.version>
 		<archunit.version>1.5.1</archunit.version>
 		<jts.version>1.20.0</jts.version>
+		<embedded-postgres.version>2.2.2</embedded-postgres.version>
+		<!-- PostgreSQL server version used by the embedded test server: the production major version (17). Without
+		     this, embedded-postgres 2.2.2 would bring PostgreSQL 14, which has no REGEXP_LIKE (docs/database-design.md, section 9). -->
+		<embedded-postgres-binaries.version>17.11.0</embedded-postgres-binaries.version>
 	</properties>
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>io.zonky.test.postgres</groupId>
+				<artifactId>embedded-postgres-binaries-bom</artifactId>
+				<version>${embedded-postgres-binaries.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -49,9 +64,26 @@
 			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
 
+		<!-- Flyway creates and upgrades the schema from src/main/resources/db/migration; Hibernate only validates it
+		     (ddl-auto: validate). See docs/database-design.md, section 8. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<!-- PostgreSQL driver: the postgres and prod profiles, and the embedded PostgreSQL tests -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
 		<!-- BCrypt password hashing only; no Spring Security filter chain (see README, "Login and sessions") -->
@@ -103,6 +135,25 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- A real PostgreSQL server for tests tagged "postgres", started from a binary that Maven downloads (no
+		     installation, no Docker). Skip those tests with: ./mvnw verify -DexcludedGroups=postgres -->
+		<dependency>
+			<groupId>io.zonky.test</groupId>
+			<artifactId>embedded-postgres</artifactId>
+			<version>${embedded-postgres.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- embedded-postgres 2.2.2 brings Windows, Intel-Mac and Linux binaries only: add Apple silicon -->
+		<dependency>
+			<groupId>io.zonky.test.postgres</groupId>
+			<artifactId>embedded-postgres-binaries-darwin-arm64v8</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<!-- Checks package and naming rules (boundary / control / entity) as JUnit tests -->

@@ -1,5 +1,6 @@
 package sg.schoolmatch.boundary.ui;
 
+import java.util.List;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,7 +23,7 @@ import sg.schoolmatch.entity.shortlist.Shortlist;
  * {@code displayEmptyShortlist}, {@code displayServiceUnavailable}. The links {@code selectCompare}
  * (GET /compare?codes=…) and {@code selectPlanChoices} (GET /plan) are on the page.
  * Model attributes: {@code schools} (List&lt;School&gt;), {@code missingCodes} (codes no longer in the dataset),
- * or {@code unavailable} = true.
+ * {@code missingNames} (their last-known names, code → name, DC-86), or {@code unavailable} = true.
  */
 @Controller
 public class ShortlistUI {
@@ -50,7 +51,9 @@ public class ShortlistUI {
         try {
             Shortlist shortlist = shortlistController.getShortlist(sessionId);
             model.addAttribute("schools", shortlist.getSchools());
-            model.addAttribute("missingCodes", shortlist.getUnresolvedSchoolCodes());
+            List<String> missingCodes = shortlist.getUnresolvedSchoolCodes();
+            model.addAttribute("missingCodes", missingCodes);
+            model.addAttribute("missingNames", shortlistController.getLastKnownNames(missingCodes));   // DC-86
         } catch (DataAccessException e) {
             model.addAttribute("unavailable", true);     // displayServiceUnavailable
             model.addAttribute(PageMessages.FLASH_ERROR, UNAVAILABLE_MESSAGE);

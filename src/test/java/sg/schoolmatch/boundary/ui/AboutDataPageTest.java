@@ -118,7 +118,8 @@ class AboutDataPageTest {
 
     private static SnapshotManifest manifest(String kind, String version) {
         Instant downloaded = Instant.parse("2026-10-02T02:10:00Z");
-        return new SnapshotManifest(kind, version, LocalDate.of(2026, 10, 2), Instant.parse("2026-10-02T02:20:00Z"),
+        return new SnapshotManifest(SnapshotManifest.FORMAT_VERSION, kind, version, LocalDate.of(2026, 10, 2),
+                Instant.parse("2026-10-02T02:20:00Z"),
                 List.of(new SnapshotManifest.Source("data.gov.sg General information of schools",
                                 "d_688b934f82c1059ed0a6993d2a829089", downloaded),
                         new SnapshotManifest.Source("OneMap search (coordinates by postal code)",

@@ -9,6 +9,10 @@ spring:
     import: optional:file:.env[.properties]
   jpa:
     open-in-view: false
+    hibernate:
+      # Flyway creates and upgrades the tables (src/main/resources/db/migration); Hibernate only checks at start-up
+      # that every entity matches them and changes nothing. A mismatch stops start-up (docs/database-design.md, section 8).
+      ddl-auto: validate
   thymeleaf:
     cache: true            # dev turns this off so template edits show on refresh
 
@@ -80,7 +84,11 @@ app:
     read-timeout: 15s
   dataset:
     dir: data/snapshots    # data/snapshots/ACTIVE names the snapshot folder to load
-    recheck-after: 1h
+    # DC-83: the school data is served from the database. At start-up the ACTIVE snapshot is validated and loaded
+    # into it unless it is already the active version (docs/database-design.md, section 6.2).
+    load-on-startup: true  # false = read no snapshot file; build the cache from the database on first use (import profile)
+    allow-rollback: true   # false = a snapshot older than the database's active version is not loaded (prod)
+    recheck-after: 1h      # how often the database's active version is checked (another instance may load a newer one)
     import-output-dir: ""  # where the importer writes a new snapshot; empty = dir
     activate-on-import: false   # true = a successful import also updates ACTIVE
     curated-dir: data/curated   # hand-maintained CSVs read by the importer (CuratedCsvReader, @Value)

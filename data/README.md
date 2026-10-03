@@ -1,12 +1,12 @@
 # School data
 
-The app does not call data.gov.sg while it runs. It loads one **snapshot**: a folder of JSON files committed to this repo, checked at startup, and kept in memory. This keeps the app fast, lets it work offline, and means nobody except the data owner (B) needs network access to get school data.
+The app does not call data.gov.sg while it runs. It loads one **snapshot**: a folder of JSON files committed to this repo, checked at start-up and copied into the database (DC-83), from where the app builds its in-memory cache. The JSON stays the reviewed record of every data change: what a pull request shows is exactly what reaches the database. The app still starts offline, and nobody except the data owner (B) needs network access to get school data. How the copy works, and how to roll back, is in [Loading into the database](#loading-into-the-database) and [Rollback](#rollback).
 
 ```
 data/
 ├─ snapshots/
-│  ├─ ACTIVE              one line: the folder name of the snapshot the app loads (2026-10-03.5)
-│  ├─ 2026-10-03.5/       the real snapshot: 147 secondary schools from data.gov.sg + OneMap, 2025 PSLE ranges from MOE SchoolFinder
+│  ├─ ACTIVE              one line: the folder name of the snapshot the app loads (2026-10-04.1)
+│  ├─ 2026-10-04.1/       the real snapshot: 147 secondary schools from data.gov.sg + OneMap, 2025 PSLE ranges from MOE SchoolFinder
 │  └─ 0000-seed/          historical: the 10-school seed with TEST PSLE values (same as the test fixture)
 ├─ curated/               curated CSV files (codes, aliases, overrides, MOE SchoolFinder ranges and affiliations), changed only by PR (rules below)
 ├─ tools/build_seed.py    Python script that built the seed snapshot (seed only)
@@ -36,9 +36,9 @@ The CCA and subject datasets have no school code, so they are joined to schools 
 - **MOE SchoolFinder:** MOE's terms of use forbid commercial reuse and modification. The lead approved using SchoolFinder data for this non-commercial course project on 3 Oct 2026; the TA has not been asked yet and is to be informed (owner: lead). We copy the published values as they are (`raw_text` keeps MOE's text) and never change them; pages name MOE SchoolFinder as the source and say the ranges are historical. The school codes stay our own (see [School codes](#school-codes)).
 - **Google:** the map shows Google's own attribution. Anywhere Places data is shown without a Google map, show "Google Maps" as the source. Do not store Places content beyond the in-memory cache.
 
-## The active snapshot `2026-10-03.5`
+## The active snapshot `2026-10-04.1`
 
-Built on 3 October 2026 (23:06–23:10 Singapore time) by the importer from live data.gov.sg and OneMap, with the MOE SchoolFinder rows of `curated/`: `kind` `full`, **PASSED_WITH_WARNINGS**, 0 errors, 14 warnings.
+Built on 4 October 2026 (01:17–01:20 Singapore time) by the importer from live data.gov.sg and OneMap, with the MOE SchoolFinder rows of `curated/`: snapshot format 2, `kind` `full`, **PASSED_WITH_WARNINGS**, 0 errors, 14 warnings. Its data is the same as the previous snapshot `2026-10-03.5` (see the runs below).
 
 | What | Count |
 |:--:|:--:|
@@ -78,17 +78,17 @@ Built on 3 October 2026 (23:06–23:10 Singapore time) by the importer from live
 
 | File | Size |
 |:--:|:--:|
-| `schools.json` | 489,333 bytes |
+| `schools.json` | 493,746 bytes |
 | `districts.geojson` | 123,231 bytes (simplified from the full boundaries to stay under 300 KB) |
-| `validation-report.md` | 1,444 bytes |
-| `import-log.txt` | 16,743 bytes |
-| `manifest.json` | 2,039 bytes |
+| `validation-report.md` | 1,477 bytes |
+| `import-log.txt` | 17,327 bytes |
+| `manifest.json` | 2,083 bytes |
 
 ## School codes
 
 `curated/school-codes.csv` freezes every school's `schoolCode`: 147 rows, `school_name` exactly as data.gov.sg spells it, `school_code` the slug the importer made from that name (`NameNormaliser.slug`, the same rule as the seed, e.g. `st-hildas-secondary-school`), `source_url` the school's MOE SchoolFinder page (added 3 Oct 2026). **Codes are our own internal ids, frozen on 3 October 2026. They are not MOE SchoolFinder slugs** (decision 2026-10-03): for 11 schools the SchoolFinder page name differs (e.g. `catholic-high-school` and `...?schoolname=catholic-high-school-secondary`), and the codes stay as they are. The 10 seed codes are unchanged, so shortlists and choice plans saved against the seed still find their schools.
 
-- Never change a code once it is used: saved shortlists and choice plans refer to it.
+- Never change a code once it is used: saved shortlists and choice plans refer to it, through a foreign key since V3 (DC-86). A changed code would withdraw the old one and leave members' saved entries on the withdrawn school; the loader log says how many.
 - If data.gov.sg renames a school, change `school_name` in its row and keep the `school_code`.
 - A new school gets a new row (the importer warns `school-code-slug` until it has one).
 
@@ -98,7 +98,7 @@ The app no longer loads it; it stays because the test fixture `src/test/resource
 
 - 10 real secondary schools in 3 planning areas: Bishan (4), Tampines (3) and Jurong West (3), with names, addresses and contact details as published on data.gov.sg and coordinates from OneMap.
 - **The PSLE ranges are TEST VALUES, not MOE data.** The manifest says so (`"kind": "seed"` and `notes`), and the footer shows "Seed data (test values)" while the seed is active. Never quote them as real cut-off scores.
-- `schoolCode` values are slugs made from the names (e.g. `catholic-high-school`); they are the same codes as in `2026-10-03.5`.
+- `schoolCode` values are slugs made from the names (e.g. `catholic-high-school`); they are the same codes as in the active snapshot.
 - Some gaps are on purpose, to test "Not available": one school has no PSLE ranges, and one school's email is null.
 - Broken copies (one defect each) live in `src/test/resources/fixtures/snapshot-broken/<rule>/`.
 - Rebuild it only if the seed must change: `python3 data/tools/build_seed.py` (Mac) or `py data\tools\build_seed.py` (Windows), from the repo root, Python 3.9+, no extra packages. It rewrites the seed, the test fixtures and the OneMap stub files, so review the diff. **Never pass `--activate`**: it would point `ACTIVE` back at the seed.
@@ -107,17 +107,54 @@ The app no longer loads it; it stays because the test fixture `src/test/resource
 
 Each snapshot folder `data/snapshots/<version>/` has:
 
-- `manifest.json`: `kind` (`seed` or `full`), `version`, `effectiveDate`, `importedAt`, `sources` (name, dataset id, download time), `validationStatus`, `warnings`, `counts`, `notes`.
-- `schools.json`: an array sorted by `schoolCode`, one object per school, with its `scoreRanges` (`admissionYear`, `postingGroup`, `affiliated`, `lowerScore`, `upperScore`, `integratedProgramme`, `moeText`; a range without `integratedProgramme`, as in older snapshots, reads as `false`, and one without `moeText` (MOE's text of the cell, DC-82) as `null`). A missing value is JSON `null`, never `0`, `""`, `"NA"` or `"-"`.
+- `manifest.json`: `formatVersion` (2; DC-84), `kind` (`seed` or `full`), `version`, `effectiveDate`, `importedAt`, `sources` (name, dataset id, download time), `validationStatus`, `warnings`, `counts`, `notes`.
+- `schools.json`: an array sorted by `schoolCode`, one object per school, with `busServices` and `mrtStations` (lists in MOE's published order, one bus service or one station per element; the app joins each list with `", "` for display) and its `scoreRanges` (`admissionYear`, `postingGroup`, `affiliated`, `lowerScore`, `upperScore`, `integratedProgramme`, `moeText`; a range without `integratedProgramme`, as in older snapshots, reads as `false`, and one without `moeText` (MOE's text of the cell, DC-82) as `null`). A missing value is JSON `null`, never `0`, `""`, `"NA"` or `"-"`.
 - `districts.geojson`: a FeatureCollection with `planningAreaCode` and `planningAreaName` on each feature, simplified to keep the file small.
 - Full snapshots also have `validation-report.md` (every error and warning) and `import-log.txt` (what the importer did for each school).
 
 At startup `SchoolDataController` reads the folder named in `ACTIVE` (tests read `snapshot-mini` instead) and checks it with `SnapshotValidator`:
 
-- **Errors** stop the app from starting: a duplicate or badly formed `schoolCode` (must match `^[a-z0-9-]+$`), a missing name, a coordinate missing or outside Singapore, a planning area not in `districts.geojson`, a range with lower > upper, outside 4–32 or a posting group other than 1–3, an IP range that is not PG3, a duplicate range (same year, posting group, affiliation and IP flag), and (full snapshots only) a school count outside 140–160.
+- **Errors** stop the app from starting: a `formatVersion` other than 2 (a manifest without one is format 1, which had the `busInfo` and `nearestMrt` texts instead of the lists; `manifest`), a bus element that does not match `^[A-Z]{0,2}[0-9]{1,3}[A-Za-z]?$` or an MRT element that contains `:`, ` - `, ` and `, `&`, `campus` or a comma, or one listed twice or with leading or trailing white space (`transport-list`), a duplicate or badly formed `schoolCode` (must match `^[a-z0-9-]+$`), a missing name, a coordinate missing or outside Singapore, a planning area not in `districts.geojson`, a range with lower > upper, outside 4–32 or a posting group other than 1–3, an IP range that is not PG3, a duplicate range (same year, posting group, affiliation and IP flag), and (full snapshots only) a school count outside 140–160. DC-85 adds the rules that keep a valid snapshot loadable into the database: an admission year outside 2022–2100 (`bad-psle-range`), a `moeText` not in MOE's form `lower[(D|M)] - upper[(D|M)][*]` or with other numbers than the range (`moe-text-format`), a text longer than its database column (`too-long`), a postal code that is not 6 digits (`bad-postal-code`), two schools with the same name (`duplicate-name`), a planning area without a code or name or with one used twice (`bad-district`), a CCA, programme or affiliation listed twice for one school (`duplicate-element`), and a manifest without `effectiveDate` or `importedAt`, with a version other than letters, digits, `.`, `_` and `-`, or with a source lacking a `datasetId` or name or listed twice (`manifest`).
 - **Warnings** are allowed: a school with no CCAs, a school with no PSLE ranges.
 
 `ActiveSnapshotIsValidTest` checks the `ACTIVE` snapshot on every build, so a broken snapshot fails CI.
+
+`schools.json` may also carry `planningAreaName` and `ipRangeNote` for reviewers. The database does not store them: the app computes the name from the planning-area code and the note from the IP ranges (DC-85), and the round-trip test checks that both equal what the JSON says.
+
+## Loading into the database
+
+At start-up, after the checks above, `SchoolDataController` hands the snapshot to `persistence.dataset.SchoolDatasetStore.ensureLoaded`, which runs in one database transaction (DC-83; [`docs/database-design.md`](../docs/database-design.md), section 6.2):
+
+1. It locks the one row of `active_dataset`, so a second app instance starting at the same moment waits.
+2. **Nothing to do** when the database's active version has the same name, the same SHA-256 of `manifest.json` + `schools.json` + `districts.geojson`, and the same loader format. This is the normal start-up and takes milliseconds.
+3. **An older snapshot** (earlier `importedAt` than the active one) is not loaded when `app.dataset.allow-rollback` is false, which is the case only in the `prod` profile. The app keeps serving the newer version and logs a WARN.
+4. Otherwise it writes the version row (with its sources and warnings), updates or inserts every planning area and school, and **withdraws** the ones missing from the snapshot: their row stays, marked with `withdrawn_in_version`. It logs each withdrawn school code with how many shortlists and plans saved it. Then it replaces all PSLE ranges, CCAs, programmes, affiliations, bus services and MRT stations, and makes the version active.
+5. Any failure rolls the whole load back, and the previous version stays active.
+
+After that the app reads the active dataset from the database (about 10 SELECTs) into `SchoolDataCache`. Every hour (`app.dataset.recheck-after`) it compares the database's active version and hash with what it serves, and rebuilds the cache when another instance loaded a different version. It never reads the files after start-up, so **a changed `ACTIVE` is picked up on the next restart**.
+
+**Withdrawn schools.** Schools and planning areas are never deleted (DC-86): shortlists and plans hold foreign keys to `school`. A withdrawn school is left out of every page; a member who saved it sees its last-known name and code with "School no longer in the dataset" and a Remove button, and the plan warns about it. If the school comes back in a later snapshot, the loader clears `withdrawn_in_version` and the saved entries work again.
+
+**Settings** (`app.dataset.*`): `load-on-startup` (true; false = read no snapshot file and build the cache from the database on first use, as the `import` profile does, so a new validator rule that rejects the current `ACTIVE` cannot stop the importer that would fix it), `allow-rollback` (true; `${DATASET_ALLOW_ROLLBACK:false}` in `prod`), `recheck-after` (1h).
+
+**Look at the loaded data.** With the H2 console (README, "Look inside the dev database") or, on PostgreSQL, `docker compose exec db psql -U schoolmatch`:
+
+```sql
+SELECT a.dataset_version, v.load_status, v.loaded_at FROM active_dataset a JOIN dataset_version v USING (dataset_version);
+SELECT school_code, school_name, withdrawn_in_version FROM school WHERE withdrawn_in_version IS NOT NULL;
+```
+
+## Rollback
+
+To go back to an older snapshot:
+
+1. In a PR, point `ACTIVE` back at the older folder. If the folder was removed, restore it from git history first: `git checkout <commit> -- data/snapshots/<version>`.
+2. Restart the app. In `prod`, set `DATASET_ALLOW_ROLLBACK=true` for that one deploy and remove it afterwards; without it, `prod` keeps the newer version (so an old image restarting during a rolling deploy cannot switch every instance back).
+3. The loader takes the normal path above: the old version's row already exists, so it is updated and made active; schools that are only in the newer version are withdrawn; schools that came back are reactivated. No history row is deleted.
+
+Only format-2 snapshots can be loaded. `2026-10-03.5` and older are format 1, so they are no longer rollback targets; `2026-10-04.1` is the oldest real snapshot that is.
+
+To start over on a local database instead (dev only): stop the app and delete `.local/h2/`; the next start creates the tables and loads `ACTIVE` again.
 
 ## The real snapshot: the importer (owner B)
 
@@ -133,17 +170,20 @@ What it does, in order:
 2. **Join** CCAs (`cca_grouping_desc`, rows whose `school_section` is not `PRIMARY` or `JUNIOR COLLEGE`) and subjects (`Subject_Desc`, stored as `programmes`) to the schools by name: upper case, single spaces, curly apostrophes made straight, plus `curated/name-aliases.csv`. A school with no rows is kept and reported (`cca-join-miss`, `subject-join-miss`). Two subject clean-ups (DC-76): rows listed in `curated/subject-exclusions.csv` are left out (`subjects-excluded` in the report; a row that matches nothing is a `curated` warning), and subject names that differ only in letter case get one spelling for all schools: a spelling that is not all upper case first, then the one most schools use, then alphabetical (`subject-spellings-merged`; e.g. `BIOLOGY` becomes `Biology`).
 3. **School code** from `curated/school-codes.csv`; without a row, a slug of the name (e.g. `st-hildas-secondary-school`) and a `school-code-slug` warning.
 4. **Coordinate** by postal code with OneMap (`OneMapClient`, at most 1 request per second, one retry on an error; 5-digit postal codes get their leading 0 back). The hit whose BUILDING is the school's name wins (`ST.` = `SAINT`, `GOVT` = `GOVERNMENT`); else the only hit, or the first of several hits within 100 m of each other (both reported). Hits far apart (`geocode-ambiguous`) or no hit (`geocode-failed`) leave the school without a coordinate, which fails validation: add a row to `curated/geocode-overrides.csv`. An override row always wins.
-5. **Planning area** by point-in-polygon on the full-detail boundaries (`District.contains`, JTS). A planning area that disagrees with the dataset's `dgp_code` is reported (`district-mismatch`; names are compared on letters only, so `SENG KANG` = `SENGKANG`).
-6. **Curated data**: checked rows of `psle-ranges.csv` and `affiliations.csv`. An `IP` row becomes a range with `integratedProgramme: true` (posting group 3, non-affiliated, listed after the school's other ranges) and also the school's `ipRangeNote` with MOE's text (DC-77, see [MOE SchoolFinder data](#moe-schoolfinder-data)); an `IP_AFFILIATED` row is the same with `affiliated: true` (DC-82). Every range keeps the row's `raw_text` as `moeText` (DC-82), so the details page can show MOE's Higher Chinese grades and `30*`. Rows that are not checked by a second person, or that name an unknown school code, are reported (`curated`).
-7. **Validate** with `SnapshotValidator` as kind `full` (140–160 schools, every coordinate in Singapore, every planning area known, ranges sane).
-8. **Write** `<output>/<yyyy-MM-dd>.<n>/`: `manifest.json`, `schools.json` (sorted by code), `districts.geojson` (simplified with JTS until it is under 300 KB), `validation-report.md` (every error and warning) and `import-log.txt`. A FAILED snapshot is written too, so you can read why; an existing folder is never overwritten.
-9. **ACTIVE** changes only when `app.dataset.activate-on-import=true` and the snapshot is not FAILED. The default is false: B reads the report, then edits `ACTIVE` in the PR titled "data: snapshot <version>".
+5. **Bus and MRT lists** (DC-84, `TransportLists`): MOE's `bus_desc` and `mrt_desc` texts are split on commas, each piece trimmed, empty and repeated pieces dropped. A text the split gets wrong has a row in `curated/transport-overrides.csv`, used only while MOE's text is still exactly its `published_text`; a stale row is reported (`transport-override-stale`) and the plain split is used, which the validator then refuses (`transport-list`).
+6. **Planning area** by point-in-polygon on the full-detail boundaries (`District.contains`, JTS). A planning area that disagrees with the dataset's `dgp_code` is reported (`district-mismatch`; names are compared on letters only, so `SENG KANG` = `SENGKANG`).
+7. **Curated data**: checked rows of `psle-ranges.csv` and `affiliations.csv`. An `IP` row becomes a range with `integratedProgramme: true` (posting group 3, non-affiliated, listed after the school's other ranges) and also the school's `ipRangeNote` with MOE's text (DC-77, see [MOE SchoolFinder data](#moe-schoolfinder-data)); an `IP_AFFILIATED` row is the same with `affiliated: true` (DC-82). Every range keeps the row's `raw_text` as `moeText` (DC-82), so the details page can show MOE's Higher Chinese grades and `30*`. Rows that are not checked by a second person, or that name an unknown school code, are reported (`curated`).
+8. **Validate** with `SnapshotValidator` as kind `full` (140–160 schools, every coordinate in Singapore, every planning area known, ranges sane).
+9. **Write** `<output>/<yyyy-MM-dd>.<n>/`: `manifest.json`, `schools.json` (sorted by code), `districts.geojson` (simplified with JTS until it is under 300 KB), `validation-report.md` (every error and warning) and `import-log.txt`. A FAILED snapshot is written too, so you can read why; an existing folder is never overwritten.
+10. **ACTIVE** changes only when `app.dataset.activate-on-import=true` and the snapshot is not FAILED. The default is false: B reads the report, then edits `ACTIVE` in the PR titled "data: snapshot <version>".
 
-Settings: `app.dataset.import-output-dir` (empty = `app.dataset.dir`), `app.dataset.activate-on-import` (false), `app.dataset.curated-dir` (`data/curated`, six CSV files), `DATAGOVSG_API_KEY` (optional, sent as the `x-api-key` header).
+Settings: `app.dataset.import-output-dir` (empty = `app.dataset.dir`), `app.dataset.activate-on-import` (false), `app.dataset.curated-dir` (`data/curated`, seven CSV files), `DATAGOVSG_API_KEY` (optional, sent as the `x-api-key` header).
 
 Run it again whenever a curated CSV changes. Never on a schedule and never during the demo. Each run takes about 4 minutes. Delete the folders of runs you do not keep, so only the active snapshot (and the seed) stay in the repo.
 
 **Runs on 3 Oct 2026.** Run 1 (curated CSVs empty) passed with 301 warnings: the same data as run 2, plus 147 `school-code-slug` and 1 `geocode-single-hit` (School of the Arts). Its codes were then frozen in `school-codes.csv` and the School of the Arts coordinate added to `geocode-overrides.csv`. Run 2 (`2026-10-03.2`, 153 warnings) had the same `schools.json` and `districts.geojson` as run 1, byte for byte. Run 3 is `2026-10-03.3` (153 warnings), made after the DC-76 subject clean-up: compared with run 2, only the `programmes` of 12 schools changed (4 placeholders left out, 32 names given one spelling), and `districts.geojson` is the same byte for byte; the manifest now names "Subjects Offered" as data.gov.sg does. Run 4 is `2026-10-03.4` (14 warnings), made after the MOE SchoolFinder rows were added to `curated/` (DC-77, DC-78): compared with run 3, only `scoreRanges`, `affiliatedPrimarySchools` and `ipRangeNote` changed (no other field of any school), `districts.geojson` is the same byte for byte, and the 139 `no-psle-ranges` warnings of the schools that now have ranges are gone. Run 5 is `2026-10-03.5` (14 warnings), made after the review fixes of DC-82: compared with run 4, every range gains `moeText` (MOE's `raw_text`), Nanyang Girls' High gains its affiliated IP range `4(D) - 8(M)` and the matching `ipRangeNote` part, and nothing else changed (`districts.geojson` the same byte for byte). The folders of runs 1 to 4 were removed from the repo. A dry run on 2 Oct 2026 (outside the repo) gave the same 147 schools.
+
+**Run on 4 Oct 2026.** `2026-10-04.1` (14 warnings, the same 14 as run 5) is the first snapshot in format 2 (DC-84), made after `TransportLists` and `curated/transport-overrides.csv` were added. Compared with `2026-10-03.5`, a script checked that every field of every school is the same except `busInfo` / `nearestMrt`, which became `busServices` / `mrtStations` (1,492 bus services and 243 MRT stations; 9 texts through `transport-overrides.csv`); `districts.geojson` is the same byte for byte; the manifest differs only in `formatVersion`, the version, the dates and the curated-files source name (which now lists the transport overrides). Joined with `", "` for display, 138 of 147 bus texts and 144 of 147 MRT texts are exactly as before; the other 12 lose only labels, a repeated service or a stray comma. `2026-10-03.5` (format 1) was removed from the repo; the app can no longer load it.
 
 **OneMap token notice.** Since at least 3 Oct 2026, OneMap's search answer carries `"error": "Authentication token missing. Please create an account and generate or renew your API Token."` next to normal results. Search still works without a token. If OneMap starts refusing searches without one, the importer (and live address search) will need a OneMap account token.
 
@@ -156,6 +196,7 @@ Run it again whenever a curated CSV changes. Never on a schedule and never durin
 | `psle-ranges.csv` | `school_code,admission_year,posting_group,track,lower,upper,raw_text,source_url,entered_by,checked_by` | PSLE ranges; `track` is `NON_AFFILIATED`, `AFFILIATED`, `IP` or `IP_AFFILIATED` (an IP row has `posting_group` 3). 444 rows for 139 schools, admission year 2025. |
 | `geocode-overrides.csv` | `postal_code,school_code,latitude,longitude,reason` | coordinates for schools OneMap's hits cannot place by name; fill `postal_code` or `school_code`. One row: School of the Arts (227968). |
 | `affiliations.csv` | `school_code,primary_school,source_url` | affiliated primary schools (DC-21), names as SchoolFinder writes them (the importer upper-cases them). The app compares a member's primary school with these names ignoring case, spaces, dots, apostrophes, brackets and a trailing "(Primary)" (DC-82), so the data.gov.sg spelling (e.g. `CATHOLIC HIGH SCHOOL` for MOE's `Catholic High School (Primary)`) also counts. 39 rows for 27 schools. |
+| `transport-overrides.csv` | `school_code,kind,published_text,elements,reason` | DC-84: the bus services (`kind` `bus`) or MRT stations (`mrt`) of a school whose MOE text the plain comma split gets wrong; `elements` separated by `;`, in published order. Used only while MOE's (cleaned) text equals `published_text`. Nine rows (4 Oct 2026): 7 bus texts with operator names, `&`, `243G/W`, missing commas, stop or road labels, and the MRT texts of NUS High and Outram. |
 | `subject-exclusions.csv` | `school_name,subject_desc,reason` | rows of the Subjects Offered dataset that are not real subjects, left out by the importer (DC-76). `school_name` and `subject_desc` as published (the subject is matched ignoring case). Four rows: the placeholders `G1 Test` (Boon Lay Secondary), `Test rebase A` (Cedar Girls'), `Test Subject` (Methodist Girls' (Secondary)) and `test` (Singapore Chinese Girls'), seen in the live dataset on 3 Oct 2026. |
 
 - **Approval.** The lead approved using MOE SchoolFinder data (ranges, affiliations, page links) on 3 Oct 2026. The TA was not consulted and is to be informed (owner: lead). If the TA says no, empty `psle-ranges.csv` and `affiliations.csv` (header rows only) and import again: every page then works without ranges (DC-74).

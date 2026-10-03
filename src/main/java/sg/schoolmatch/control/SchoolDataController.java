@@ -6,16 +6,18 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import sg.schoolmatch.boundary.external.DataGovSgInterface;
 import sg.schoolmatch.boundary.external.DataGovSgRecord;
@@ -26,6 +28,7 @@ import sg.schoolmatch.dataset.CuratedCsvReader.CuratedData;
 import sg.schoolmatch.dataset.CuratedCsvReader.PsleRangeRow;
 import sg.schoolmatch.dataset.DistrictLocator;
 import sg.schoolmatch.dataset.ImportLog;
+import sg.schoolmatch.dataset.IpRangeNotes;
 import sg.schoolmatch.dataset.LoadedSnapshot;
 import sg.schoolmatch.dataset.NameNormaliser;
 import sg.schoolmatch.dataset.SchoolGeocoder;
@@ -38,20 +41,36 @@ import sg.schoolmatch.dataset.SnapshotManifest;
 import sg.schoolmatch.dataset.SnapshotReader;
 import sg.schoolmatch.dataset.SnapshotValidator;
 import sg.schoolmatch.dataset.SnapshotWriter;
+import sg.schoolmatch.dataset.TransportLists;
 import sg.schoolmatch.dataset.ValidationReport;
 import sg.schoolmatch.entity.common.Coordinate;
 import sg.schoolmatch.entity.school.District;
 import sg.schoolmatch.entity.school.School;
 import sg.schoolmatch.entity.school.SchoolDataCache;
 import sg.schoolmatch.error.NotFoundException;
+import sg.schoolmatch.persistence.dataset.SchoolDatasetMapper;
+import sg.schoolmatch.persistence.dataset.SchoolDatasetStore;
+import sg.schoolmatch.persistence.dataset.SnapshotRows;
 
 /**
- * Design class «control» SchoolDataController — serves the active, validated school snapshot
+ * Design class «control» SchoolDataController — serves the active, validated school dataset
  * (FR-DATA-03, NFR-DATA-01). Every other control reads schools through this class.
  * DC-09: exposes the dataset metadata; DC-12: {@link #importDataset()} builds a new snapshot from data.gov.sg.
  * <p>
- * The snapshot is read and validated once, in the constructor. A FAILED snapshot stops the app from starting.
- * After {@code app.dataset.recheck-after} (1 h) the next call re-reads it and switches when the version changed.
+ * DC-83 (docs/database-design.md, sections 6.2 and 6.3): the school data is served from the database.
+ * <ul>
+ *   <li>Start-up ({@code app.dataset.load-on-startup}, default true): the snapshot ({@code ACTIVE}, or
+ *       {@code app.dataset.snapshot-location}) is read and validated; a FAILED snapshot stops the app from starting.
+ *       {@link SchoolDatasetStore#ensureLoaded} then makes it the database's active version unless it already is
+ *       (normally it is, and nothing is written).</li>
+ *   <li>The cache and the manifest are always built from the database ({@link SchoolDatasetStore#readActive()},
+ *       {@link SchoolDatasetMapper}), never from the files.</li>
+ *   <li>After {@code app.dataset.recheck-after} (1 h) the next call reads the database's active version and hash, and
+ *       rebuilds the cache when either changed (another instance loaded a version). It never reads files: a changed
+ *       {@code ACTIVE} is picked up on restart.</li>
+ *   <li>{@code load-on-startup: false} (the import profile) reads no file at start-up and builds the cache from the
+ *       database on first use.</li>
+ * </ul>
  */
 @Service
 public class SchoolDataController {
@@ -80,13 +99,19 @@ public class SchoolDataController {
     private final SnapshotWriter snapshotWriter;
     private final AppProperties props;
     private final Clock clock;
+    private final SchoolDatasetStore datasetStore;
 
-    private volatile SchoolDataCache activeDataset;
-    private volatile SnapshotManifest activeManifest;
+    /** What is served; replaced as a whole by {@link #rebuildFromDatabase} (null until the first build). */
+    private volatile Served served;
+
+    /** The cache, its manifest, and the database state they were built from. */
+    private record Served(SchoolDataCache dataset, SnapshotManifest manifest, SchoolDatasetStore.ActiveState state) {
+    }
 
     public SchoolDataController(DataGovSgInterface dataGovSg, OneMapInterface oneMap, SnapshotReader snapshotReader,
                                 SnapshotValidator snapshotValidator, CuratedCsvReader curatedCsvReader,
-                                SnapshotWriter snapshotWriter, AppProperties props, Clock clock) {
+                                SnapshotWriter snapshotWriter, AppProperties props, Clock clock,
+                                SchoolDatasetStore datasetStore) {
         this.dataGovSg = dataGovSg;
         this.oneMap = oneMap;
         this.snapshotReader = snapshotReader;
@@ -95,13 +120,15 @@ public class SchoolDataController {
         this.snapshotWriter = snapshotWriter;
         this.props = props;
         this.clock = clock;
-        loadValidated();
+        this.datasetStore = datasetStore;
+        if (props.dataset().loadOnStartup()) {
+            loadAtStartUp();
+        }
     }
 
     /** All schools, sorted by name then code. */
     public List<School> getSchools() {
-        refreshIfExpired();
-        return activeDataset.getSchools();
+        return current().dataset().getSchools();
     }
 
     /**
@@ -110,15 +137,13 @@ public class SchoolDataController {
      * @throws sg.schoolmatch.error.NotFoundException when the code is not in the dataset
      */
     public School getSchool(String schoolCode) {
-        refreshIfExpired();
-        return activeDataset.findByCode(schoolCode)
+        return current().dataset().findByCode(schoolCode)
                 .orElseThrow(() -> new NotFoundException("No school with code '" + schoolCode + "'"));
     }
 
     /** Planning areas with their boundaries (FR-MAP-06, DC-04). */
     public List<District> getDistricts() {
-        refreshIfExpired();
-        return activeDataset.getDistricts();
+        return current().dataset().getDistricts();
     }
 
     /**
@@ -126,8 +151,7 @@ public class SchoolDataController {
      * The one place every page and control asks; false for a snapshot built without curated ranges.
      */
     public boolean hasPsleData() {
-        refreshIfExpired();
-        return activeDataset.hasPsleData();
+        return current().dataset().hasPsleData();
     }
 
     /**
@@ -135,14 +159,12 @@ public class SchoolDataController {
      * a school with none then has none (the details page says "None"), not unknown ("Not available").
      */
     public boolean hasAffiliationData() {
-        refreshIfExpired();
-        return activeDataset.hasAffiliationData();
+        return current().dataset().hasAffiliationData();
     }
 
     /** DC-09: the loaded dataset with its version, date and status (footer, about page). */
     public SchoolDataCache getActiveDataset() {
-        refreshIfExpired();
-        return activeDataset;
+        return current().dataset();
     }
 
     /**
@@ -150,8 +172,27 @@ public class SchoolDataController {
      * (the {@code /about/data} page and the Singapore Open Data Licence notice).
      */
     public SnapshotManifest getActiveManifest() {   // DC-52
-        refreshIfExpired();
-        return activeManifest;
+        return current().manifest();
+    }
+
+    /**
+     * The last-known name of each given code that is not in the active dataset but still has a database row: a
+     * school that was withdrawn (design section 6.4, open decision 3; DC-86). Shortlist and plan pages show it next
+     * to the code. Codes in the active dataset and codes the database never had are left out. When the database
+     * cannot be read, the answer is empty, so the pages fall back to showing the code alone.
+     */
+    public Map<String, String> getLastKnownSchoolNames(Collection<String> schoolCodes) {
+        SchoolDataCache dataset = current().dataset();
+        List<String> missing = schoolCodes.stream().filter(code -> dataset.findByCode(code).isEmpty()).toList();
+        if (missing.isEmpty()) {
+            return Map.of();
+        }
+        try {
+            return datasetStore.schoolNames(missing);
+        } catch (DataAccessException e) {
+            log.warn("Could not read the last-known names of {} school codes: {}", missing.size(), e.getMessage());
+            return Map.of();
+        }
     }
 
     // ------------------------------------------------------------------ importer (DC-12)
@@ -166,10 +207,13 @@ public class SchoolDataController {
      *   <li>Coordinate by postal code ({@link SchoolGeocoder}); planning area by {@link District#contains},
      *       with a warning when it disagrees with the dataset's {@code dgp_code}.</li>
      *   <li>Checked PSLE ranges and affiliations from the curated CSVs (none yet → no school has ranges).</li>
+     *   <li>DC-84: bus and MRT texts split into lists ({@link TransportLists}, with {@code transport-overrides.csv});
+     *       the snapshot is written in format {@value SnapshotManifest#FORMAT_VERSION}.</li>
      *   <li>Validate as kind "full" with {@link SnapshotValidator}; write the folder even when FAILED, for review.</li>
      *   <li>Update {@code ACTIVE} only when {@code app.dataset.activate-on-import=true} and the status is not FAILED.</li>
      * </ol>
-     * The running app keeps serving its current snapshot; it switches only after ACTIVE changes (recheck).
+     * The running app keeps serving the database's active dataset; the new snapshot is loaded into the database when an
+     * app starts with ACTIVE pointing at it (DC-83). This method never reads or writes the database.
      *
      * @return the validator's errors, plus the importer's and validator's warnings
      * @throws sg.schoolmatch.error.ExternalServiceUnavailableException when data.gov.sg cannot be read (nothing is written)
@@ -202,14 +246,16 @@ public class SchoolDataController {
         CuratedLookups lookups = curatedLookups(curated, names, importLog);
         SchoolGeocoder geocoder = new SchoolGeocoder(oneMap, curated.geocodeOverrides());
         DistrictLocator locator = new DistrictLocator(fullDistricts);
+        TransportLists transport = new TransportLists(curated.transportOverrides());
         List<SchoolRecord> records = new ArrayList<>();
         for (JoinedSchool school : joined) {
-            records.add(buildRecord(school, lookups, geocoder, locator, importLog));
+            records.add(buildRecord(school, lookups, geocoder, locator, transport, importLog));
         }
         sources.add(new SnapshotManifest.Source("OneMap search (coordinates by postal code)", ONEMAP_SOURCE_ID,
                 clock.instant()));
         sources.add(new SnapshotManifest.Source("SchoolMatch curated CSV files (school codes, name aliases, "
-                + "PSLE ranges, geocode overrides, affiliations, subject exclusions)", CURATED_SOURCE_ID, started));
+                + "PSLE ranges, geocode overrides, affiliations, subject exclusions, transport overrides)",
+                CURATED_SOURCE_ID, started));
         warnUnknownCodes(curated, records, importLog);
 
         String districtsGeoJson = snapshotWriter.districtsGeoJson(fullDistricts, SnapshotWriter.MAX_DISTRICTS_BYTES);
@@ -230,8 +276,8 @@ public class SchoolDataController {
                 : "PSLE ranges come from data/curated/psle-ranges.csv (MOE SchoolFinder; each value read twice by "
                         + "independent scripts and spot-checked by hand, see data/README.md). They are historical, "
                         + "not a guarantee.";
-        SnapshotManifest draft = new SnapshotManifest(SnapshotManifest.KIND_FULL, version, today, clock.instant(),
-                sources, null, List.of(), counts, notes);
+        SnapshotManifest draft = new SnapshotManifest(SnapshotManifest.FORMAT_VERSION, SnapshotManifest.KIND_FULL,
+                version, today, clock.instant(), sources, null, List.of(), counts, notes);
         LoadedSnapshot candidate = new LoadedSnapshot(outputDir.resolve(version).toUri().toString(), draft, records,
                 records.stream().map(SnapshotReader::toSchool).toList(), storedDistricts);
         ValidationReport validation = snapshotValidator.validate(candidate);
@@ -241,8 +287,8 @@ public class SchoolDataController {
 
         List<String> manifestWarnings = new ArrayList<>(importLog.summary());
         manifestWarnings.addAll(summariseByRule(validation.getWarnings()));
-        SnapshotManifest manifest = new SnapshotManifest(SnapshotManifest.KIND_FULL, version, today, clock.instant(),
-                sources, report.getStatus(), manifestWarnings, counts, notes);
+        SnapshotManifest manifest = new SnapshotManifest(SnapshotManifest.FORMAT_VERSION, SnapshotManifest.KIND_FULL,
+                version, today, clock.instant(), sources, report.getStatus(), manifestWarnings, counts, notes);
 
         boolean activate = props.dataset().activateOnImport() && report.isUsable();
         importLog.info("Validation: " + report.getStatus() + " (" + report.getErrors().size() + " errors, "
@@ -266,7 +312,7 @@ public class SchoolDataController {
 
     /** One joined school → its schools.json record (code, coordinate, planning area, curated data). */
     private SchoolRecord buildRecord(JoinedSchool school, CuratedLookups lookups, SchoolGeocoder geocoder,
-                                     DistrictLocator locator, ImportLog importLog) {
+                                     DistrictLocator locator, TransportLists transport, ImportLog importLog) {
         DataGovSgRecord row = school.row();
         String name = clean(row.get("school_name"));
         String code = lookups.codesByName().get(school.name());
@@ -307,16 +353,18 @@ public class SchoolDataController {
                 clean(row.get("type_code")),
                 district == null ? null : district.getPlanningAreaCode(),
                 district == null ? null : district.getPlanningAreaName(),
-                clean(row.get("mrt_desc")), clean(row.get("bus_desc")), clean(row.get("session_code")),
+                transport.elements(TransportLists.Kind.MRT, code, clean(row.get("mrt_desc")), importLog),
+                transport.elements(TransportLists.Kind.BUS, code, clean(row.get("bus_desc")), importLog),
+                clean(row.get("session_code")),
                 clean(row.get("nature_code")), school.programmes(), school.ccas(),
                 lookups.affiliationsByCode().getOrDefault(code, List.of()),
-                lookups.ipNotesByCode().get(code),
+                IpRangeNotes.of(lookups.rangesByCode().getOrDefault(code, List.of())),   // DC-85: computed
                 lookups.rangesByCode().getOrDefault(code, List.of()));
     }
 
     /** The curated CSV rows indexed for {@link #buildRecord}; unusable rows become warnings. */
     private record CuratedLookups(Map<String, String> codesByName, Map<String, List<ScoreRangeRecord>> rangesByCode,
-                                  Map<String, String> ipNotesByCode, Map<String, List<String>> affiliationsByCode) {
+                                  Map<String, List<String>> affiliationsByCode) {
     }
 
     private static CuratedLookups curatedLookups(CuratedData curated, NameNormaliser names, ImportLog importLog) {
@@ -330,7 +378,6 @@ public class SchoolDataController {
         });
         Map<String, List<ScoreRangeRecord>> ranges = new HashMap<>();
         Map<String, List<ScoreRangeRecord>> ipRanges = new HashMap<>();
-        Map<String, List<String>> ipNotes = new HashMap<>();
         for (PsleRangeRow row : curated.psleRanges()) {
             String label = row.schoolCode() + " " + row.admissionYear() + " PG" + row.postingGroup() + " " + row.track();
             if (!row.isChecked()) {
@@ -339,15 +386,12 @@ public class SchoolDataController {
             } else if (CuratedCsvReader.TRACK_IP.equals(row.track())
                     || CuratedCsvReader.TRACK_IP_AFFILIATED.equals(row.track())) {
                 // DC-77: an IP row is a range too (the PG3 fallback; MOE files IP under PG3), and its MOE text
-                // stays the details-page note (DC-18), e.g. "4(D) - 8(M)". DC-82: IP_AFFILIATED is the affiliated
-                // IP value (Nanyang Girls').
+                // stays the details-page note (DC-18, built by IpRangeNotes), e.g. "4(D) - 8(M)". DC-82:
+                // IP_AFFILIATED is the affiliated IP value (Nanyang Girls').
                 boolean affiliatedIp = CuratedCsvReader.TRACK_IP_AFFILIATED.equals(row.track());
                 ipRanges.computeIfAbsent(row.schoolCode(), c -> new ArrayList<>()).add(new ScoreRangeRecord(
                         row.admissionYear(), row.postingGroup(), affiliatedIp, row.lower(), row.upper(), true,
                         row.rawText()));
-                ipNotes.computeIfAbsent(row.schoolCode(), c -> new ArrayList<>()).add("IP " + row.admissionYear()
-                        + " PG" + row.postingGroup() + (affiliatedIp ? " affiliated" : "") + ": "
-                        + (row.rawText() != null ? row.rawText() : row.lower() + "–" + row.upper()));
             } else {
                 ranges.computeIfAbsent(row.schoolCode(), c -> new ArrayList<>()).add(new ScoreRangeRecord(
                         row.admissionYear(), row.postingGroup(), CuratedCsvReader.TRACK_AFFILIATED.equals(row.track()),
@@ -356,12 +400,10 @@ public class SchoolDataController {
         }
         // IP ranges after the others, so the details table lists them last within a year and posting group.
         ipRanges.forEach((code, list) -> ranges.computeIfAbsent(code, c -> new ArrayList<>()).addAll(list));
-        Map<String, String> ipNoteText = new HashMap<>();
-        ipNotes.forEach((code, list) -> ipNoteText.put(code, String.join("; ", list)));
         Map<String, List<String>> affiliations = new HashMap<>();
         curated.affiliations().forEach(a -> affiliations.computeIfAbsent(a.schoolCode(), c -> new ArrayList<>())
                 .add(NameNormaliser.normalise(a.primarySchool())));
-        return new CuratedLookups(codes, ranges, ipNoteText, affiliations);
+        return new CuratedLookups(codes, ranges, affiliations);
     }
 
     /** Curated rows that name a school code the import did not produce (a typo, or a school that closed). */
@@ -372,6 +414,7 @@ public class SchoolDataController {
         curated.psleRanges().forEach(r -> warnUnknown(CuratedCsvReader.PSLE_RANGES, r.schoolCode(), codes, reported, importLog));
         curated.affiliations().forEach(a -> warnUnknown(CuratedCsvReader.AFFILIATIONS, a.schoolCode(), codes, reported, importLog));
         curated.geocodeOverrides().forEach(o -> warnUnknown(CuratedCsvReader.GEOCODE_OVERRIDES, o.schoolCode(), codes, reported, importLog));
+        curated.transportOverrides().forEach(o -> warnUnknown(CuratedCsvReader.TRANSPORT_OVERRIDES, o.schoolCode(), codes, reported, importLog));
     }
 
     private static void warnUnknown(String file, String code, Set<String> codes, Set<String> reported, ImportLog importLog) {
@@ -415,67 +458,82 @@ public class SchoolDataController {
         return Math.round(value * 1_000_000d) / 1_000_000d;
     }
 
-    // ------------------------------------------------------------------ serving the active snapshot
+    // ------------------------------------------------------------------ serving the active dataset
 
     /**
-     * NFR-DATA-01: once {@code expiresAt} has passed, re-reads the snapshot and switches to it when its version
-     * changed and it validates. On any problem the current dataset stays and is checked again later.
+     * What to serve now. Builds it from the database on first use ({@code load-on-startup: false}); once
+     * {@code expiresAt} has passed, checks the database's active version and hash (NFR-DATA-01, section 6.3).
      */
-    private synchronized void refreshIfExpired() {
-        Instant now = clock.instant();
-        if (!activeDataset.isExpired(now)) {
-            return;
+    private Served current() {
+        Served now = served;
+        if (now == null || now.dataset().isExpired(clock.instant())) {
+            now = refresh();
         }
-        Instant nextCheck = now.plus(props.dataset().recheckAfter());
+        return now;
+    }
+
+    /**
+     * The hourly check: rebuild from the database when its active version or hash differs from what is served;
+     * otherwise check again after {@code recheck-after}. On any problem the current dataset stays and is checked
+     * again later. Never reads snapshot files.
+     */
+    private synchronized Served refresh() {
+        Served now = served;
+        Instant instant = clock.instant();
+        if (now == null) {
+            return rebuildFromDatabase();   // first use; a problem here is the caller's error
+        }
+        if (!now.dataset().isExpired(instant)) {
+            return now;   // another thread just checked
+        }
         try {
-            LoadedSnapshot snapshot = snapshotReader.read();
-            if (Objects.equals(snapshot.version(), activeDataset.getDatasetVersion())) {
-                activeDataset.setExpiresAt(nextCheck);
-                return;
+            Optional<SchoolDatasetStore.ActiveState> state = datasetStore.activeState();
+            if (state.isEmpty() || state.get().equals(now.state())) {
+                now.dataset().setExpiresAt(instant.plus(props.dataset().recheckAfter()));
+                return now;
             }
-            ValidationReport report = snapshotValidator.validate(snapshot);
-            if (report.isUsable()) {
-                log.info("Switching school snapshot {} -> {}", activeDataset.getDatasetVersion(), snapshot.version());
-                activeManifest = snapshot.manifest();
-                activeDataset = toCache(snapshot, report);
-            } else {
-                log.warn("New school snapshot {} ignored, keeping {}: {}", snapshot.version(),
-                        activeDataset.getDatasetVersion(), report);
-                activeDataset.setExpiresAt(nextCheck);
-            }
+            log.info("The database's active school dataset changed ({} -> {}); rebuilding the cache",
+                    now.state().datasetVersion(), state.get().datasetVersion());
+            return rebuildFromDatabase();
         } catch (RuntimeException e) {
-            log.warn("Could not re-read the school snapshot, keeping {}: {}", activeDataset.getDatasetVersion(),
-                    e.getMessage());
-            activeDataset.setExpiresAt(nextCheck);
+            log.warn("Could not check the database's active school dataset, keeping {}: {}",
+                    now.dataset().getDatasetVersion(), e.getMessage());
+            now.dataset().setExpiresAt(instant.plus(props.dataset().recheckAfter()));
+            return now;
         }
     }
 
-    /** Reads and validates the configured snapshot; a FAILED one stops start-up. */
-    private void loadValidated() {
+    /**
+     * Start-up (design section 6.2, step 1): read and validate the configured snapshot (a FAILED one stops
+     * start-up), load it into the database unless it is already the active version, then build the cache from the
+     * database.
+     */
+    private void loadAtStartUp() {
         LoadedSnapshot snapshot = snapshotReader.read();
         ValidationReport report = snapshotValidator.validate(snapshot);
         if (!report.isUsable()) {
             throw new IllegalStateException("School snapshot " + snapshot.location() + " failed validation: " + report);
         }
-        SchoolDataCache cache = toCache(snapshot, report);
-        log.info("Loaded school snapshot {} ({}, {} schools, {} districts) from {}: {}", cache.getDatasetVersion(),
-                cache.getDatasetKind(), cache.size(), cache.getDistricts().size(), snapshot.location(),
-                report.getStatus());
         report.getWarnings().forEach(w -> log.debug("Snapshot warning: {}", w));
-        activeManifest = snapshot.manifest();
-        activeDataset = cache;
+        SchoolDatasetStore.Outcome outcome = datasetStore.ensureLoaded(snapshot, report,
+                snapshotReader.contentSha256(snapshot));
+        Served built = rebuildFromDatabase();
+        log.info("School snapshot {} from {}: {} ({}); serving {} ({}, {} schools, {} districts) from the database",
+                snapshot.version(), snapshot.location(), report.getStatus(), outcome,
+                built.dataset().getDatasetVersion(), built.dataset().getDatasetKind(), built.dataset().size(),
+                built.dataset().getDistricts().size());
     }
 
-    /** DC-09: metadata from the manifest; the status is the one just computed by the validator. */
-    private SchoolDataCache toCache(LoadedSnapshot snapshot, ValidationReport report) {
+    /** DC-83: the cache and the manifest built from the database's active dataset (design section 6.3). */
+    private synchronized Served rebuildFromDatabase() {
+        SnapshotRows rows = datasetStore.readActive().orElseThrow(() -> new IllegalStateException("The database has "
+                + "no active school dataset. Start the app once with app.dataset.load-on-startup=true (the default) "
+                + "to load data/snapshots/ACTIVE into it."));
         Instant now = clock.instant();
-        SchoolDataCache cache = new SchoolDataCache(SOURCE_NAME, now, now.plus(props.dataset().recheckAfter()),
-                snapshot.schools(), snapshot.districts());
-        cache.setDatasetVersion(snapshot.manifest().version());
-        cache.setDatasetKind(snapshot.manifest().kind());
-        cache.setEffectiveDate(snapshot.manifest().effectiveDate());
-        cache.setImportedAt(snapshot.manifest().importedAt());
-        cache.setValidationStatus(report.getStatus());
-        return cache;
+        Served built = new Served(SchoolDatasetMapper.cache(rows, SOURCE_NAME, now,
+                now.plus(props.dataset().recheckAfter())), SchoolDatasetMapper.manifest(rows),
+                new SchoolDatasetStore.ActiveState(rows.version().datasetVersion(), rows.version().contentSha256()));
+        served = built;
+        return built;
     }
 }

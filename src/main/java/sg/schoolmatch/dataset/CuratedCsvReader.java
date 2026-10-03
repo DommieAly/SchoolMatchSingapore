@@ -31,6 +31,8 @@ public class CuratedCsvReader {
     public static final String GEOCODE_OVERRIDES = "geocode-overrides.csv";
     public static final String AFFILIATIONS = "affiliations.csv";
     public static final String SUBJECT_EXCLUSIONS = "subject-exclusions.csv";
+    /** DC-84: the elements of a bus or MRT text that the plain comma split gets wrong ({@link TransportLists}). */
+    public static final String TRANSPORT_OVERRIDES = "transport-overrides.csv";
 
     /** {@code psle-ranges.csv} track values (DC-18). */
     public static final String TRACK_NON_AFFILIATED = "NON_AFFILIATED";
@@ -52,7 +54,7 @@ public class CuratedCsvReader {
     }
 
     /**
-     * Reads all six files. A missing file reads as empty (and is reported).
+     * Reads all seven files. A missing file reads as empty (and is reported).
      *
      * @throws IllegalStateException when the folder itself does not exist (wrong working directory)
      */
@@ -78,7 +80,10 @@ public class CuratedCsvReader {
         List<SubjectExclusion> exclusions = rows(SUBJECT_EXCLUSIONS, List.of("school_name", "subject_desc", "reason"),
                 problems, r -> new SubjectExclusion(required(r, "school_name"), required(r, "subject_desc"),
                         r.get("reason")));
-        return new CuratedData(codes, aliases, ranges, overrides, affiliations, exclusions, problems);
+        List<TransportOverride> transport = rows(TRANSPORT_OVERRIDES,
+                List.of("school_code", "kind", "published_text", "elements", "reason"), problems,
+                CuratedCsvReader::toTransportOverride);
+        return new CuratedData(codes, aliases, ranges, overrides, affiliations, exclusions, transport, problems);
     }
 
     // ------------------------------------------------------------------ rows → records
@@ -100,6 +105,22 @@ public class CuratedCsvReader {
             throw new IllegalArgumentException("needs a postal_code or a school_code");
         }
         return new GeocodeOverride(postal, code, number(r, "latitude"), number(r, "longitude"), r.get("reason"));
+    }
+
+    /** {@code elements} are separated by ";" and trimmed; empty pieces are dropped, and at least one must remain. */
+    private static TransportOverride toTransportOverride(Map<String, String> r) {
+        TransportLists.Kind kind = TransportLists.Kind.fromCsv(required(r, "kind"));
+        List<String> elements = new ArrayList<>();
+        for (String piece : required(r, "elements").split(";")) {
+            if (!piece.isBlank()) {
+                elements.add(piece.trim());
+            }
+        }
+        if (elements.isEmpty()) {
+            throw new IllegalArgumentException("elements has no element (separate them with ';')");
+        }
+        return new TransportOverride(required(r, "school_code"), kind, required(r, "published_text"), elements,
+                r.get("reason"));
     }
 
     private static String required(Map<String, String> row, String column) {
@@ -251,6 +272,7 @@ public class CuratedCsvReader {
             List<GeocodeOverride> geocodeOverrides,
             List<Affiliation> affiliations,
             List<SubjectExclusion> subjectExclusions,
+            List<TransportOverride> transportOverrides,
             List<String> problems) {
 
         public CuratedData {
@@ -260,6 +282,7 @@ public class CuratedCsvReader {
             geocodeOverrides = List.copyOf(geocodeOverrides);
             affiliations = List.copyOf(affiliations);
             subjectExclusions = List.copyOf(subjectExclusions);
+            transportOverrides = List.copyOf(transportOverrides);
             problems = List.copyOf(problems);
         }
     }
@@ -302,5 +325,18 @@ public class CuratedCsvReader {
      * {@code subjectDesc} are as published; {@code reason} says why and when it was checked.
      */
     public record SubjectExclusion(String schoolName, String subjectDesc, String reason) {
+    }
+
+    /**
+     * {@code transport-overrides.csv} (DC-84): the elements to use for one school's bus or MRT text while MOE's text
+     * is exactly {@code publishedText} (as the importer cleans it: trimmed, single spaces). {@code elements} are in
+     * published order; {@code reason} says what is wrong with the text.
+     */
+    public record TransportOverride(String schoolCode, TransportLists.Kind kind, String publishedText,
+                                    List<String> elements, String reason) {
+
+        public TransportOverride {
+            elements = List.copyOf(elements);
+        }
     }
 }

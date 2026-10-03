@@ -45,12 +45,10 @@ import sg.schoolmatch.support.TestSchools;
  * DC-74: the whole app on a dataset WITHOUT any PSLE score range — the situation of the real snapshot until MOE
  * SchoolFinder ranges are curated. Fixture {@code fixtures/snapshot-mini-no-psle/}: snapshot-mini with every
  * {@code scoreRanges} emptied (kind "seed", so the seed's TEST VALUES warning must give way to "not available yet").
- * Real controls, real login, stub external services; its own in-memory database so it does not share tables with
- * the other application contexts.
+ * Real controls, real login, stub external services; its own in-memory database, like every application context
+ * (the test profile's {@code jdbc:h2:mem:${random.uuid}} URL).
  */
-@SpringBootTest(properties = {
-        "app.dataset.snapshot-location=classpath:fixtures/snapshot-mini-no-psle/",
-        "spring.datasource.url=jdbc:h2:mem:nopsle;MODE=PostgreSQL;DB_CLOSE_DELAY=-1"})
+@SpringBootTest(properties = "app.dataset.snapshot-location=classpath:fixtures/snapshot-mini-no-psle/")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class NoPsleDataFlowTest {

@@ -7,6 +7,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toCollection;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
@@ -48,6 +49,8 @@ import org.springframework.web.bind.annotation.RestController;
  *   <li>{@code entity} holds exactly the Lab 2 entity classes and enumerations.</li>
  *   <li>Only {@code boundary.external} (and {@code config}, which builds the shared {@code RestClient.Builder})
  *       uses Spring's HTTP client ({@code org.springframework.web.client}).</li>
+ *   <li>Only {@code control.SchoolDataController} (and {@code persistence} itself) uses {@code persistence.dataset}:
+ *       every other class reads schools through SchoolDataController (docs/database-design.md, section 7.3).</li>
  * </ol>
  * ArchUnit runs this class with its own JUnit engine: {@code @ArchTag} is the tag (so
  * {@code ./mvnw test -Dgroups=NFR-MAIN-01} works) and the member name is the display name
@@ -270,6 +273,33 @@ class ArchitectureTest {
                     .because("outside services are reached only through the integration components in "
                             + "boundary.external (NFR-MAIN-02); config only builds the shared RestClient.Builder "
                             + "with the timeouts (spec §2.6)");
+
+    // ---- Rule 9: only SchoolDataController uses the school dataset store and mapper -----------------------------
+
+    private static final String SCHOOL_DATA_CONTROLLER = "sg.schoolmatch.control.SchoolDataController";
+
+    /** SchoolDataController and its nested classes (records, lambdas). */
+    private static final DescribedPredicate<JavaClass> SCHOOL_DATA_CONTROLLER_ITSELF = DescribedPredicate.describe(
+            "are SchoolDataController or nested in it", c -> c.getName().equals(SCHOOL_DATA_CONTROLLER)
+                    || c.getName().startsWith(SCHOOL_DATA_CONTROLLER + "$"));
+
+    @ArchTest
+    @ArchTag("NFR-MAIN-01")
+    @ArchTag("FR-DATA-03")
+    static final ArchRule TC_Arch_9_only_SchoolDataController_uses_persistence_dataset =
+            noClasses().that().resideOutsideOfPackage("sg.schoolmatch.persistence..")
+                    .and(DescribedPredicate.not(SCHOOL_DATA_CONTROLLER_ITSELF))
+                    .should().dependOnClassesThat().resideInAPackage("sg.schoolmatch.persistence.dataset..")
+                    .because("school data is read and written only through SchoolDataController, which loads the "
+                            + "snapshot with SchoolDatasetStore and builds the cache with SchoolDatasetMapper "
+                            + "(docs/database-design.md, section 7.3; DC-83)");
+
+    @ArchTest
+    @ArchTag("NFR-MAIN-01")
+    static final ArchRule TC_Arch_9b_SchoolDataController_uses_persistence_dataset =
+            classes().that().haveFullyQualifiedName(SCHOOL_DATA_CONTROLLER)
+                    .should().dependOnClassesThat().resideInAPackage("sg.schoolmatch.persistence.dataset..")
+                    .because("rule 9 must not pass only because nothing uses persistence.dataset");
 
     private static Set<String> relativeNames(List<JavaClass> types) {
         return types.stream()

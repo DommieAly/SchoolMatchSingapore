@@ -29,7 +29,8 @@ import sg.schoolmatch.error.InvalidInputException;
  * Design display operations are {@code th:fragment} names in {@code choice-plan.html}: {@code displayPlan},
  * {@code displayAdmissionChance}, {@code displayRiskWarnings}. Every action is a POST that redirects back to
  * GET /plan with a message.
- * Model attributes: {@code plan}, {@code rows} ({@link ChoiceRow}), {@code warnings}, {@code addableSchools}
+ * Model attributes: {@code plan}, {@code rows} ({@link ChoiceRow}), {@code missingNames} (last-known names of
+ * choices that left the dataset, code → name, DC-86), {@code warnings}, {@code addableSchools}
  * (shortlisted schools not in the plan), {@code positions} (1..n+1, empty when the plan is full),
  * {@code emptyRanks} (n+1..6, shown as empty slots), {@code shortlistEmpty}, {@code safeMargin}, {@code maxChoices}.
  * DC-37 style arrow: ChoicePlanUI → ShortlistController ({@code getShortlistedSchools}) for the "Add a school" list.
@@ -76,6 +77,8 @@ public class ChoicePlanUI {
             int size = plan.getChoices().size();
             model.addAttribute("plan", plan);
             model.addAttribute("rows", rows(plan));
+            model.addAttribute("missingNames", shortlistController.getLastKnownNames(plan.getChoices().stream()
+                    .filter(c -> c.getSchool() == null).map(SchoolChoice::getSchoolCode).toList()));   // DC-86
             model.addAttribute("warnings", choicePlanController.assessPlan(plan));
             model.addAttribute("addableSchools",
                     shortlisted.stream().filter(s -> !plan.contains(s.getSchoolCode())).toList());

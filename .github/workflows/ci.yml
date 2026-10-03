@@ -1,5 +1,8 @@
 # Builds and tests every push and pull request on Linux and Windows.
 # The test profile forces every external service to stub mode, so no secrets are needed.
+# The database tests tagged "postgres" run here too, on embedded PostgreSQL 17 (io.zonky.test:embedded-postgres):
+# Maven downloads the server binaries like any other dependency (kept by cache: maven), so no Docker and no
+# services: block are needed (docs/database-design.md, section 10).
 name: CI
 
 on:

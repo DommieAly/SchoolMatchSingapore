@@ -12,8 +12,19 @@
     "schoolType": "GOVERNMENT-AIDED SCH",
     "planningAreaCode": "BS",
     "planningAreaName": "BISHAN",
-    "nearestMrt": "BISHAN MRT",
-    "busInfo": "13, 52, 54, 88, 156, 162, 162M, 410",
+    "mrtStations": [
+      "BISHAN MRT"
+    ],
+    "busServices": [
+      "13",
+      "52",
+      "54",
+      "88",
+      "156",
+      "162",
+      "162M",
+      "410"
+    ],
     "sessionType": "SINGLE SESSION",
     "schoolNature": "BOYS' SCHOOL",
     "programmes": [
@@ -153,8 +164,21 @@
     "schoolType": "GOVERNMENT SCHOOL",
     "planningAreaCode": "BS",
     "planningAreaName": "BISHAN",
-    "nearestMrt": "BISHAN MRT",
-    "busInfo": "13, 56, 57, 59, 71, 88, 93, 157, 163, 410",
+    "mrtStations": [
+      "BISHAN MRT"
+    ],
+    "busServices": [
+      "13",
+      "56",
+      "57",
+      "59",
+      "71",
+      "88",
+      "93",
+      "157",
+      "163",
+      "410"
+    ],
     "sessionType": "SINGLE SESSION",
     "schoolNature": "CO-ED SCHOOL",
     "programmes": [
@@ -314,8 +338,25 @@
     "schoolType": "GOVERNMENT SCHOOL",
     "planningAreaCode": "JW",
     "planningAreaName": "JURONG WEST",
-    "nearestMrt": "LAKESIDE MRT, CHINESE GARDEN MRT",
-    "busInfo": "49, 98, 98B, 98M, 99, 157, 185, 187, 198, 198A, 334, 335, 502",
+    "mrtStations": [
+      "LAKESIDE MRT",
+      "CHINESE GARDEN MRT"
+    ],
+    "busServices": [
+      "49",
+      "98",
+      "98B",
+      "98M",
+      "99",
+      "157",
+      "185",
+      "187",
+      "198",
+      "198A",
+      "334",
+      "335",
+      "502"
+    ],
     "sessionType": "SINGLE SESSION",
     "schoolNature": "CO-ED SCHOOL",
     "programmes": [
@@ -441,8 +482,19 @@
     "schoolType": "GOVERNMENT SCHOOL",
     "planningAreaCode": "JW",
     "planningAreaName": "JURONG WEST",
-    "nearestMrt": "BOON LAY MRT, PIONEER MRT",
-    "busInfo": "30, 154, 157, 180, 187, 198, 242",
+    "mrtStations": [
+      "BOON LAY MRT",
+      "PIONEER MRT"
+    ],
+    "busServices": [
+      "30",
+      "154",
+      "157",
+      "180",
+      "187",
+      "198",
+      "242"
+    ],
     "sessionType": "SINGLE SESSION",
     "schoolNature": "CO-ED SCHOOL",
     "programmes": [
@@ -575,8 +627,15 @@
     "schoolType": "GOVERNMENT-AIDED SCH",
     "planningAreaCode": "BS",
     "planningAreaName": "BISHAN",
-    "nearestMrt": "BISHAN MRT",
-    "busInfo": "54, 56, 410G, 410W",
+    "mrtStations": [
+      "BISHAN MRT"
+    ],
+    "busServices": [
+      "54",
+      "56",
+      "410G",
+      "410W"
+    ],
     "sessionType": "SINGLE SESSION",
     "schoolNature": "CO-ED SCHOOL",
     "programmes": [
@@ -716,8 +775,34 @@
     "schoolType": "GOVERNMENT-AIDED SCH",
     "planningAreaCode": "TM",
     "planningAreaName": "TAMPINES",
-    "nearestMrt": "TAMPINES MRT, SIMEI MRT, TAMPINES EAST MRT",
-    "busInfo": "3, 4, 8, 9, 12, 17, 18, 19, 21, 28, 29, 34, 37, 38, 39, 59, 81, 291, 293, 518, 552",
+    "mrtStations": [
+      "TAMPINES MRT",
+      "SIMEI MRT",
+      "TAMPINES EAST MRT"
+    ],
+    "busServices": [
+      "3",
+      "4",
+      "8",
+      "9",
+      "12",
+      "17",
+      "18",
+      "19",
+      "21",
+      "28",
+      "29",
+      "34",
+      "37",
+      "38",
+      "39",
+      "59",
+      "81",
+      "291",
+      "293",
+      "518",
+      "552"
+    ],
     "sessionType": "SINGLE SESSION",
     "schoolNature": "CO-ED SCHOOL",
     "programmes": [
@@ -866,8 +951,24 @@
     "schoolType": "GOVERNMENT SCHOOL",
     "planningAreaCode": "BS",
     "planningAreaName": "BISHAN",
-    "nearestMrt": "ANG MO KIO MRT, BISHAN MRT, MARYMOUNT MRT, BRIGHT HILL MRT",
-    "busInfo": "52, 132, 162, 163, 165, 166, 167, 410, 855, 980",
+    "mrtStations": [
+      "ANG MO KIO MRT",
+      "BISHAN MRT",
+      "MARYMOUNT MRT",
+      "BRIGHT HILL MRT"
+    ],
+    "busServices": [
+      "52",
+      "132",
+      "162",
+      "163",
+      "165",
+      "166",
+      "167",
+      "410",
+      "855",
+      "980"
+    ],
     "sessionType": "SINGLE SESSION",
     "schoolNature": "CO-ED SCHOOL",
     "programmes": [
@@ -993,8 +1094,16 @@
     "schoolType": "GOVERNMENT-AIDED SCH",
     "planningAreaCode": "TM",
     "planningAreaName": "TAMPINES",
-    "nearestMrt": "TAMPINES MRT, TAMPINES WEST MRT",
-    "busInfo": "22, 129, 293, 298",
+    "mrtStations": [
+      "TAMPINES MRT",
+      "TAMPINES WEST MRT"
+    ],
+    "busServices": [
+      "22",
+      "129",
+      "293",
+      "298"
+    ],
     "sessionType": "SINGLE SESSION",
     "schoolNature": "CO-ED SCHOOL",
     "programmes": [
@@ -1118,8 +1227,32 @@
     "schoolType": "GOVERNMENT SCHOOL",
     "planningAreaCode": "TM",
     "planningAreaName": "TAMPINES",
-    "nearestMrt": "TAMPINES MRT",
-    "busInfo": "3, 8, 10, 15, 17, 18, 20, 21, 23, 27, 28, 31, 34, 39, 59, 65, 129, 168, 292, 298, 518",
+    "mrtStations": [
+      "TAMPINES MRT"
+    ],
+    "busServices": [
+      "3",
+      "8",
+      "10",
+      "15",
+      "17",
+      "18",
+      "20",
+      "21",
+      "23",
+      "27",
+      "28",
+      "31",
+      "34",
+      "39",
+      "59",
+      "65",
+      "129",
+      "168",
+      "292",
+      "298",
+      "518"
+    ],
     "sessionType": "SINGLE SESSION",
     "schoolNature": "CO-ED SCHOOL",
     "programmes": [
@@ -1246,8 +1379,19 @@
     "schoolType": "GOVERNMENT SCHOOL",
     "planningAreaCode": "JW",
     "planningAreaName": "JURONG WEST",
-    "nearestMrt": "BOON LAY MRT",
-    "busInfo": "172, 181, 181M, 185, 199, 405, 974, 974A",
+    "mrtStations": [
+      "BOON LAY MRT"
+    ],
+    "busServices": [
+      "172",
+      "181",
+      "181M",
+      "185",
+      "199",
+      "405",
+      "974",
+      "974A"
+    ],
     "sessionType": "SINGLE SESSION",
     "schoolNature": "CO-ED SCHOOL",
     "programmes": [

@@ -76,6 +76,14 @@ public class ShortlistController {
     }
 
     /**
+     * The last-known names of saved codes that left the dataset (open decision 3, DC-86), for the shortlist and plan
+     * pages: code → name. Codes still in the dataset are left out; an empty list asks nothing.
+     */
+    public Map<String, String> getLastKnownNames(List<String> schoolCodes) {
+        return schoolCodes.isEmpty() ? Map.of() : schoolDataController.getLastKnownSchoolNames(schoolCodes);
+    }
+
+    /**
      * Removes the school from the member's shortlist, and from the choice plan (FR-SHORTLIST-06).
      * A school that is not shortlisted is ignored.
      */

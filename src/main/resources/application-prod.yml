@@ -1,0 +1,32 @@
+# Production (docs/database-design.md, section 9). The deployment itself is decided later (design section 11, step 9).
+# Every database value comes from the environment and has no default, so a missing one stops start-up:
+#   DB_URL       e.g. jdbc:postgresql://<host>:5432/schoolmatch?sslmode=verify-full&sslrootcert=<CA bundle>&reWriteBatchedInserts=true
+#   DB_USERNAME  an app user without DDL rights where the provider allows it (Flyway then needs a separate run)
+#   DB_PASSWORD
+# Keys stay in the environment too (NFR-SEC-01); nothing secret is written in this file.
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      data-source-properties:
+        # TLS, and the driver checks the server's certificate and host name. A sslmode=... inside DB_URL wins over
+        # this default, so DB_URL may repeat verify-full but must never name a weaker mode.
+        sslmode: verify-full
+  jpa:
+    hibernate:
+      ddl-auto: validate   # as in application.yml; repeated so nobody overrides it here (Flyway owns the schema)
+  h2:
+    console:
+      enabled: false
+
+app:
+  dataset:
+    # A snapshot older than the database's active version is not loaded, so an old image that restarts during a
+    # rolling deploy cannot switch every instance back. Set DATASET_ALLOW_ROLLBACK=true for the one deploy that
+    # rolls the school data back on purpose (data/README.md, "Rollback").
+    allow-rollback: ${DATASET_ALLOW_ROLLBACK:false}
+  session:
+    cookie-secure: true    # production is served over HTTPS only (NFR-SEC-03)

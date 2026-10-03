@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import sg.schoolmatch.boundary.external.DataGovSgInterface;
@@ -49,6 +50,9 @@ class ApplicationStartsTest {
     @Autowired
     private SchoolDataController schoolDataController;
 
+    @Autowired
+    private JdbcTemplate jdbc;
+
     @Test
     @Tag("NFR-MAIN-02")
     @DisplayName("TC-AppStart-01: with the test profile every external service is the offline stub")
@@ -64,6 +68,17 @@ class ApplicationStartsTest {
     void loadsFixtureSnapshot() {
         assertThat(schoolDataController.getSchools()).hasSize(10);
         assertThat(schoolDataController.getDistricts()).hasSize(3);
+    }
+
+    @Test
+    @Tag("FR-DATA-03")
+    @DisplayName("TC-AppStart-04: the fixture snapshot is loaded into the database at start-up and the schools are served from it (DC-83)")
+    void servesSchoolsFromTheDatabase() {
+        assertThat(jdbc.queryForObject("SELECT dataset_version FROM active_dataset WHERE singleton_id = 1",
+                String.class)).isEqualTo(schoolDataController.getActiveDataset().getDatasetVersion())
+                .isEqualTo("0000-seed");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM school WHERE withdrawn_in_version IS NULL",
+                Integer.class)).isEqualTo(schoolDataController.getSchools().size());
     }
 
     @Test
