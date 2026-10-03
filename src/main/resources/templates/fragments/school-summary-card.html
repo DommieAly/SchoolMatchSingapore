@@ -3,8 +3,11 @@
   card(school): the School Summary (FR-SEARCH-03, FR-SHORTLIST-05).
     <div th:replace="~{fragments/school-summary-card :: card(${school})}"></div>
   Shows name (link to details), type, address, district and the latest non-affiliated PSLE AL range for
-  PG3, PG2 and PG1 (school.getScoreRange(pg, false), DC-22), with the NFR-DATA-03 note, or the
+  PG3, PG2 and PG1 (school.getScoreRange(pg, false), DC-22; an IP-only school shows "PG3 IP 4–8 (2025)", DC-77),
+  with the NFR-DATA-03 note, or the
   "TEST VALUES" warning while the seed snapshot is active (model attribute seedData).
+  DC-74: when the dataset has no PSLE ranges at all (psleDataAvailable = false, LayoutModelAdvice) the card shows
+  one line "PSLE score ranges: not available yet" instead of the PSLE row and its note.
 
   Optional page attributes (the search page sets them; other pages can leave them out):
     cardDistanceKm   Map<String, Double>   school code → straight-line km from the starting point (FR-FILTER-05).
@@ -49,6 +52,7 @@
                     <span th:if="${minutes == null}" class="text-body-secondary">Not available</span>
                 </dd>
             </th:block>
+            <th:block th:unless="${psleDataAvailable == false}">
             <dt class="col-4 fw-normal text-body-secondary">PSLE AL</dt>
             <!--/* DC-22: with a PSLE filter, the range it used; otherwise the non-affiliated PG3/PG2/PG1 ranges */-->
             <dd class="col-8 mb-0" th:if="${cardRanges != null}"
@@ -65,17 +69,23 @@
                     <th:block th:each="pg : ${#numbers.sequence(3, 1, -1)}">
                         <th:block th:with="range=${school.getScoreRange(pg, false).orElse(null)}">
                             <li th:if="${range != null}" class="list-inline-item"
-                                th:text="|PG${range.postingGroup} ${range.lowerScore}–${range.upperScore} (${range.admissionYear})|">
+                                th:text="|PG${range.postingGroup} ${range.rangeText} (${range.admissionYear})|">
                                 PG3 8–12 (2025)</li>
                         </th:block>
                     </th:block>
                 </ul>
             </dd>
+            </th:block>
         </dl>
+        <!--/* DC-74: no PSLE ranges in the dataset: one line instead of the PSLE row and its note */-->
+        <p th:if="${psleDataAvailable == false}" class="small text-body-secondary mt-auto mb-0" data-psle-unavailable="true">
+            PSLE score ranges: not available yet</p>
+        <th:block th:unless="${psleDataAvailable == false}">
         <!--/* seedData (LayoutModelAdvice): the seed snapshot's ranges are made up (DC-34) */-->
         <p th:if="${seedData}" class="small text-warning-emphasis mt-auto mb-0">
             <strong>TEST VALUES – not MOE data.</strong> Seed PSLE ranges are made up.</p>
         <p th:unless="${seedData}" class="small text-body-secondary mt-auto mb-0">PSLE ranges from past years: historical, not guaranteed.</p>
+        </th:block>
     </div>
 </article>
 </body>

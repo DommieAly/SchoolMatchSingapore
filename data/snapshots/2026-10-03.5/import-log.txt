@@ -1,0 +1,191 @@
+SchoolMatch dataset import started 2026-10-03T15:06:36.236498Z
+data.gov.sg: 147 secondary and mixed-level schools, 7163 CCA rows, 14719 subject rows, 55 planning areas
+subject left out (subject-exclusions.csv): BOON LAY SECONDARY SCHOOL / G1 Test
+subject left out (subject-exclusions.csv): CEDAR GIRLS' SECONDARY SCHOOL / Test rebase A
+subject left out (subject-exclusions.csv): METHODIST GIRLS' SCHOOL (SECONDARY) / Test Subject
+subject left out (subject-exclusions.csv): SINGAPORE CHINESE GIRLS' SCHOOL / test
+subject spelling: {ADVANCED MATHEMATICS=2, Advanced Mathematics=1} → "Advanced Mathematics"
+subject spelling: {APPLIED LEARNING PROGRAMME=1, Applied Learning Programme=6} → "Applied Learning Programme"
+subject spelling: {APPRECIATION OF CHINESE CULTURE=1, Appreciation of Chinese Culture=11} → "Appreciation of Chinese Culture"
+subject spelling: {ART=1, Art=138} → "Art"
+subject spelling: {BAHASA INDONESIA=1, Bahasa Indonesia=99} → "Bahasa Indonesia"
+subject spelling: {BIOLOGY=2, Biology=141} → "Biology"
+subject spelling: {CHARACTER & CITIZENSHIP EDUCATION=1, Character & Citizenship Education=4} → "Character & Citizenship Education"
+subject spelling: {CHARACTER AND CITIZENSHIP EDUCATION=1, Character and Citizenship Education=9} → "Character and Citizenship Education"
+subject spelling: {CHEMISTRY=2, Chemistry=142} → "Chemistry"
+subject spelling: {CHINESE LANGUAGE=1, Chinese Language=147} → "Chinese Language"
+subject spelling: {COMPUTING=2, Computing=126} → "Computing"
+subject spelling: {DRAMA=1, Drama=20} → "Drama"
+subject spelling: {ELECTIVE - AUTOCAD=1, Elective - AutoCad=1} → "Elective - AutoCad"
+subject spelling: {GEOGRAPHY=2, Geography=130} → "Geography"
+subject spelling: {HIGHER ART=1, Higher Art=103} → "Higher Art"
+subject spelling: {HIGHER CHINESE LANGUAGE=2, Higher Chinese Language=142} → "Higher Chinese Language"
+subject spelling: {HIGHER MALAY LANGUAGE=1, Higher Malay Language=132} → "Higher Malay Language"
+subject spelling: {HIGHER MUSIC (MEP)=1, Higher Music (MEP)=2} → "Higher Music (MEP)"
+subject spelling: {HIGHER TAMIL LANGUAGE=1, Higher Tamil Language=126} → "Higher Tamil Language"
+subject spelling: {HISTORY=2, History=125} → "History"
+subject spelling: {InfoComm Studies=1, Infocomm Studies=1} → "InfoComm Studies"
+subject spelling: {INTEGRATED MATHEMATICS=1, Integrated Mathematics=2} → "Integrated Mathematics"
+subject spelling: {IP ART=1, IP Art=1} → "IP Art"
+subject spelling: {IP MUSIC=1, IP Music=1} → "IP Music"
+subject spelling: {LANGUAGE ARTS=2, Language Arts=3} → "Language Arts"
+subject spelling: {LITERATURE IN CHINESE=1, Literature in Chinese=38} → "Literature in Chinese"
+subject spelling: {MATHEMATICS=1, Mathematics=146} → "Mathematics"
+subject spelling: {MUSIC=2, Music=140} → "Music"
+subject spelling: {PHYSICAL EDUCATION=1, Physical Education=133} → "Physical Education"
+subject spelling: {PHYSICS=2, Physics=142} → "Physics"
+subject spelling: {SCIENCE=1, Science=141} → "Science"
+subject spelling: {Spanish Ab Initio (SL)=1, Spanish Ab initio (SL)=1} → "Spanish Ab Initio (SL)"
+WARNING cca-join-miss: NUS HIGH SCHOOL OF MATHEMATICS AND SCIENCE has no rows in the CCA dataset
+WARNING cca-join-miss: SCHOOL OF THE ARTS, SINGAPORE has no rows in the CCA dataset
+admiralty-secondary-school: coordinate MATCHED (BUILDING 'ADMIRALTY SECONDARY SCHOOL')
+ahmad-ibrahim-secondary-school: coordinate MATCHED (BUILDING 'AHMAD IBRAHIM SECONDARY SCHOOL')
+anderson-secondary-school: coordinate MATCHED (BUILDING 'ANDERSON SECONDARY SCHOOL')
+ang-mo-kio-secondary-school: coordinate MATCHED (BUILDING 'ANG MO KIO SECONDARY SCHOOL')
+anglican-high-school: coordinate MATCHED (BUILDING 'ANGLICAN HIGH SCHOOL')
+anglo-chinese-school-barker-road: coordinate MATCHED (BUILDING 'ANGLO-CHINESE SCHOOL (BARKER ROAD)')
+anglo-chinese-school-independent: coordinate MATCHED (BUILDING 'ANGLO-CHINESE SCHOOL (INDEPENDENT)')
+assumption-english-school: coordinate MATCHED (BUILDING 'ASSUMPTION ENGLISH SCHOOL')
+assumption-pathway-school: coordinate MATCHED (BUILDING 'ASSUMPTION PATHWAY SCHOOL')
+bartley-secondary-school: coordinate MATCHED (BUILDING 'BARTLEY SECONDARY SCHOOL')
+beatty-secondary-school: coordinate MATCHED (BUILDING 'BEATTY SECONDARY SCHOOL')
+bedok-green-secondary-school: coordinate MATCHED (BUILDING 'BEDOK GREEN SECONDARY SCHOOL')
+bedok-south-secondary-school: coordinate MATCHED (BUILDING 'BEDOK SOUTH SECONDARY SCHOOL')
+bedok-view-secondary-school: coordinate MATCHED (BUILDING 'BEDOK VIEW SECONDARY SCHOOL')
+bendemeer-secondary-school: coordinate MATCHED (BUILDING 'BENDEMEER SECONDARY SCHOOL')
+boon-lay-secondary-school: coordinate MATCHED (BUILDING 'BOON LAY SECONDARY SCHOOL')
+bowen-secondary-school: coordinate MATCHED (BUILDING 'BOWEN SECONDARY SCHOOL')
+broadrick-secondary-school: coordinate MATCHED (BUILDING 'BROADRICK SECONDARY SCHOOL')
+bukit-batok-secondary-school: coordinate MATCHED (BUILDING 'BUKIT BATOK SECONDARY SCHOOL')
+bukit-merah-secondary-school: coordinate MATCHED (BUILDING 'BUKIT MERAH SECONDARY SCHOOL')
+bukit-panjang-govt-high-school: coordinate MATCHED (BUILDING 'BUKIT PANJANG GOVERNMENT HIGH SCHOOL')
+bukit-view-secondary-school: coordinate MATCHED (BUILDING 'BUKIT VIEW SECONDARY SCHOOL')
+canberra-secondary-school: coordinate MATCHED (BUILDING 'CANBERRA SECONDARY SCHOOL')
+catholic-high-school: coordinate MATCHED (BUILDING 'CATHOLIC HIGH SCHOOL')
+cedar-girls-secondary-school: coordinate MATCHED (BUILDING 'CEDAR GIRLS' SECONDARY SCHOOL')
+changkat-changi-secondary-school: coordinate MATCHED (BUILDING 'CHANGKAT CHANGI SECONDARY SCHOOL')
+chij-katong-convent: coordinate MATCHED (BUILDING 'CHIJ KATONG CONVENT')
+chij-secondary-toa-payoh: coordinate MATCHED (BUILDING 'CHIJ SECONDARY (TOA PAYOH)')
+chij-st-josephs-convent: coordinate MATCHED (BUILDING 'CHIJ SAINT JOSEPH'S CONVENT')
+chij-st-nicholas-girls-school: coordinate MATCHED (BUILDING 'CHIJ SAINT NICHOLAS GIRLS' SCHOOL')
+chij-st-theresas-convent: coordinate MATCHED (BUILDING 'CHIJ SAINT THERESA'S CONVENT')
+christ-church-secondary-school: coordinate MATCHED (BUILDING 'CHRIST CHURCH SECONDARY SCHOOL')
+chua-chu-kang-secondary-school: coordinate MATCHED (BUILDING 'CHUA CHU KANG SECONDARY SCHOOL')
+chung-cheng-high-school-main: coordinate MATCHED (BUILDING 'CHUNG CHENG HIGH SCHOOL (MAIN)')
+chung-cheng-high-school-yishun: coordinate MATCHED (BUILDING 'CHUNG CHENG HIGH SCHOOL (YISHUN)')
+clementi-town-secondary-school: coordinate MATCHED (BUILDING 'CLEMENTI TOWN SECONDARY SCHOOL')
+commonwealth-secondary-school: coordinate MATCHED (BUILDING 'COMMONWEALTH SECONDARY SCHOOL')
+compassvale-secondary-school: coordinate MATCHED (BUILDING 'COMPASSVALE SECONDARY SCHOOL')
+crescent-girls-school: coordinate MATCHED (BUILDING 'CRESCENT GIRLS' SCHOOL')
+crest-secondary-school: coordinate MATCHED (BUILDING 'CREST SECONDARY SCHOOL')
+damai-secondary-school: coordinate MATCHED (BUILDING 'DAMAI SECONDARY SCHOOL')
+deyi-secondary-school: coordinate MATCHED (BUILDING 'DEYI SECONDARY SCHOOL')
+dunearn-secondary-school: coordinate MATCHED (BUILDING 'DUNEARN SECONDARY SCHOOL')
+dunman-high-school: coordinate MATCHED (BUILDING 'DUNMAN HIGH SCHOOL')
+dunman-secondary-school: coordinate MATCHED (BUILDING 'DUNMAN SECONDARY SCHOOL')
+east-spring-secondary-school: coordinate MATCHED (BUILDING 'EAST SPRING SECONDARY SCHOOL')
+edgefield-secondary-school: coordinate MATCHED (BUILDING 'EDGEFIELD SECONDARY SCHOOL')
+evergreen-secondary-school: coordinate MATCHED (BUILDING 'EVERGREEN SECONDARY SCHOOL')
+fairfield-methodist-school-secondary: coordinate MATCHED (BUILDING 'FAIRFIELD METHODIST SCHOOL (SECONDARY)')
+fuhua-secondary-school: coordinate MATCHED (BUILDING 'FUHUA SECONDARY SCHOOL')
+gan-eng-seng-school: coordinate MATCHED (BUILDING 'GAN ENG SENG SCHOOL')
+geylang-methodist-school-secondary: coordinate MATCHED (BUILDING 'GEYLANG METHODIST SCHOOL (SECONDARY)')
+greendale-secondary-school: coordinate MATCHED (BUILDING 'GREENDALE SECONDARY SCHOOL')
+greenridge-secondary-school: coordinate MATCHED (BUILDING 'GREENRIDGE SECONDARY SCHOOL')
+guangyang-secondary-school: coordinate MATCHED (BUILDING 'GUANGYANG SECONDARY SCHOOL')
+hai-sing-catholic-school: coordinate MATCHED (BUILDING 'HAI SING CATHOLIC SCHOOL (U/C)')
+hillgrove-secondary-school: coordinate MATCHED (BUILDING 'HILLGROVE SECONDARY SCHOOL')
+holy-innocents-high-school: coordinate MATCHED (BUILDING 'HOLY INNOCENTS' HIGH SCHOOL')
+hougang-secondary-school: coordinate MATCHED (BUILDING 'HOUGANG SECONDARY SCHOOL')
+hua-yi-secondary-school: coordinate MATCHED (BUILDING 'HUA YI SECONDARY SCHOOL')
+hwa-chong-institution: coordinate MATCHED (BUILDING 'HWA CHONG INSTITUTION')
+junyuan-secondary-school: coordinate MATCHED (BUILDING 'JUNYUAN SECONDARY SCHOOL')
+jurong-secondary-school: coordinate MATCHED (BUILDING 'JURONG SECONDARY SCHOOL')
+jurong-west-secondary-school: coordinate MATCHED (BUILDING 'JURONG WEST SECONDARY SCHOOL')
+jurongville-secondary-school: coordinate MATCHED (BUILDING 'JURONGVILLE SECONDARY SCHOOL')
+juying-secondary-school: coordinate MATCHED (BUILDING 'JUYING SECONDARY SCHOOL')
+kent-ridge-secondary-school: coordinate MATCHED (BUILDING 'KENT RIDGE SECONDARY SCHOOL')
+kranji-secondary-school: coordinate MATCHED (BUILDING 'KRANJI SECONDARY SCHOOL')
+kuo-chuan-presbyterian-secondary-school: coordinate MATCHED (BUILDING 'KUO CHUAN PRESBYTERIAN SECONDARY SCHOOL')
+loyang-view-secondary-school: coordinate MATCHED (BUILDING 'LOYANG VIEW SECONDARY SCHOOL')
+manjusri-secondary-school: coordinate MATCHED (BUILDING 'MANJUSRI SECONDARY SCHOOL')
+maris-stella-high-school: coordinate MATCHED (BUILDING 'MARIS STELLA HIGH SCHOOL')
+marsiling-secondary-school: coordinate MATCHED (BUILDING 'MARSILING SECONDARY SCHOOL')
+mayflower-secondary-school: coordinate MATCHED (BUILDING 'MAYFLOWER SECONDARY SCHOOL')
+meridian-secondary-school: coordinate MATCHED (BUILDING 'MERIDIAN SECONDARY SCHOOL')
+methodist-girls-school-secondary: coordinate MATCHED (BUILDING 'METHODIST GIRLS' SCHOOL')
+montfort-secondary-school: coordinate MATCHED (BUILDING 'MONTFORT SECONDARY SCHOOL')
+nan-chiau-high-school: coordinate MATCHED (BUILDING 'NAN CHIAU HIGH SCHOOL')
+nan-hua-high-school: coordinate MATCHED (BUILDING 'NAN HUA HIGH SCHOOL')
+nanyang-girls-high-school: coordinate MATCHED (BUILDING 'NANYANG GIRLS' HIGH SCHOOL')
+national-junior-college: coordinate MATCHED (BUILDING 'NATIONAL JUNIOR COLLEGE')
+naval-base-secondary-school: coordinate MATCHED (BUILDING 'NAVAL BASE SECONDARY SCHOOL')
+new-town-secondary-school: coordinate MATCHED (BUILDING 'NEW TOWN SECONDARY SCHOOL')
+ngee-ann-secondary-school: coordinate MATCHED (BUILDING 'NGEE ANN SECONDARY SCHOOL')
+north-vista-secondary-school: coordinate MATCHED (BUILDING 'NORTH VISTA SECONDARY SCHOOL')
+northbrooks-secondary-school: coordinate MATCHED (BUILDING 'NORTHBROOKS SECONDARY SCHOOL')
+northland-secondary-school: coordinate MATCHED (BUILDING 'NORTHLAND SECONDARY SCHOOL')
+northlight-school: coordinate MATCHED (BUILDING 'NORTHLIGHT SCHOOL')
+nus-high-school-of-mathematics-and-science: coordinate MATCHED (BUILDING 'NUS HIGH SCHOOL OF MATHEMATICS AND SCIENCE')
+orchid-park-secondary-school: coordinate MATCHED (BUILDING 'ORCHID PARK SECONDARY SCHOOL')
+outram-secondary-school: coordinate MATCHED (BUILDING 'OUTRAM SECONDARY SCHOOL')
+pasir-ris-crest-secondary-school: coordinate MATCHED (BUILDING 'PASIR RIS CREST SECONDARY SCHOOL')
+pasir-ris-secondary-school: coordinate MATCHED (BUILDING 'PASIR RIS SECONDARY SCHOOL')
+paya-lebar-methodist-girls-school-secondary: coordinate MATCHED (BUILDING 'PAYA LEBAR METHODIST GIRLS' SCHOOL (SECONDARY)')
+pei-hwa-secondary-school: coordinate MATCHED (BUILDING 'PEI HWA SECONDARY SCHOOL')
+peicai-secondary-school: coordinate MATCHED (BUILDING 'PEICAI SECONDARY SCHOOL')
+peirce-secondary-school: coordinate MATCHED (BUILDING 'PEIRCE SECONDARY SCHOOL')
+presbyterian-high-school: coordinate MATCHED (BUILDING 'PRESBYTERIAN HIGH SCHOOL')
+punggol-secondary-school: coordinate MATCHED (BUILDING 'PUNGGOL SECONDARY SCHOOL')
+queenstown-secondary-school: coordinate MATCHED (BUILDING 'QUEENSTOWN SECONDARY SCHOOL')
+queensway-secondary-school: coordinate MATCHED (BUILDING 'QUEENSWAY SECONDARY SCHOOL')
+raffles-girls-school-secondary: coordinate MATCHED (BUILDING 'RAFFLES GIRLS' SCHOOL (SECONDARY)')
+raffles-institution: coordinate MATCHED (BUILDING 'RAFFLES INSTITUTION (ADMINISTRATIVE CENTRE)')
+regent-secondary-school: coordinate MATCHED (BUILDING 'REGENT SECONDARY SCHOOL')
+river-valley-high-school: coordinate MATCHED (BUILDING 'RIVER VALLEY HIGH SCHOOL')
+riverside-secondary-school: coordinate MATCHED (BUILDING 'RIVERSIDE SECONDARY SCHOOL')
+school-of-science-and-technology-singapore: coordinate MATCHED (BUILDING 'SCHOOL OF SCIENCE AND TECHNOLOGY, SINGAPORE')
+WARNING district-mismatch: school-of-science-and-technology-singapore is in QUEENSTOWN by its coordinate, but its dgp_code says CLEMENTI
+school-of-the-arts-singapore: coordinate OVERRIDE (from geocode-overrides.csv (OneMap's only hit for 227968 is BUILDING 'SCHOOL OF THE ARTS (SOTA)' (1 Zubir Said Drive); the name rule cannot match it. Checked by hand on 2026-10-03))
+WARNING district-mismatch: school-of-the-arts-singapore is in MUSEUM by its coordinate, but its dgp_code says CENTRAL
+sembawang-secondary-school: coordinate MATCHED (BUILDING 'SEMBAWANG SECONDARY SCHOOL')
+seng-kang-secondary-school: coordinate MATCHED (BUILDING 'SENG KANG SECONDARY SCHOOL')
+serangoon-garden-secondary-school: coordinate MATCHED (BUILDING 'SERANGOON GARDEN SECONDARY SCHOOL')
+serangoon-secondary-school: coordinate MATCHED (BUILDING 'SERANGOON SECONDARY SCHOOL')
+singapore-chinese-girls-school: coordinate MATCHED (BUILDING 'SINGAPORE CHINESE GIRLS' SCHOOL')
+singapore-sports-school: coordinate MATCHED (BUILDING 'SINGAPORE SPORTS SCHOOL')
+spectra-secondary-school: coordinate MATCHED (BUILDING 'SPECTRA SECONDARY SCHOOL')
+springfield-secondary-school: coordinate MATCHED (BUILDING 'SPRINGFIELD SECONDARY SCHOOL')
+st-andrews-school-secondary: coordinate MATCHED (BUILDING 'ST ANDREW'S SCHOOL (SECONDARY)')
+st-anthonys-canossian-secondary-school: coordinate MATCHED (BUILDING 'SAINT ANTHONY'S CANOSSIAN SECONDARY SCHOOL')
+st-gabriels-secondary-school: coordinate MATCHED (BUILDING 'SAINT GABRIEL'S SECONDARY SCHOOL')
+st-hildas-secondary-school: coordinate MATCHED (BUILDING 'SAINT HILDA'S SECONDARY SCHOOL')
+st-josephs-institution: coordinate MATCHED (BUILDING 'SAINT JOSEPH'S INSTITUTION')
+st-margarets-school-secondary: coordinate MATCHED (BUILDING 'SAINT MARGARET'S SCHOOL (SECONDARY)')
+st-patricks-school: coordinate MATCHED (BUILDING 'SAINT PATRICK'S SCHOOL')
+swiss-cottage-secondary-school: coordinate MATCHED (BUILDING 'SWISS COTTAGE SECONDARY SCHOOL')
+tampines-secondary-school: coordinate MATCHED (BUILDING 'TAMPINES SECONDARY SCHOOL')
+tanjong-katong-girls-school: coordinate MATCHED (BUILDING 'TANJONG KATONG GIRLS' SCHOOL')
+tanjong-katong-secondary-school: coordinate MATCHED (BUILDING 'TANJONG KATONG SECONDARY SCHOOL')
+temasek-junior-college: coordinate MATCHED (BUILDING 'TEMASEK JUNIOR COLLEGE')
+temasek-secondary-school: coordinate MATCHED (BUILDING 'TEMASEK SECONDARY SCHOOL')
+unity-secondary-school: coordinate MATCHED (BUILDING 'UNITY SECONDARY SCHOOL')
+victoria-school: coordinate MATCHED (BUILDING 'VICTORIA SCHOOL')
+west-spring-secondary-school: coordinate MATCHED (BUILDING 'WEST SPRING SECONDARY SCHOOL')
+westwood-secondary-school: coordinate MATCHED (BUILDING 'WESTWOOD SECONDARY SCHOOL')
+whitley-secondary-school: coordinate MATCHED (BUILDING 'WHITLEY SECONDARY SCHOOL')
+woodgrove-secondary-school: coordinate MATCHED (BUILDING 'WOODGROVE SECONDARY SCHOOL')
+woodlands-ring-secondary-school: coordinate MATCHED (BUILDING 'WOODLANDS RING SECONDARY SCHOOL (TILL DEC 2028)')
+woodlands-secondary-school: coordinate MATCHED (BUILDING 'WOODLANDS SECONDARY SCHOOL')
+xinmin-secondary-school: coordinate MATCHED (BUILDING 'XINMIN SECONDARY SCHOOL')
+yio-chu-kang-secondary-school: coordinate MATCHED (BUILDING 'YIO CHU KANG SECONDARY SCHOOL')
+yishun-secondary-school: coordinate MATCHED (BUILDING 'YISHUN SECONDARY SCHOOL')
+yishun-town-secondary-school: coordinate MATCHED (BUILDING 'YISHUN TOWN SECONDARY SCHOOL')
+yuan-ching-secondary-school: coordinate MATCHED (BUILDING 'YUAN CHING SECONDARY SCHOOL')
+yuhua-secondary-school: coordinate MATCHED (BUILDING 'YUHUA SECONDARY SCHOOL')
+yusof-ishak-secondary-school: coordinate MATCHED (BUILDING 'YUSOF ISHAK SECONDARY SCHOOL')
+yuying-secondary-school: coordinate MATCHED (BUILDING 'YUYING SECONDARY SCHOOL')
+zhenghua-secondary-school: coordinate MATCHED (BUILDING 'ZHENGHUA SECONDARY SCHOOL')
+zhonghua-secondary-school: coordinate MATCHED (BUILDING 'ZHONGHUA SECONDARY SCHOOL')
+Validation: PASSED_WITH_WARNINGS (0 errors, 14 warnings)
+ACTIVE not changed (app.dataset.activate-on-import is false)

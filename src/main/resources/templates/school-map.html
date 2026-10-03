@@ -3,6 +3,7 @@
        GET /api/districts (SchoolMapUI.toggleDistrictLayer).
        Model: q, chips (label + removeUrl), notAppliedChips, hiddenFields, resultCount, schools (those with a map location),
        omittedCount, interactive, markersJson, resultsUrl, filterUrl, startLocation, usesStartingPoint, psleActive,
+       psleNotApplied (DC-74),
        fieldErrors / notice when something went wrong. */-->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('School map')}"></head>
@@ -46,6 +47,10 @@
         </th:block>
         <a th:href="${filterUrl}" class="small">Change filters</a>
     </div>
+    <!--/* DC-74: a PSLE score in the URL is not applied when the dataset has no PSLE ranges */-->
+    <p th:if="${psleNotApplied}" class="small text-body-secondary" data-psle-not-applied="true"
+       th:text="|PSLE filter not applied: ${noPsleDataMessage}.|">
+        PSLE filter not applied: PSLE score ranges are not available in the current dataset.</p>
     <p th:if="${startLocation != null and usesStartingPoint}" class="small text-body-secondary">
         Distances and travel times are from <span th:text="${startLocation.inputText}">200 BISHAN ROAD</span>.
     </p>

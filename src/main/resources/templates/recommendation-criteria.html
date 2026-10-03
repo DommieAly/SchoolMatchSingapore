@@ -32,7 +32,10 @@
                         <input th:field="*{psleScore}" type="number" class="form-control" min="4" max="32"
                                th:classappend="${fieldErrors.containsKey('psleScore')} ? 'is-invalid'"
                                aria-describedby="psleScore-help">
-                        <div id="psleScore-help" class="form-text">Lower is better.</div>
+                        <div id="psleScore-help" class="form-text" th:if="${psleDataAvailable != false}">Lower is better.</div>
+                        <!--/* DC-74: optional and not used while the dataset has no PSLE ranges */-->
+                        <div id="psleScore-help" class="form-text" th:if="${psleDataAvailable == false}"
+                             data-psle-unavailable="true">Optional: not used until PSLE score ranges are available.</div>
                         <div class="invalid-feedback" th:if="${fieldErrors.containsKey('psleScore')}"
                              th:text="${fieldErrors['psleScore']}">Enter a whole number from 4 to 32</div>
                     </div>
@@ -110,8 +113,12 @@
             </section>
             <section class="small">
                 <h2 class="h6">How schools are scored</h2>
-                <p class="text-body-secondary mb-2">Only schools with PSLE range data for your posting group can be
-                    recommended. PSLE ranges are historical, not a guarantee.</p>
+                <p class="text-body-secondary mb-2" th:if="${psleDataAvailable != false}">Only schools with PSLE
+                    range data for your posting group can be recommended. PSLE ranges are historical, not a guarantee.</p>
+                <!--/* DC-74 */-->
+                <p class="text-body-secondary mb-2" th:if="${psleDataAvailable == false}" data-psle-unavailable="true">
+                    PSLE score ranges: not available yet, so PSLE fit is not used (weight 0, the other weights are
+                    rescaled) and every school can be recommended.</p>
                 <table class="table table-sm w-auto">
                     <thead>
                     <tr><th scope="col">Factor</th><th scope="col" class="text-end">Weight</th></tr>
@@ -119,7 +126,10 @@
                     <tbody>
                     <tr th:each="weight : ${weights}">
                         <td th:text="${#strings.replace(weight.key, '_', ' ')}">PSLE FIT</td>
-                        <td class="text-end" th:text="${#numbers.formatPercent(weight.value, 1, 0)}">40%</td>
+                        <!--/* DC-74: PSLE fit has weight 0 without PSLE ranges */-->
+                        <td class="text-end" th:if="${psleDataAvailable == false and weight.key.name() == 'PSLE_FIT'}">not used</td>
+                        <td class="text-end" th:unless="${psleDataAvailable == false and weight.key.name() == 'PSLE_FIT'}"
+                            th:text="${#numbers.formatPercent(weight.value, 1, 0)}">40%</td>
                     </tr>
                     </tbody>
                 </table>

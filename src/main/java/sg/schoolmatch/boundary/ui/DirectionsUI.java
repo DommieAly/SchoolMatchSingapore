@@ -39,6 +39,7 @@ import sg.schoolmatch.entity.route.Route;
 import sg.schoolmatch.entity.route.RouteStep;
 import sg.schoolmatch.entity.route.TravelMode;
 import sg.schoolmatch.entity.school.School;
+import sg.schoolmatch.error.ExternalFailureLog;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
 import tools.jackson.databind.json.JsonMapper;
@@ -163,7 +164,7 @@ public class DirectionsUI {
         try {
             route = directionsController.getDirections(start, destination, travelMode.get());
         } catch (ExternalServiceUnavailableException e) {
-            log.warn("Directions unavailable: {} did not answer", e.getService());
+            ExternalFailureLog.warn(log, "Directions", e);
             model.addAttribute(PageMessages.FLASH_ERROR, DIRECTIONS_UNAVAILABLE_MESSAGE);   // EX-1, T-59
             return "directions-input";
         } catch (InvalidInputException e) {
@@ -204,7 +205,7 @@ public class DirectionsUI {
         } catch (InvalidInputException e) {
             failed(redirect, firstMessage(e), address);
         } catch (ExternalServiceUnavailableException e) {
-            log.warn("Address search unavailable: {} did not answer", e.getService());
+            ExternalFailureLog.warn(log, "Address search", e);
             failed(redirect, ADDRESS_SEARCH_UNAVAILABLE_MESSAGE, address);
         }
         return backTo(returnTo);

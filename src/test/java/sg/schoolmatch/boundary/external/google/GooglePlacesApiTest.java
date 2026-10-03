@@ -170,6 +170,27 @@ class GooglePlacesApiTest {
         server.verify();
     }
 
+    @Test
+    @Tag("FR-FACILITY-01")
+    @Tag("NFR-MAIN-02")
+    @DisplayName("TC-GooglePlaces-07: Google's 403 answer is kept for the log line (status, reason, message), never the key")
+    void refusal_describedForTheLog() {
+        server.expect(requestTo(BASE + "/v1/places:searchNearby"))
+                .andRespond(withStatus(HttpStatus.FORBIDDEN).contentType(MediaType.APPLICATION_JSON).body(
+                        "{\"error\": {\"code\": 403, \"message\": \"API key not valid. Please pass a valid API key.\","
+                        + " \"status\": \"PERMISSION_DENIED\", \"details\": [{\"@type\": "
+                        + "\"type.googleapis.com/google.rpc.ErrorInfo\", \"reason\": \"API_KEY_INVALID\"}]}}"));
+
+        ExternalServiceUnavailableException e = org.assertj.core.api.Assertions.catchThrowableOfType(
+                ExternalServiceUnavailableException.class, () -> api.searchPlaces(FacilityType.LIBRARY, CENTRE));
+
+        assertThat(sg.schoolmatch.error.ExternalFailureLog.describe(e))
+                .isEqualTo("Google Places: Google refused the request: HTTP 403, PERMISSION_DENIED, API_KEY_INVALID: "
+                        + "API key not valid. Please pass a valid API key.")
+                .doesNotContain("test-key");
+        server.verify();
+    }
+
     private static void assertServiceUnavailable(org.assertj.core.api.ThrowableAssert.ThrowingCallable call) {
         assertThatThrownBy(call)
                 .isInstanceOf(ExternalServiceUnavailableException.class)

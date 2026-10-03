@@ -33,13 +33,25 @@ class SchoolTest {
 
     @Test
     @Tag("FR-SEARCH-02")
-    @DisplayName("TC-School-02: matchesName treats apostrophes and dots as plain characters")
+    @DisplayName("TC-School-02: matchesName ignores apostrophes, dots and brackets, and needs every word of the term (DC-75)")
     void matchesNameWithPunctuation() {
-        School school = TestSchools.named("st-andrews-secondary-school", "St. Andrew's Secondary School");
+        School dotted = TestSchools.named("st-andrews-secondary-school", "St. Andrew's Secondary School");
+        School undotted = TestSchools.named("st-andrews-school-secondary", "ST ANDREW'S SCHOOL (SECONDARY)");
+        School bracketed = TestSchools.named("chij-secondary-toa-payoh", "CHIJ SECONDARY (TOA PAYOH)");
+        School govt = TestSchools.named("bukit-panjang-govt-high-school", "BUKIT PANJANG GOVT. HIGH SCHOOL");
 
-        assertThat(school.matchesName("andrew's")).isTrue();
-        assertThat(school.matchesName("st. a")).isTrue();
-        assertThat(school.matchesName("andrews")).isFalse();
+        assertThat(dotted.matchesName("andrew's")).isTrue();
+        assertThat(dotted.matchesName("st. a")).isTrue();
+        assertThat(dotted.matchesName("andrews")).isTrue();
+        assertThat(dotted.matchesName("st andrews")).isTrue();
+        assertThat(undotted.matchesName("St. Andrew")).isTrue();
+        assertThat(undotted.matchesName("st andrews secondary")).isTrue();
+        assertThat(bracketed.matchesName("chij toa payoh")).isTrue();
+        assertThat(bracketed.matchesName("(toa payoh)")).isTrue();
+        assertThat(govt.matchesName("government")).isTrue();
+        assertThat(govt.matchesName("govt high")).isTrue();
+        assertThat(bracketed.matchesName("chij katong")).isFalse();
+        assertThat(dotted.matchesName("'.")).isFalse();
     }
 
     @Test
@@ -104,6 +116,131 @@ class SchoolTest {
         assertThat(noRanges.getScoreRange(3, false)).isEmpty();
         assertThat(pg3Only.getScoreRange(1, false)).isEmpty();
         assertThat(pg3Only.getScoreRange(1, true)).isEmpty();
+    }
+
+    @Test
+    @Tag("FR-FILTER-03")
+    @Tag("FR-SCHOOL-02")
+    @DisplayName("TC-School-10: an IP-only school uses its IP range for PG3 only; other posting groups stay Not available")
+    void ipRangeIsThePg3Fallback() {
+        School ipOnly = withRanges("dunman-high-school", new IndicativePsleScoreRange(2025, 3, false, 4, 8, true));
+
+        assertThat(ipOnly.getScoreRange(3, false)).get().satisfies(r -> {
+            assertThat(r.isIntegratedProgramme()).isTrue();
+            assertThat(r.getUpperScore()).isEqualTo(8);
+        });
+        assertThat(ipOnly.getScoreRange(3, true)).get()
+                .satisfies(r -> assertThat(r.isIntegratedProgramme()).isTrue());
+        assertThat(ipOnly.getScoreRange(2, false)).isEmpty();
+        assertThat(ipOnly.getScoreRange(1, true)).isEmpty();
+    }
+
+    @Test
+    @Tag("FR-FILTER-03")
+    @DisplayName("TC-School-11: a non-IP PG3 range always wins over the IP range, even an older one (IP is only a fallback)")
+    void nonIpRangeWinsOverIp() {
+        School ipAndPg3 = withRanges("catholic-high-school",
+                new IndicativePsleScoreRange(2025, 3, false, 4, 7, true),
+                new IndicativePsleScoreRange(2024, 3, false, 6, 8),
+                new IndicativePsleScoreRange(2025, 3, true, 7, 12));
+
+        assertThat(ipAndPg3.getScoreRange(3, false)).get().satisfies(r -> {
+            assertThat(r.isIntegratedProgramme()).isFalse();
+            assertThat(r.getAdmissionYear()).isEqualTo(2024);
+        });
+        assertThat(ipAndPg3.getScoreRange(3, true)).get().satisfies(r -> {
+            assertThat(r.isIntegratedProgramme()).isFalse();
+            assertThat(r.isAffiliated()).isTrue();
+        });
+    }
+
+    @Test
+    @Tag("FR-FILTER-03")
+    @DisplayName("TC-School-12: with several IP ranges the latest admission year is used")
+    void latestIpRange() {
+        School ipOnly = withRanges("hwa-chong-institution",
+                new IndicativePsleScoreRange(2024, 3, false, 4, 7, true),
+                new IndicativePsleScoreRange(2025, 3, false, 4, 6, true));
+
+        assertThat(ipOnly.getScoreRange(3, false)).map(IndicativePsleScoreRange::getAdmissionYear).contains(2025);
+    }
+
+    @Test
+    @Tag("FR-FILTER-03")
+    @Tag("FR-SCHOOL-02")
+    @DisplayName("TC-School-13: an affiliated IP range is used for an affiliated student, the non-affiliated IP range for others (DC-82, Nanyang Girls')")
+    void affiliatedIpRange() {
+        School nanyang = withRanges("nanyang-girls-high-school",
+                new IndicativePsleScoreRange(2025, 3, false, 4, 6, true),
+                new IndicativePsleScoreRange(2025, 3, true, 4, 8, true));
+
+        assertThat(nanyang.getScoreRange(3, true)).get().satisfies(r -> {
+            assertThat(r.isIntegratedProgramme()).isTrue();
+            assertThat(r.isAffiliated()).isTrue();
+            assertThat(r.getUpperScore()).isEqualTo(8);
+        });
+        assertThat(nanyang.getScoreRange(3, false)).get().satisfies(r -> {
+            assertThat(r.isIntegratedProgramme()).isTrue();
+            assertThat(r.isAffiliated()).isFalse();
+            assertThat(r.getUpperScore()).isEqualTo(6);
+        });
+    }
+
+    @Test
+    @Tag("FR-FILTER-03")
+    @DisplayName("TC-School-14: the IP fallback is used only when the school has no non-IP PG3 range at all, not when only the affiliated one exists")
+    void ipFallbackOnlyWithoutAnyNonIpPg3Range() {
+        School affiliatedOnly = withRanges("x-high-school",
+                new IndicativePsleScoreRange(2025, 3, true, 7, 12),
+                new IndicativePsleScoreRange(2025, 3, false, 4, 7, true));
+
+        assertThat(affiliatedOnly.getScoreRange(3, false)).isEmpty();
+        assertThat(affiliatedOnly.getScoreRange(3, true)).get().satisfies(r -> {
+            assertThat(r.isIntegratedProgramme()).isFalse();
+            assertThat(r.isAffiliated()).isTrue();
+        });
+    }
+
+    @ParameterizedTest(name = "\"{0}\" → {1}")
+    @CsvSource(delimiter = '|', value = {
+            "Catholic High School (Primary)|true",
+            "Catholic High School|true",
+            "  catholic   high school (primary) |true",
+            "CHIJ Kellock|true",
+            "CHIJ (Kellock)|true",
+            "St Anthony's Canossian Primary School|true",
+            "St. Anthonys Canossian Primary School|true",
+            "Catholic High|false",
+            "Kellock|false",
+            "Rosyth School|false"})
+    @Tag("FR-FILTER-03")
+    @Tag("FR-PLAN-02")
+    @DisplayName("TC-School-15: hasAffiliatedPrimarySchool ignores case, spaces, dots, apostrophes, brackets and a trailing (Primary), but not missing words")
+    void affiliatedPrimarySchoolNames(String profileName, boolean expected) {
+        School school = TestSchools.school("x-secondary").build();
+        school.setAffiliatedPrimarySchools(java.util.List.of("CATHOLIC HIGH SCHOOL (PRIMARY)", "CHIJ (KELLOCK)",
+                "ST. ANTHONY'S CANOSSIAN PRIMARY SCHOOL"));
+
+        assertThat(school.hasAffiliatedPrimarySchool(profileName)).isEqualTo(expected);
+    }
+
+    @Test
+    @Tag("FR-FILTER-03")
+    @DisplayName("TC-School-16: no primary school (guest, blank profile field) is never affiliated")
+    void noPrimarySchoolIsNotAffiliated() {
+        School school = TestSchools.school("x-secondary").build();
+        school.setAffiliatedPrimarySchools(java.util.List.of("NGEE ANN PRIMARY SCHOOL"));
+
+        assertThat(school.hasAffiliatedPrimarySchool(null)).isFalse();
+        assertThat(school.hasAffiliatedPrimarySchool("   ")).isFalse();
+        assertThat(school.hasAffiliatedPrimarySchool("(Primary)")).isFalse();
+    }
+
+    /** A school with exactly these ranges (TestSchools has no IP shorthand). */
+    private static School withRanges(String code, IndicativePsleScoreRange... ranges) {
+        School school = TestSchools.school(code).build();
+        school.setScoreRanges(java.util.List.of(ranges));
+        return school;
     }
 
     @Test

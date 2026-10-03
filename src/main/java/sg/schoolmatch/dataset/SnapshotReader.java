@@ -163,7 +163,7 @@ public class SnapshotReader {
         school.setScoreRanges(r.scoreRanges().stream()
                 .filter(ScoreRangeRecord::isComplete)   // incomplete ranges are reported by the validator
                 .map(x -> new IndicativePsleScoreRange(x.admissionYear(), x.postingGroup(), x.affiliated(),
-                        x.lowerScore(), x.upperScore()))
+                        x.lowerScore(), x.upperScore(), x.integratedProgramme(), x.moeText()))
                 .toList());
         return school;
     }

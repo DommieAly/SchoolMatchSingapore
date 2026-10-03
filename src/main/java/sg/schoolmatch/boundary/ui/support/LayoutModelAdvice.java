@@ -32,6 +32,9 @@ import sg.schoolmatch.entity.school.SchoolDataCache;
  *       "Seed data (test values)" for the seed snapshot (DC-09, NFR-DATA-01)</li>
  *   <li>{@code seedData} — true while the seed snapshot is active: pages that show PSLE ranges must say the
  *       ranges are test values (DC-34)</li>
+ *   <li>{@code psleDataAvailable} — false when the active dataset has no PSLE score range at all: pages then say
+ *       "PSLE score ranges: not available yet" once instead of showing ranges, labels or PSLE inputs (DC-74);
+ *       {@code noPsleDataMessage} is the reason text</li>
  *   <li>{@code dataAccessedOn} — the snapshot's import date for the Singapore Open Data Licence notice
  *       (absent when unknown)</li>
  *   <li>{@code googleStub} — Google Maps Platform runs in stub mode (footer badge "Demo data (stub)")</li>
@@ -86,6 +89,8 @@ public class LayoutModelAdvice {   // DC-49
         SchoolDataCache dataset = activeDataset();
         attributes.put("datasetLabel", datasetLabel(dataset));
         attributes.put("seedData", dataset != null && dataset.isSeedData());
+        attributes.put("psleDataAvailable", PsleAvailability.available(dataset));   // DC-74
+        attributes.put("noPsleDataMessage", PsleAvailability.NOT_AVAILABLE_MESSAGE);
         if (dataset != null && dataset.getImportedAt() != null) {
             attributes.put("dataAccessedOn", DATE.format(dataset.getImportedAt().atZone(SINGAPORE)));
         }

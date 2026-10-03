@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--/* DM 24 Recommendation (login) — RecommendationUI.displayRecommendations (FR-REC-01, DC-20, NFR-DATA-03).
        Model: recommendations (List<Recommendation>, ranked; empty = AF-2), criteria (MatchCriteria), travelModeLabel,
-       weights (Map<MatchFactor, Double>), topN, resultId; seedData from LayoutModelAdvice.
+       weights (Map<MatchFactor, Double>), topN, resultId; seedData and psleDataAvailable (DC-74) from LayoutModelAdvice.
        Each row: rank, school (link to details, DC-08), total score, commute minutes and the reason of every factor
        (displayRecommendations + displayReasons). */-->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
@@ -13,8 +13,9 @@
     <p class="mb-2"><a th:href="@{/recommendations}">&larr; Refine criteria</a></p>
     <h1 class="h3 mb-1">Recommended schools</h1>
     <p class="text-body-secondary">
-        For PSLE <strong th:text="${criteria.psleScore}">12</strong>
-        (PG<span th:text="${criteria.postingGroup}">3</span>),
+        <th:block th:if="${criteria.psleScore != null and psleDataAvailable != false}">For PSLE
+            <strong th:text="${criteria.psleScore}">12</strong>
+            (PG<span th:text="${criteria.postingGroup}">3</span>),</th:block>
         from <strong th:text="${criteria.startLocation != null and criteria.startLocation.inputText != null
                                  ? criteria.startLocation.inputText : 'your starting point'}">home</strong>,
         <span th:text="${#strings.toLowerCase(travelModeLabel)}">public transport</span>,
@@ -23,6 +24,10 @@
     </p>
     <div th:replace="~{fragments/messages :: messages}"></div>
 
+    <!--/* DC-74: no PSLE ranges in the dataset */-->
+    <p class="small text-body-secondary" th:if="${psleDataAvailable == false}" data-psle-unavailable="true">
+        PSLE score ranges: not available yet, so PSLE fit is not used and the other factors decide the order.</p>
+    <th:block th:unless="${psleDataAvailable == false}">
     <div class="alert alert-warning small" role="note" th:if="${seedData}">
         <strong>TEST VALUES – not MOE data.</strong> The seed dataset uses made-up PSLE ranges, so these
         recommendations are for testing only.
@@ -30,13 +35,17 @@
     <p class="small text-body-secondary" th:unless="${seedData}">
         PSLE ranges are historical (the scores of students posted in past years), not a guarantee of a place.
     </p>
+    </th:block>
 
     <div class="row g-4">
         <div class="col-12 col-lg-8">
             <div th:if="${#lists.isEmpty(recommendations)}" class="empty-state text-center rounded border p-5 mb-4">
                 <p class="fw-semibold mb-1">No school matches your criteria.</p>
-                <p class="small text-body-secondary mb-3">Try a longer commute, another way to travel, or check your
-                    PSLE score and posting group. Only schools with PSLE range data can be recommended.</p>
+                <p class="small text-body-secondary mb-3" th:if="${psleDataAvailable != false}">Try a longer
+                    commute, another way to travel, or check your PSLE score and posting group. Only schools with PSLE
+                    range data can be recommended.</p>
+                <p class="small text-body-secondary mb-3" th:if="${psleDataAvailable == false}">Try a longer commute
+                    or another way to travel.</p>
                 <a class="btn btn-outline-primary btn-sm" th:href="@{/recommendations}">Refine criteria</a>
             </div>
 
@@ -83,7 +92,10 @@
                     <tbody>
                     <tr th:each="weight : ${weights}">
                         <td th:text="${#strings.replace(weight.key, '_', ' ')}">PSLE FIT</td>
-                        <td class="text-end" th:text="${#numbers.formatPercent(weight.value, 1, 0)}">40%</td>
+                        <!--/* DC-74: PSLE fit has weight 0 without PSLE ranges */-->
+                        <td class="text-end" th:if="${psleDataAvailable == false and weight.key.name() == 'PSLE_FIT'}">not used</td>
+                        <td class="text-end" th:unless="${psleDataAvailable == false and weight.key.name() == 'PSLE_FIT'}"
+                            th:text="${#numbers.formatPercent(weight.value, 1, 0)}">40%</td>
                     </tr>
                     </tbody>
                 </table>

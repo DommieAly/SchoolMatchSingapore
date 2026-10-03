@@ -7,7 +7,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sg.schoolmatch.control.FilterController;
 import sg.schoolmatch.control.ProfileController;
 import sg.schoolmatch.entity.account.UserProfile;
@@ -19,6 +22,7 @@ import sg.schoolmatch.entity.search.ProximityFilter;
 import sg.schoolmatch.entity.search.PsleScoreFilter;
 import sg.schoolmatch.entity.search.SchoolAttributeFilter;
 import sg.schoolmatch.entity.search.TransportationFilter;
+import sg.schoolmatch.error.ExternalFailureLog;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
 import sg.schoolmatch.error.NotAuthenticatedException;
@@ -30,6 +34,10 @@ import sg.schoolmatch.error.NotAuthenticatedException;
  * travel-time filter when routing is down (EX-1), and report which filters were really applied, so the chips
  * and "N of M schools match your filters" only describe those (FR-FILTER-08, Filter Schools step 9).
  * <p>
+ * DC-74: when the active dataset has no PSLE score range at all, a {@code psle} (and {@code pg}) in the URL is not
+ * turned into a filter (it would hide every school) and is not checked; its chip is listed as "not applied" and
+ * {@link Outcome#psleNotApplied()} tells the page to give the reason ({@link PsleAvailability#NOT_AVAILABLE_MESSAGE}).
+ * <p>
  * Not a Spring bean: each UI class builds one from the controls it already has.
  */
 public final class SearchFilterPipeline {
@@ -40,11 +48,18 @@ public final class SearchFilterPipeline {
      * @param results           the filtered results (the input results when no filter could be applied)
      * @param applied           the filters FilterController applied; empty when none
      * @param travelUnavailable true when the travel-time filter was dropped because routing failed (EX-1)
+     * @param psleNotApplied    true when the URL has a PSLE score but the dataset has no PSLE ranges (DC-74)
      */
-    public record Outcome(CurrentResultSet results, List<Filter> applied, boolean travelUnavailable) {
+    public record Outcome(CurrentResultSet results, List<Filter> applied, boolean travelUnavailable,
+                          boolean psleNotApplied) {
 
         public Outcome {
             applied = List.copyOf(applied);
+        }
+
+        /** An outcome with PSLE data available (the usual case). */
+        public Outcome(CurrentResultSet results, List<Filter> applied, boolean travelUnavailable) {
+            this(results, applied, travelUnavailable, false);
         }
 
         /** True when at least one filter was applied. */
@@ -70,15 +85,25 @@ public final class SearchFilterPipeline {
         }
     }
 
+    private static final Logger log = LoggerFactory.getLogger(SearchFilterPipeline.class);
+
     private final FilterController filterController;
     private final ProfileController profileController;   // primary school for the affiliated PSLE range (DC-22)
     private final SessionCookie sessionCookie;
+    private final BooleanSupplier psleDataAvailable;     // DC-74: SchoolDataController.hasPsleData, via PsleAvailability
 
     public SearchFilterPipeline(FilterController filterController, ProfileController profileController,
                                 SessionCookie sessionCookie) {
+        this(filterController, profileController, sessionCookie, () -> true);
+    }
+
+    /** @param psleDataAvailable asked once per {@link #apply}: false when the dataset has no PSLE ranges (DC-74) */
+    public SearchFilterPipeline(FilterController filterController, ProfileController profileController,
+                                SessionCookie sessionCookie, BooleanSupplier psleDataAvailable) {
         this.filterController = filterController;
         this.profileController = profileController;
         this.sessionCookie = sessionCookie;
+        this.psleDataAvailable = psleDataAvailable;
     }
 
     /**
@@ -90,14 +115,21 @@ public final class SearchFilterPipeline {
      */
     public Outcome apply(FilterParams params, CurrentResultSet results, Optional<ReferenceLocation> start,
                          HttpServletRequest request, Map<String, String> errors) {
-        String primarySchool = params.psle() == null ? null : primarySchool(request);
-        List<Filter> remaining = new ArrayList<>(params.toFilters(start, primarySchool, errors));
+        boolean psleNotApplied = false;
+        FilterParams usable = params;
+        if ((params.psle() != null || params.pg() != null) && !psleDataAvailable.getAsBoolean()) {
+            usable = params.without(FilterParams.PSLE, null);   // DC-74: no PSLE filter and no psle/pg messages
+            psleNotApplied = params.psle() != null;
+        }
+        String primarySchool = usable.psle() == null ? null : primarySchool(request);
+        List<Filter> remaining = new ArrayList<>(usable.toFilters(start, primarySchool, errors));
         boolean travelUnavailable = false;
         while (!remaining.isEmpty()) {
             try {
                 CurrentResultSet filtered = filterController.applyFilters(results, List.copyOf(remaining));
-                return new Outcome(filtered, remaining, travelUnavailable);
+                return new Outcome(filtered, remaining, travelUnavailable, psleNotApplied);
             } catch (ExternalServiceUnavailableException e) {
+                ExternalFailureLog.warn(log, "Travel-time filter", e);
                 travelUnavailable = true;
                 if (!remaining.removeIf(TransportationFilter.class::isInstance)) {
                     break;
@@ -110,7 +142,7 @@ public final class SearchFilterPipeline {
                 }
             }
         }
-        return new Outcome(results, List.of(), travelUnavailable);
+        return new Outcome(results, List.of(), travelUnavailable, psleNotApplied);
     }
 
     /** The logged-in user's primary school (affiliated PSLE range, DC-22), or null for a guest or an ended login. */

@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +25,7 @@ import sg.schoolmatch.entity.facility.Facility;
 import sg.schoolmatch.entity.facility.FacilityFilterCriteria;
 import sg.schoolmatch.entity.facility.FacilityType;
 import sg.schoolmatch.entity.school.School;
+import sg.schoolmatch.error.ExternalFailureLog;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
 import tools.jackson.databind.json.JsonMapper;
@@ -49,6 +52,8 @@ public class FacilityMapUI {
     static final String RADIUS_KM = "radiusKm";
     static final String TYPE_MESSAGE = "Choose library or tuition centre";
     static final String RADIUS_MESSAGE = "Choose 1, 2 or 3 km";
+
+    private static final Logger log = LoggerFactory.getLogger(FacilityMapUI.class);
 
     private final SchoolController schoolController;   // DC-37: loads the school from the URL
     private final FacilityController facilityController;
@@ -91,6 +96,7 @@ public class FacilityMapUI {
             } catch (InvalidInputException e) {
                 errors.putAll(e.getFieldErrors());
             } catch (ExternalServiceUnavailableException e) {
+                ExternalFailureLog.warn(log, "Nearby facilities map", e);
                 model.addAttribute("serviceUnavailable", true);
             }
         }

@@ -156,20 +156,20 @@ A budget **only sends emails. It does not stop any charges.** Google Cloud's "sp
 
 On top of Google's caps, the app keeps its own daily allowance. Before every **live** Google call, `ExternalCallBudget.charge` takes units from a counter. When the counter would go over today's limit, nothing is sent. Stub mode never counts.
 
-**Daily limit = floor(monthly-free × safety ÷ 30), at least 1**, with `safety: 0.8`. Both numbers live under `app.external.budget.*` in `src/main/resources/application.yml`.
+**Daily limit = floor(monthly-free × safety ÷ 30), at least 1**, with `safety: 0.8`. Both numbers live under `app.external.budget.*` in `src/main/resources/application.yml`. The `monthly-free` values are Google's free amounts per month (checked on Google's pricing pages on 3 Oct 2026).
 
-| Counter (`monthly-free.<name>`) | One unit is | Value in `application.yml` | App daily limit now | Google free per month | Our Google daily cap |
+| Counter (`monthly-free.<name>`) | One unit is | Value in `application.yml` | App daily limit | Google free per month | Our Google daily cap |
 |:--:|:--:|:--:|:--:|:--:|:--:|
 | `map-loads` | one page with an interactive map (live mode only) | 10000 | 266 | 10,000 | 322 |
-| `routes` | one `computeRoutes` request | 5000 | 133 | 10,000 | 322 |
-| `route-matrix-elements` | one matrix element (start × school) | 5000 | 133 | 10,000 | 322 |
+| `routes` | one `computeRoutes` request | 10000 | 266 | 10,000 | 322 |
+| `route-matrix-elements` | one matrix element (start × school) | 10000 | 266 | 10,000 | 322 |
 | `places-search` | one `searchNearby` or `searchText` request (both share this counter) | 5000 | 133 | 5,000 each | 161 each |
 | `place-details` | one Place Details request | 1000 | 26 | 1,000 | 32 |
 
-- A day is a **Singapore** calendar day; the counters restart at midnight Singapore time.
+- The app's day is **Google's quota day**: it ends at midnight Pacific Time (`app.external.budget.zone: America/Los_Angeles`), the same moment Google's daily caps reset. In Singapore that is 3 pm during US daylight saving time (until 1 Nov 2026) and 4 pm otherwise. The counters are stored under the Pacific date.
 - With a browser key in stub mode, map pages still load from Google, but the app does not count them; only Google's cap (322) limits them.
 - The counters are stored in the `external_usage` table (columns `usage_day`, `sku`, `used`) of the local H2 database, so restarting the app does not reset them. Each database counts on its own: `.local/h2/dev` for the dev profile, `.local/h2/demo` for the demo profile, and every laptop has its own. Deleting `.local/h2` resets them. Two key holders running live mode at the same time can therefore use twice the app's allowance; only Google's caps cover the whole project.
-- Matrix requests are charged per batch before sending: at most 100 elements per request (`app.google.matrix-batch-size`; Google allows 100 for TRANSIT and 625 otherwise).
+- A route matrix is charged once, for all its uncached elements, before its first request is sent; it is then sent in requests of at most 100 elements (`app.google.matrix-batch-size`; Google allows 100 for TRANSIT and 625 otherwise). A matrix that does not fit in what is left of today's limit sends nothing and uses up nothing.
 - Answers are cached in memory: routes and matrix elements for 30 minutes, place searches and details for 24 hours. A repeat inside that time costs nothing. A restart clears the caches but not the counters.
 
 **What users see when a limit is reached** (the app's or Google's):
@@ -183,13 +183,22 @@ On top of Google's caps, the app keeps its own daily allowance. Before every **l
 | Travel-time filter | "Travel-time filter is temporarily unavailable." The other filters still apply. |
 | Recommendations | Commute shows "Not available"; its weight is shared by the other factors |
 
+**What the terminal shows.** Every time a page shows one of the messages above, the app writes one WARN line: `<feature> unavailable: <service>: <what happened>`. The line never contains a key, a request header or a full URL (URLs are cut to the host name).
+
+| The line says | Meaning | What to do |
+|:--:|:--:|:--:|
+| `app daily limit reached for <counter> (… used on <date>, America/Los_Angeles day; … more asked); nothing was sent to Google` | The app's own limit for that counter is used up. Google was not called. | Wait for midnight Pacific Time, or raise the value in `application.yml` only if Google's free amount allows it. |
+| `Google refused the request: HTTP 4xx, <Google status>, <reason>: <Google's message>` | Google answered with an error. `PERMISSION_DENIED` or `API_KEY_*`: key restrictions, API not enabled, billing off. `429` with `RESOURCE_EXHAUSTED`: Google's daily cap (step 6) or per-minute limit is reached. | Fix the setting the message names (steps 2 to 6). |
+| `Google failed: HTTP 5xx` or `Google failed: no answer (…)` | Google had a server error, or there was a timeout or network problem. | Retry after a minute. |
+| `OneMap failed: …` | OneMap address search failed (exception class and HTTP status). | Retry; check the network. |
+
+Features named in the line: `Directions`, `Nearby facilities`, `Nearby facilities map`, `Facility details`, `Travel-time filter`, `Commute times for recommendations`, `Address search`, `Home address search`. Map pages write their own line: `Today's Google map-load limit is used up; pages show their lists without a map`.
+
 **Known follow-ups** (this guide does not change the code):
 
-1. `routes` and `route-matrix-elements` are 5000 in `application.yml`, but Google's free amount for these Essentials SKUs is 10,000. The app's limits are 133 per day; with 10000 they would be 266.
-2. Because of 1, a live travel-time filter that must route more than 133 schools always shows "temporarily unavailable". TRANSIT with 45 or 60 minutes reaches nearly all 147 schools. The first batch of 100 elements is counted even though the filter then fails. With 10000 (266 per day), only one such island-wide filter fits per day; repeating it from the same start point and mode within 30 minutes is free.
-3. `places-search` is one counter for two Google SKUs that each have 5,000 free. The app is stricter than needed: one school's facility list uses 2 units, so about 66 schools per day.
-4. The app's day ends at midnight Singapore time; Google's daily caps reset at midnight Pacific Time. The two do not reset together.
-5. The comment in `application.yml` still calls the numbers "UNVERIFIED placeholders". `map-loads`, `places-search` and `place-details` now match Google; `routes` and `route-matrix-elements` do not.
+1. A live travel-time filter that must route more than what is left of today's 266 `route-matrix-elements` shows "temporarily unavailable". TRANSIT with 45 or 60 minutes reaches nearly all 147 schools, so about one such island-wide filter fits per day; repeating it from the same start point and mode within 30 minutes is free. The refused request sends nothing and counts nothing, so the rest of the day's elements stay free for recommendations.
+2. `places-search` is one counter for two Google SKUs that each have 5,000 free. The app is stricter than needed: one school's facility list uses 2 units, so about 66 schools per day.
+3. Counters written before the change to the Pacific day (3 Oct 2026) are stored under the Singapore date. On the day of the switch the count can be wrong both ways. Before 15:00 Singapore time (16:00 in Pacific winter time) the app reads the previous date's row, so units used since Singapore midnight are not counted and the app can allow up to a second day's amount within one Google day. After that time it reads a row that already holds those units and counts some of them twice. To start the switch day with exact counts, delete today's `external_usage` rows (or the `.local/h2` folder) when you switch.
 
 ## Step 8: Put the keys into the app
 
@@ -299,8 +308,8 @@ Expected cost of each action (repeats inside the cache time cost nothing):
 | Warning "`google.maps.Marker` is deprecated" | Expected without a Map ID; markers still work. |
 | App stops at start-up: "GOOGLE_MODE=live needs GOOGLE_MAPS_SERVER_KEY in .env" | Add the server key, or set `GOOGLE_MODE=stub`. The demo profile with no `.env` at all defaults to live and stops the same way. |
 | App stops at start-up: "app.external.*.mode must be 'stub' or 'live'" | `GOOGLE_MODE` or `ONEMAP_MODE` has quotes, a space or a typo. |
-| "temporarily unavailable" for facilities, directions or the travel-time filter; "Not available" commute in recommendations | (1) The app's daily limit is reached. (2) Google refused: the API is not enabled, the server key's API restrictions lack Routes API or Places API (New), or billing is off. (3) Google's daily cap is reached (it resets at midnight Pacific Time). (4) A short Google error or timeout: retry after a minute. See the next row for how to tell them apart. |
-| Which cause? | Directions and recommendations write a WARN line in the terminal. A lower-case name after "Google" (`routes`, `route-matrix-elements`) means the app's own limit. "Google Routes" or "Google Places" means Google refused or failed. The facility pages and the travel-time filter write no log line. For Google's reason, open **Google Maps Platform → Metrics** and look at the response codes for that API. |
+| "temporarily unavailable" for facilities, directions or the travel-time filter; "Not available" commute in recommendations | (1) The app's daily limit is reached (it resets at midnight Pacific Time, like Google's caps). (2) Google refused: the API is not enabled, the server key's API restrictions lack Routes API or Places API (New), or billing is off. (3) Google's daily cap is reached (it resets at midnight Pacific Time). (4) A short Google error or timeout: retry after a minute. See the next row for how to tell them apart. |
+| Which cause? | Read the WARN line in the terminal (see [What the terminal shows](#the-apps-own-daily-limiter-externalcallbudget)). `app daily limit reached` means the app's own limit. `Google refused the request` names Google's HTTP status, error status and message (for example `PERMISSION_DENIED` for key or API settings, `RESOURCE_EXHAUSTED` for Google's daily cap). `Google failed` means a Google server error, timeout or network problem. **Google Maps Platform → Metrics** shows the response codes per API too. |
 | Facilities still named "(stub)", footer badge still there | The app is still in stub mode: `GOOGLE_MODE` is not `live`, or the app was not restarted. |
 | Edits to `.env` have no effect | Restart the app. Check that `.env` is next to `pom.xml`, not in `src/` or your home folder. On Windows, check it is not named `.env.txt` (`Get-ChildItem -Force`); on Mac, `ls -a`. Remove quotes and trailing spaces. Check for an environment variable with the same name in your shell or IntelliJ run configuration. |
 | Changes in Cloud Console have no effect | Restriction and key changes can take a few minutes. Reload the page after waiting. |

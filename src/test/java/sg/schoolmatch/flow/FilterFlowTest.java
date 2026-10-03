@@ -154,12 +154,12 @@ class FilterFlowTest {
     @Test
     @Tag("FR-FILTER-03")
     @Tag("NFR-DATA-03")
-    @DisplayName("TC-FILTER-03-10: the PSLE filter says how many schools have no PSLE data, that PG3 was used, and that ranges are test values")
+    @DisplayName("TC-FILTER-03-10: the PSLE filter says how many schools have no range for the posting group, that PG3 was used, and that ranges are test values")
     void psleNotes() throws Exception {
         mvc.perform(get("/schools").param("psle", "4"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("totalCount", 9))
-                .andExpect(content().string(containsString("1 school has no PSLE data and is hidden")))
+                .andExpect(content().string(containsString("1 school has no PSLE range for PG3 and is hidden")))
                 .andExpect(content().string(containsString("posting group 3 is used")))
                 .andExpect(content().string(containsString("TEST VALUES – not MOE data")));
     }

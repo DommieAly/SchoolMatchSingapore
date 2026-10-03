@@ -3,6 +3,8 @@
        Model: plan (ChoicePlan), rows (ChoicePlanUI.ChoiceRow), warnings (List<String>), addableSchools
        (shortlisted, not in the plan), positions (1..n+1; empty when the plan is full), emptyRanks (n+1..6),
        shortlistEmpty, safeMargin, maxChoices; or unavailable = true. Every button is a POST that redirects back here.
+       DC-74: psleDataAvailable = false (LayoutModelAdvice) means the dataset has no PSLE ranges: every label is
+       "Not available" and the page says so once; ordering, adding and removing still work.
        The design's display operations are the th:fragment names below. */-->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Choice planner')}"></head>
@@ -18,7 +20,7 @@
     <div class="row g-4" th:unless="${unavailable}">
         <div class="col-12 col-lg-8">
             <!--/* The score and posting group the labels use */-->
-            <p th:if="${plan.basedOnScore != null}" class="mb-3">
+            <p th:if="${plan.basedOnScore != null and psleDataAvailable != false}" class="mb-3">
                 Labels use PSLE score <strong th:text="${plan.basedOnScore}">12</strong>,
                 posting group <strong th:text="${plan.postingGroup}">3</strong>.
                 <span th:if="${plan.currentProfileScore != null and plan.currentProfilePostingGroup == null}"
@@ -27,7 +29,7 @@
                     Your profile has no posting group, so posting group 3 is used.</span>
                 <a th:href="@{/profile}">Edit profile</a>
             </p>
-            <div th:if="${plan.basedOnScore == null}" class="alert alert-info" role="status">
+            <div th:if="${plan.basedOnScore == null and psleDataAvailable != false}" class="alert alert-info" role="status">
                 Add your PSLE score in your profile to see SAFE/MATCH/REACH.
                 <a class="alert-link" th:href="@{/profile}">Go to your profile</a>
             </div>
@@ -58,7 +60,7 @@
                             </td>
                             <td>
                                 <span th:if="${row.range != null}"
-                                      th:text="|PG${row.range.postingGroup} ${row.range.lowerScore}–${row.range.upperScore} (${row.range.admissionYear}${row.range.affiliated ? ', affiliated' : ''})|">
+                                      th:text="|PG${row.range.postingGroup} ${row.range.rangeText} (${row.range.admissionYear}${row.range.affiliated ? ', affiliated' : ''})|">
                                     PG3 8–12 (2025)</span>
                                 <span th:if="${row.range == null}" class="text-body-secondary">Not available</span>
                             </td>
@@ -165,13 +167,17 @@
                     <li><span class="badge text-bg-warning">MATCH</span> U − <span th:text="${safeMargin}">2</span> &lt; your score ≤ U</li>
                     <li><span class="badge text-bg-danger">REACH</span> your score &gt; U</li>
                 </ul>
-                <!--/* NFR-DATA-03; the seed snapshot's ranges are made up (DC-34) */-->
+                <!--/* NFR-DATA-03; the seed snapshot's ranges are made up (DC-34); DC-74: no ranges at all */-->
+                <p th:if="${psleDataAvailable == false}" class="mb-0" data-psle-unavailable="true">
+                    PSLE score ranges: not available yet</p>
+                <th:block th:unless="${psleDataAvailable == false}">
                 <div th:if="${seedData}" class="alert alert-warning py-2 mb-0" role="note">
                     <strong>TEST VALUES – not MOE data.</strong> The seed dataset uses made-up PSLE ranges, so these
                     labels are only a demo.
                 </div>
                 <p th:unless="${seedData}" class="mb-0">Ranges are historical, not guaranteed: they show past
                     admission scores, not a promise of a place this year.</p>
+                </th:block>
             </section>
         </div>
     </div>

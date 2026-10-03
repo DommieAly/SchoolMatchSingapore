@@ -58,6 +58,9 @@ public class SchoolDataController {
 
     static final String SOURCE_NAME = "SchoolMatch snapshot";
 
+    /** DC-74: why the PSLE filter, SAFE/MATCH/REACH and PSLE fit are not used when {@link #hasPsleData()} is false. */
+    public static final String NO_PSLE_DATA_MESSAGE = "PSLE score ranges are not available in the current dataset";
+
     // data.gov.sg datasets used by the importer (data/README.md)
     static final String SCHOOLS_DATASET = "d_688b934f82c1059ed0a6993d2a829089";
     static final String CCAS_DATASET = "d_9aba12b5527843afb0b2e8e4ed6ac6bd";
@@ -118,6 +121,24 @@ public class SchoolDataController {
         return activeDataset.getDistricts();
     }
 
+    /**
+     * DC-74: true when the active dataset has at least one PSLE score range ({@link SchoolDataCache#hasPsleData()}).
+     * The one place every page and control asks; false for a snapshot built without curated ranges.
+     */
+    public boolean hasPsleData() {
+        refreshIfExpired();
+        return activeDataset.hasPsleData();
+    }
+
+    /**
+     * True when the active dataset has curated affiliated primary schools ({@link SchoolDataCache#hasAffiliationData()}):
+     * a school with none then has none (the details page says "None"), not unknown ("Not available").
+     */
+    public boolean hasAffiliationData() {
+        refreshIfExpired();
+        return activeDataset.hasAffiliationData();
+    }
+
     /** DC-09: the loaded dataset with its version, date and status (footer, about page). */
     public SchoolDataCache getActiveDataset() {
         refreshIfExpired();
@@ -168,7 +189,7 @@ public class SchoolDataController {
         sources.add(new SnapshotManifest.Source("data.gov.sg Co-curricular activities (CCAs)", CCAS_DATASET,
                 clock.instant()));
         List<DataGovSgRecord> subjectRows = dataGovSg.fetchSchoolSubjects();
-        sources.add(new SnapshotManifest.Source("data.gov.sg Subjects offered", SUBJECTS_DATASET, clock.instant()));
+        sources.add(new SnapshotManifest.Source("data.gov.sg Subjects Offered", SUBJECTS_DATASET, clock.instant()));
         List<District> fullDistricts = DistrictLocator.parseFeatureCollection(dataGovSg.fetchDistrictsGeoJson());
         sources.add(new SnapshotManifest.Source("data.gov.sg Master Plan 2019 Planning Area Boundary (No Sea)",
                 PLANNING_AREAS_DATASET, clock.instant()));
@@ -176,7 +197,8 @@ public class SchoolDataController {
                 + " CCA rows, " + subjectRows.size() + " subject rows, " + fullDistricts.size() + " planning areas");
 
         NameNormaliser names = new NameNormaliser(curated.aliases());
-        List<JoinedSchool> joined = new SchoolRecordJoiner(names).join(schoolRows, ccaRows, subjectRows, importLog);
+        List<JoinedSchool> joined = new SchoolRecordJoiner(names, curated.subjectExclusions())
+                .join(schoolRows, ccaRows, subjectRows, importLog);
         CuratedLookups lookups = curatedLookups(curated, names, importLog);
         SchoolGeocoder geocoder = new SchoolGeocoder(oneMap, curated.geocodeOverrides());
         DistrictLocator locator = new DistrictLocator(fullDistricts);
@@ -187,7 +209,7 @@ public class SchoolDataController {
         sources.add(new SnapshotManifest.Source("OneMap search (coordinates by postal code)", ONEMAP_SOURCE_ID,
                 clock.instant()));
         sources.add(new SnapshotManifest.Source("SchoolMatch curated CSV files (school codes, name aliases, "
-                + "PSLE ranges, geocode overrides, affiliations)", CURATED_SOURCE_ID, started));
+                + "PSLE ranges, geocode overrides, affiliations, subject exclusions)", CURATED_SOURCE_ID, started));
         warnUnknownCodes(curated, records, importLog);
 
         String districtsGeoJson = snapshotWriter.districtsGeoJson(fullDistricts, SnapshotWriter.MAX_DISTRICTS_BYTES);
@@ -205,8 +227,9 @@ public class SchoolDataController {
         String notes = counts.get("scoreRanges") == 0
                 ? "No PSLE ranges yet: data/curated/psle-ranges.csv has no checked rows, so every page shows the "
                         + "ranges as Not available."
-                : "PSLE ranges come from data/curated/psle-ranges.csv (MOE SchoolFinder, typed and checked by the "
-                        + "team). They are historical, not a guarantee.";
+                : "PSLE ranges come from data/curated/psle-ranges.csv (MOE SchoolFinder; each value read twice by "
+                        + "independent scripts and spot-checked by hand, see data/README.md). They are historical, "
+                        + "not a guarantee.";
         SnapshotManifest draft = new SnapshotManifest(SnapshotManifest.KIND_FULL, version, today, clock.instant(),
                 sources, null, List.of(), counts, notes);
         LoadedSnapshot candidate = new LoadedSnapshot(outputDir.resolve(version).toUri().toString(), draft, records,
@@ -250,7 +273,8 @@ public class SchoolDataController {
         if (code == null) {
             code = NameNormaliser.slug(name);
             importLog.warn(ImportLog.SCHOOL_CODE_SLUG, name + " → " + code + " (no row in "
-                    + CuratedCsvReader.SCHOOL_CODES + "; verify against the MOE SchoolFinder URL)");
+                    + CuratedCsvReader.SCHOOL_CODES + "; add a row to it with this code, so the code stays the same"
+                    + " in later imports)");
         }
 
         GeocodeResult geocode = geocoder.locate(code, name, row.get("postal_code"));
@@ -305,22 +329,33 @@ public class SchoolDataController {
             }
         });
         Map<String, List<ScoreRangeRecord>> ranges = new HashMap<>();
+        Map<String, List<ScoreRangeRecord>> ipRanges = new HashMap<>();
         Map<String, List<String>> ipNotes = new HashMap<>();
         for (PsleRangeRow row : curated.psleRanges()) {
             String label = row.schoolCode() + " " + row.admissionYear() + " PG" + row.postingGroup() + " " + row.track();
             if (!row.isChecked()) {
                 importLog.warn(ImportLog.CURATED, CuratedCsvReader.PSLE_RANGES + ": " + label
                         + " not used: not checked by a second person");
-            } else if (CuratedCsvReader.TRACK_IP.equals(row.track())) {
+            } else if (CuratedCsvReader.TRACK_IP.equals(row.track())
+                    || CuratedCsvReader.TRACK_IP_AFFILIATED.equals(row.track())) {
+                // DC-77: an IP row is a range too (the PG3 fallback; MOE files IP under PG3), and its MOE text
+                // stays the details-page note (DC-18), e.g. "4(D) - 8(M)". DC-82: IP_AFFILIATED is the affiliated
+                // IP value (Nanyang Girls').
+                boolean affiliatedIp = CuratedCsvReader.TRACK_IP_AFFILIATED.equals(row.track());
+                ipRanges.computeIfAbsent(row.schoolCode(), c -> new ArrayList<>()).add(new ScoreRangeRecord(
+                        row.admissionYear(), row.postingGroup(), affiliatedIp, row.lower(), row.upper(), true,
+                        row.rawText()));
                 ipNotes.computeIfAbsent(row.schoolCode(), c -> new ArrayList<>()).add("IP " + row.admissionYear()
-                        + " PG" + row.postingGroup() + ": "
+                        + " PG" + row.postingGroup() + (affiliatedIp ? " affiliated" : "") + ": "
                         + (row.rawText() != null ? row.rawText() : row.lower() + "–" + row.upper()));
             } else {
                 ranges.computeIfAbsent(row.schoolCode(), c -> new ArrayList<>()).add(new ScoreRangeRecord(
                         row.admissionYear(), row.postingGroup(), CuratedCsvReader.TRACK_AFFILIATED.equals(row.track()),
-                        row.lower(), row.upper()));
+                        row.lower(), row.upper(), false, row.rawText()));
             }
         }
+        // IP ranges after the others, so the details table lists them last within a year and posting group.
+        ipRanges.forEach((code, list) -> ranges.computeIfAbsent(code, c -> new ArrayList<>()).addAll(list));
         Map<String, String> ipNoteText = new HashMap<>();
         ipNotes.forEach((code, list) -> ipNoteText.put(code, String.join("; ", list)));
         Map<String, List<String>> affiliations = new HashMap<>();

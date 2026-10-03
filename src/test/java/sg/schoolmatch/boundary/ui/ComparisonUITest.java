@@ -36,6 +36,7 @@ import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.control.AuthController;
 import sg.schoolmatch.control.SchoolDataController;
 import sg.schoolmatch.control.ShortlistController;
+import sg.schoolmatch.entity.school.IndicativePsleScoreRange;
 import sg.schoolmatch.entity.school.School;
 import sg.schoolmatch.error.InvalidInputException;
 import sg.schoolmatch.support.TestSchools;
@@ -164,6 +165,25 @@ class ComparisonUITest {
         assertThat(ComparisonUI.differs(List.of("A", "B"))).isTrue();
         assertThat(ComparisonUI.differs(Arrays.asList("A", null))).isTrue();
         assertThat(ComparisonUI.differs(Arrays.asList(null, null))).isFalse();
+    }
+
+    @Test
+    @Tag("FR-COMPARE-01")
+    @Tag("NFR-DATA-03")
+    @DisplayName("TC-ComparisonUI-07: an IP-only school shows its IP range in the PG3 row, marked IP; its PG2 cell stays Not available")
+    void displayComparison_ipRange() throws Exception {
+        School dunman = TestSchools.school("dunman-high-school").name("DUNMAN HIGH SCHOOL").build();
+        dunman.setScoreRanges(List.of(new IndicativePsleScoreRange(2025, 3, false, 4, 8, true)));
+        when(shortlistController.compareSchools(SESSION, codes("dunman-high-school", "tampines-secondary-school")))
+                .thenReturn(List.of(dunman, tampines));
+
+        String html = mvc.perform(get("/compare").param("codes", "dunman-high-school,tampines-secondary-school")
+                        .cookie(member()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(row(html, "PSLE AL range PG3")).contains("IP 4–8 (2025)").contains("22–25 (2025)");
+        assertThat(row(html, "PSLE AL range PG2")).contains("Not available");
     }
 
     private Cookie member() {

@@ -36,6 +36,8 @@ import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
 import sg.schoolmatch.error.NotAuthenticatedException;
 import sg.schoolmatch.persistence.UserProfileRepository;
+import sg.schoolmatch.support.ExternalFailures;
+import sg.schoolmatch.support.LogCapture;
 
 /**
  * Unit test of the control class ProfileController (use case Manage Profile; FR-PROFILE-01, NFR-SEC-05, DC-27).
@@ -348,6 +350,22 @@ class ProfileControllerTest {
 
         assertThat(e.getFieldErrors()).containsEntry("homeAddress", ProfileController.ADDRESS_UNAVAILABLE_MESSAGE);
         verify(profileRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @Tag("FR-PROFILE-01")
+    @Tag("NFR-USE-03")
+    @DisplayName("TC-ProfileController-16: OneMap unavailable while saving a home address writes one WARN line")
+    void saveProfile_addressSearchUnavailable_logsOneWarning() {
+        when(locationController.findCandidates("bishan")).thenThrow(ExternalFailures.timeout("OneMap"));
+
+        try (LogCapture log = LogCapture.of(ProfileController.class)) {
+            catchThrowableOfType(InvalidInputException.class,
+                    () -> profileController.saveProfile(SESSION, withAddress("bishan")));
+
+            assertThat(log.warnings()).singleElement().asString()
+                    .startsWith("Home address search unavailable: OneMap: OneMap failed: ResourceAccessException");
+        }
     }
 
     @Test

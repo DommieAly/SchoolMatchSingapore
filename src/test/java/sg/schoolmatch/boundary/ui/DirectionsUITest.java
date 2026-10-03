@@ -1,5 +1,6 @@
 package sg.schoolmatch.boundary.ui;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
@@ -59,6 +60,8 @@ import sg.schoolmatch.entity.school.School;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
 import sg.schoolmatch.error.NotFoundException;
+import sg.schoolmatch.support.ExternalFailures;
+import sg.schoolmatch.support.LogCapture;
 import sg.schoolmatch.support.TestSchools;
 
 /**
@@ -443,6 +446,31 @@ class DirectionsUITest {
         mvc.perform(post("/location").param("address", "bishan").param("returnTo", INPUT_URL))
                 .andExpect(redirectedUrl(INPUT_URL))
                 .andExpect(flash().attribute("flashError", containsString("Address search is temporarily unavailable")));
+    }
+
+    @Test
+    @Tag("FR-ROUTE-08")
+    @Tag("FR-ROUTE-02")
+    @Tag("NFR-USE-03")
+    @DisplayName("TC-DirectionsUI-32: routing and address-search failures each write one WARN line with the cause")
+    void serviceDown_logsOneWarningEach() throws Exception {
+        when(schoolController.getSchoolDetails(SCHOOL_CODE)).thenReturn(school);
+        when(directionsController.getDirections(home, school, TravelMode.WALK))
+                .thenThrow(ExternalFailures.googleRefused("Google Routes", 403, "PERMISSION_DENIED", "Blocked."));
+        when(locationController.findCandidates("bishan")).thenThrow(ExternalFailures.timeout("OneMap"));
+
+        try (LogCapture log = LogCapture.of(DirectionsUI.class)) {
+            mvc.perform(get("/directions").param("to", TO_SCHOOL).param("mode", "WALK").session(sessionWith(home)))
+                    .andExpect(content().string(containsString("Directions are temporarily unavailable")));
+            mvc.perform(post("/location").param("address", "bishan").param("returnTo", INPUT_URL))
+                    .andExpect(redirectedUrl(INPUT_URL));
+
+            assertThat(log.warnings()).hasSize(2);
+            assertThat(log.warnings().get(0)).isEqualTo("Directions unavailable: Google Routes: Google refused the "
+                    + "request: HTTP 403, PERMISSION_DENIED: Blocked.");
+            assertThat(log.warnings().get(1)).isEqualTo("Address search unavailable: OneMap: OneMap failed: ResourceAccessException: "
+                    + "I/O error; SocketTimeoutException: Read timed out");
+        }
     }
 
     // ---- POST /location/device ------------------------------------------------------------------------------

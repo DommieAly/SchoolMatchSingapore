@@ -90,6 +90,19 @@ class PsleScoreFilterTest {
 
     @Test
     @Tag("FR-FILTER-03")
+    @DisplayName("TC-PsleFilter-06b: the data.gov.sg spelling of an affiliated primary school also counts (no dot, no '(Primary)')")
+    void primarySchoolSpellings() {
+        School catholicHigh = TestSchools.school("catholic-high-school").build();
+        catholicHigh.setAffiliatedPrimarySchools(java.util.List.of("CATHOLIC HIGH SCHOOL (PRIMARY)",
+                "ST. ANTHONY'S CANOSSIAN PRIMARY SCHOOL"));
+
+        assertThat(new PsleScoreFilter(12, 3, "CATHOLIC HIGH SCHOOL").isAffiliatedWith(catholicHigh)).isTrue();
+        assertThat(new PsleScoreFilter(12, 3, "St Anthony's Canossian Primary School").isAffiliatedWith(catholicHigh))
+                .isTrue();
+    }
+
+    @Test
+    @Tag("FR-FILTER-03")
     @DisplayName("TC-PsleFilter-07: affiliated user, but the school has no affiliated range → non-affiliated range")
     void affiliatedWithoutAffiliatedRangeFallsBack() {
         School onlyNonAffiliated = TestSchools.school("x-secondary-school")

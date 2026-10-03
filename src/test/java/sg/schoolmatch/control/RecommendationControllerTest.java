@@ -39,6 +39,8 @@ import sg.schoolmatch.entity.route.TravelMode;
 import sg.schoolmatch.entity.school.School;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
+import sg.schoolmatch.support.ExternalFailures;
+import sg.schoolmatch.support.LogCapture;
 import sg.schoolmatch.support.TestSchools;
 
 /**
@@ -65,6 +67,7 @@ class RecommendationControllerTest {
 
     @BeforeEach
     void stubCommuteTimes() {
+        when(schoolData.hasPsleData()).thenReturn(true);   // DC-74: the dataset has PSLE ranges unless a test says not
         when(directions.getCommuteTimes(any(), anyList(), any())).thenAnswer(call -> {
             List<? extends Place> places = call.getArgument(1);
             TravelMode mode = call.getArgument(2);
@@ -204,6 +207,21 @@ class RecommendationControllerTest {
                 .isEqualTo("PSLE 13 is within the 2025 PG3 affiliated range 8–14 → MATCH");
     }
 
+    @Test
+    @Tag("FR-REC-01")
+    @Tag("DC-77")
+    @DisplayName("TC-REC-04-05: an IP-only school is a PG3 candidate and its PSLE fit reason names the IP range")
+    void ipOnlySchoolReason() {
+        School ipOnly = TestSchools.school("ip-only").ipRange(2025, 4, 8).build();
+        when(schoolData.getSchools()).thenReturn(List.of(ipOnly));
+        commuteMinutes.put("ip-only", 10);
+
+        assertThat(controller.recommend(criteria(7, 2))).as("no PG2 range: not a candidate").isEmpty();
+        Recommendation rec = controller.recommend(criteria(7, 3)).getFirst();
+        assertThat(component(rec, MatchFactor.PSLE_FIT).getReason())
+                .isEqualTo("PSLE 7 is within the 2025 PG3 range IP 4–8 → MATCH");
+    }
+
     // ------------------------------------------------------------------ commute
 
     @Test
@@ -270,6 +288,24 @@ class RecommendationControllerTest {
         assertThat(rec.getTotalScore()).isCloseTo(1.0, within(1e-9));   // only PSLE_FIT counts
         assertThat(component(rec, MatchFactor.COMMUTE).getReason())
                 .contains("Not available").contains("route service");
+    }
+
+    @Test
+    @Tag("FR-REC-01")
+    @Tag("NFR-MAIN-02")
+    @DisplayName("TC-REC-05-05: commute times refused by the app's daily limit → one WARN line saying so")
+    void routeServiceDown_logsOneWarning() {
+        School school = TestSchools.school("down").range(2025, 3, 8, 12).build();
+        when(schoolData.getSchools()).thenReturn(List.of(school));
+        when(directions.getCommuteTimes(any(), anyList(), any()))
+                .thenThrow(ExternalFailures.dailyLimit("route-matrix-elements", 266, 1, 266));
+
+        try (LogCapture log = LogCapture.of(RecommendationController.class)) {
+            controller.recommend(criteria(12, 3));
+
+            assertThat(log.warnings()).singleElement().asString().startsWith(
+                    "Commute times for recommendations unavailable: Google route-matrix-elements: app daily limit reached");
+        }
     }
 
     @Test
@@ -359,6 +395,92 @@ class RecommendationControllerTest {
         criteria.setWeights(weights);
 
         assertThat(controller.recommend(criteria).getFirst().getTotalScore()).isCloseTo(0.6, within(1e-9));
+    }
+
+    // ------------------------------------------------------------------ no PSLE ranges in the dataset (DC-74)
+
+    @Test
+    @Tag("FR-REC-01")
+    @Tag("DC-74")
+    @DisplayName("TC-REC-08-01: without PSLE data every school is a candidate and PSLE fit says it is not used")
+    void noPsleData_allSchoolsAreCandidates() {
+        when(schoolData.hasPsleData()).thenReturn(false);
+        School near = TestSchools.school("near").name("NEAR SCHOOL").build();
+        School far = TestSchools.school("far").name("FAR SCHOOL").build();
+        School tooFar = TestSchools.school("too-far").name("TOO FAR SCHOOL").build();
+        when(schoolData.getSchools()).thenReturn(List.of(far, near, tooFar));
+        commuteMinutes.putAll(Map.of("near", 10, "far", 20, "too-far", 40));   // limit 30 min
+
+        List<Recommendation> recs = controller.recommend(criteria(12, 3));
+
+        assertThat(recs).extracting(r -> r.getSchool().getSchoolCode()).containsExactly("near", "far");
+        for (Recommendation rec : recs) {
+            assertThat(component(rec, MatchFactor.PSLE_FIT).getReason())
+                    .isEqualTo("PSLE fit not used: no score ranges in the current dataset")
+                    .isEqualTo(RecommendationController.PSLE_FIT_NOT_USED);
+            assertThat(rec.getReasons()).contains(RecommendationController.PSLE_FIT_NOT_USED);
+        }
+        // only COMMUTE counts: PSLE_FIT has weight 0 and the commute weight is rescaled to 1
+        assertThat(recs.getFirst().getTotalScore()).isCloseTo(1 - 10.0 / 30, within(1e-9));
+        assertThat(recs.get(1).getTotalScore()).isCloseTo(1 - 20.0 / 30, within(1e-9));
+    }
+
+    @Test
+    @Tag("FR-REC-01")
+    @Tag("DC-74")
+    @DisplayName("TC-REC-08-02: without PSLE data the other weights are rescaled (CCA 0.15 and commute 0.3 over 0.45)")
+    void noPsleData_weightsRescaled() {
+        when(schoolData.hasPsleData()).thenReturn(false);
+        School school = TestSchools.school("cca").ccas("BASKETBALL").build();
+        when(schoolData.getSchools()).thenReturn(List.of(school));
+        commuteMinutes.put("cca", 15);
+        MatchCriteria criteria = criteria(12, 3);
+        criteria.setPreferredCCAs(List.of("BASKETBALL", "CHOIR"));   // 1 of 2 → 0.5; commute 15 of 30 → 0.5
+
+        Recommendation rec = controller.recommend(criteria).getFirst();
+
+        assertThat(rec.getComponents()).extracting(ScoreComponent::getFactor)
+                .containsExactly(MatchFactor.PSLE_FIT, MatchFactor.CCA, MatchFactor.COMMUTE);
+        assertThat(rec.getTotalScore()).isCloseTo((0.15 * 0.5 + 0.3 * 0.5) / 0.45, within(1e-9));
+        assertThat(rec.getRank()).isEqualTo(1);
+    }
+
+    @Test
+    @Tag("FR-REC-01")
+    @Tag("NFR-USE-03")
+    @Tag("DC-74")
+    @DisplayName("TC-REC-08-03: without PSLE data the PSLE score and posting group are optional but still checked when given")
+    void noPsleData_scoreOptional() {
+        when(schoolData.hasPsleData()).thenReturn(false);
+        when(schoolData.getSchools()).thenReturn(List.of(TestSchools.school("plain").build()));
+        commuteMinutes.put("plain", 15);
+        MatchCriteria noScore = criteria(12, 3);
+        noScore.setPsleScore(null);
+        noScore.setPostingGroup(null);
+
+        assertThat(controller.recommend(noScore)).hasSize(1);
+
+        MatchCriteria badScore = criteria(40, 3);
+        assertThatThrownBy(() -> controller.recommend(badScore))
+                .isInstanceOf(InvalidInputException.class)
+                .satisfies(e -> assertThat(((InvalidInputException) e).getFieldErrors()).containsOnlyKeys("psleScore"));
+    }
+
+    @Test
+    @Tag("FR-REC-01")
+    @Tag("DC-74")
+    @DisplayName("TC-REC-08-04: with PSLE data a missing score is still an error and schools without ranges are not candidates")
+    void withPsleData_unchanged() {
+        School ranged = TestSchools.school("ranged").range(2025, 3, 8, 12).build();
+        School noRanges = TestSchools.school("no-ranges").build();
+        when(schoolData.getSchools()).thenReturn(List.of(ranged, noRanges));
+        commuteMinutes.putAll(Map.of("ranged", 10, "no-ranges", 10));
+        MatchCriteria noScore = criteria(12, 3);
+        noScore.setPsleScore(null);
+
+        assertThatThrownBy(() -> controller.recommend(noScore)).isInstanceOf(InvalidInputException.class);
+        assertThat(controller.recommend(criteria(12, 3))).extracting(r -> r.getSchool().getSchoolCode())
+                .containsExactly("ranged");
     }
 
     // ------------------------------------------------------------------ helpers

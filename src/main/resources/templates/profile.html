@@ -16,8 +16,13 @@
         (<span th:text="${account.email}">alice@example.com</span>)
     </p>
     <div th:replace="~{fragments/messages :: messages}"></div>
-    <div th:unless="${profileComplete}" class="alert alert-info small" role="status">
-        To get school recommendations, fill in your PSLE score, posting group, home address and usual travel mode.
+    <div th:unless="${profileComplete or (psleDataAvailable == false and homeLocationSaved and form.travelMode != null)}"
+         class="alert alert-info small" role="status">
+        <th:block th:if="${psleDataAvailable != false}">To get school recommendations, fill in your PSLE score,
+            posting group, home address and usual travel mode.</th:block>
+        <!--/* DC-74: the PSLE fields are not used while the dataset has no PSLE ranges */-->
+        <th:block th:if="${psleDataAvailable == false}">To get school recommendations, fill in your home address and
+            usual travel mode.</th:block>
     </div>
 
     <div class="row g-4">
@@ -41,7 +46,10 @@
                                    inputmode="numeric" aria-describedby="psle-help"
                                    th:classappend="${fieldErrors?.get('psleScore') != null} ? 'is-invalid'">
                             <div class="invalid-feedback" th:text="${fieldErrors?.get('psleScore')}">Error</div>
-                            <div id="psle-help" class="form-text">A whole number from 4 (best) to 32.</div>
+                            <div id="psle-help" class="form-text">A whole number from 4 (best) to 32.
+                                <!--/* DC-74 */-->
+                                <span th:if="${psleDataAvailable == false}" data-psle-unavailable="true">Optional: not
+                                    used until PSLE score ranges are available.</span></div>
                         </div>
                         <div class="col-sm-6">
                             <label for="postingGroup" class="form-label">Posting group</label>
@@ -53,7 +61,9 @@
                                 <option value="1">Posting Group 1</option>
                             </select>
                             <div class="invalid-feedback" th:text="${fieldErrors?.get('postingGroup')}">Error</div>
-                            <div id="pg-help" class="form-text">From your PSLE results slip.</div>
+                            <div id="pg-help" class="form-text">From your PSLE results slip.
+                                <span th:if="${psleDataAvailable == false}">Optional: not used until PSLE score ranges
+                                    are available.</span></div>
                         </div>
                         <div class="col-12">
                             <label for="primarySchool" class="form-label">Primary school</label>

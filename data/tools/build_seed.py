@@ -380,7 +380,7 @@ def main():
              "downloadedAt": downloaded[DS_SCHOOLS]},
             {"name": "data.gov.sg Co-curricular activities (CCAs)", "datasetId": DS_CCAS,
              "downloadedAt": downloaded[DS_CCAS]},
-            {"name": "data.gov.sg Subjects offered", "datasetId": DS_SUBJECTS,
+            {"name": "data.gov.sg Subjects Offered", "datasetId": DS_SUBJECTS,
              "downloadedAt": downloaded[DS_SUBJECTS]},
             {"name": "data.gov.sg Master Plan 2019 Planning Area Boundary", "datasetId": DS_AREAS,
              "downloadedAt": downloaded[DS_AREAS]},

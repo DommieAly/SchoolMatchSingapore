@@ -237,7 +237,7 @@ class GoogleRoutesApiTest {
     @Test
     @Tag("FR-FILTER-06")
     @Tag("NFR-MAIN-02")
-    @DisplayName("TC-GoogleRoutes-09: 5 destinations with batch size 2 → 3 requests, each charged its batch size first")
+    @DisplayName("TC-GoogleRoutes-09: 5 destinations with batch size 2 → 3 requests, all 5 elements charged once, before the first")
     void matrix_batches() {
         GoogleRoutesApi api = api(2);
         List<Coordinate> destinations = destinations(5);
@@ -254,9 +254,67 @@ class GoogleRoutesApiTest {
         List<Route> routes = api.computeRouteMatrix(BISHAN, destinations, TravelMode.DRIVE);
 
         assertThat(routes).extracting(Route::getDurationSeconds).containsExactly(100, 101, 200, 201, 300);
+        verify(budget).charge(ExternalCallBudget.ROUTE_MATRIX_ELEMENTS, 5);
+        verifyNoMoreInteractions(budget);
+        server.verify();
+    }
+
+    @Test
+    @Tag("FR-FILTER-06")
+    @Tag("NFR-MAIN-02")
+    @DisplayName("TC-GoogleRoutes-13: a matrix that does not fit in what is left of today's limit sends no batch at all (147 TRANSIT elements)")
+    void matrix_refusedWholeRequestSendsNothing() {
+        GoogleRoutesApi api = api(150);
         InOrder order = inOrder(budget);
-        order.verify(budget, org.mockito.Mockito.times(2)).charge(ExternalCallBudget.ROUTE_MATRIX_ELEMENTS, 2);
-        order.verify(budget).charge(ExternalCallBudget.ROUTE_MATRIX_ELEMENTS, 1);
+        doThrow(new ExternalServiceUnavailableException("Google " + ExternalCallBudget.ROUTE_MATRIX_ELEMENTS, null))
+                .when(budget).charge(ExternalCallBudget.ROUTE_MATRIX_ELEMENTS, 147);
+
+        assertThatThrownBy(() -> api.computeRouteMatrix(BISHAN, destinations(147), TravelMode.TRANSIT))
+                .isInstanceOf(ExternalServiceUnavailableException.class);
+
+        order.verify(budget).charge(ExternalCallBudget.ROUTE_MATRIX_ELEMENTS, 147);
+        verifyNoMoreInteractions(budget);
+        server.verify();   // no request was expected, and none was sent (before: batch 1 of 100 was paid and sent)
+    }
+
+    @Test
+    @Tag("FR-FILTER-06")
+    @Tag("NFR-MAIN-02")
+    @DisplayName("TC-GoogleRoutes-15: Google's daily cap (429 RESOURCE_EXHAUSTED, JSON array) is described as Google refusing, without the key")
+    void matrixQuotaRefusal_describedForTheLog() {
+        GoogleRoutesApi api = api(100);
+        server.expect(requestTo(BASE + "/distanceMatrix/v2:computeRouteMatrix"))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS).contentType(MediaType.APPLICATION_JSON)
+                        .body("[{\"error\": {\"code\": 429, \"message\": \"Quota exceeded for quota metric "
+                                + "'DistanceMatrix elements' and limit 'per day'.\", \"status\": \"RESOURCE_EXHAUSTED\"}}]"));
+
+        ExternalServiceUnavailableException e = org.assertj.core.api.Assertions.catchThrowableOfType(
+                ExternalServiceUnavailableException.class,
+                () -> api.computeRouteMatrix(BISHAN, destinations(3), TravelMode.TRANSIT));
+
+        assertThat(sg.schoolmatch.error.ExternalFailureLog.describe(e))
+                .startsWith("Google Routes: Google refused the request: HTTP 429, RESOURCE_EXHAUSTED: Quota exceeded")
+                .doesNotContain("test-key");
+        server.verify();
+    }
+
+    @Test
+    @Tag("NFR-MAIN-02")
+    @DisplayName("TC-GoogleRoutes-14: a matrix whose destinations are all cached or null charges nothing")
+    void matrix_nothingToFetchChargesNothing() {
+        GoogleRoutesApi api = api(100);
+        List<Coordinate> first = destinations(2);
+        server.expect(requestTo(BASE + "/distanceMatrix/v2:computeRouteMatrix"))
+                .andRespond(withSuccess(matrixAnswer(2, 100), MediaType.APPLICATION_JSON));
+        api.computeRouteMatrix(BISHAN, first, TravelMode.DRIVE);
+
+        List<Coordinate> again = new ArrayList<>(first);
+        again.add(null);
+        List<Route> routes = api.computeRouteMatrix(BISHAN, again, TravelMode.DRIVE);
+
+        assertThat(routes).extracting(Route::getDurationSeconds).containsExactly(100, 101, null);
+        verify(budget).charge(ExternalCallBudget.ROUTE_MATRIX_ELEMENTS, 2);
+        verifyNoMoreInteractions(budget);
         server.verify();
     }
 

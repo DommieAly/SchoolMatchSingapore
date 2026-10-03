@@ -79,7 +79,10 @@ class AboutDataPageTest {
                         + "accessed on 2 Oct 2026 from data.gov.sg")))
                 .andExpect(content().string(containsString("Singapore Open Data Licence version 1.0")))
                 .andExpect(content().string(containsString("https://data.gov.sg/open-data-licence")))
-                .andExpect(content().string(containsString("OneMap, Singapore Land Authority")));
+                .andExpect(content().string(containsString("OneMap, Singapore Land Authority")))
+                .andExpect(content().string(containsString("Contains information from OneMap search accessed on "
+                        + "2 Oct 2026 from OneMap (onemap.gov.sg, Singapore Land Authority)")))
+                .andExpect(content().string(containsString("https://www.onemap.gov.sg/legal/opendatalicence.html")));
     }
 
     @Test

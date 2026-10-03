@@ -1,6 +1,5 @@
 package sg.schoolmatch.entity.search;
 
-import java.util.Locale;
 import java.util.Optional;
 import sg.schoolmatch.entity.school.IndicativePsleScoreRange;
 import sg.schoolmatch.entity.school.School;
@@ -58,11 +57,12 @@ public class PsleScoreFilter extends Filter {
         return "PSLE " + score + " (PG" + postingGroup + ")";
     }
 
-    /** DC-40: true when the user's primary school is one of the school's affiliated primary schools. */
+    /**
+     * DC-40: true when the user's primary school is one of the school's affiliated primary schools (name rule:
+     * {@link School#hasAffiliatedPrimarySchool}, shared with the choice plan and recommendations).
+     */
     public boolean isAffiliatedWith(School school) {   // DC-36 helper
-        String mine = normalise(primarySchool);
-        return mine != null && school.getAffiliatedPrimarySchools().stream()
-                .anyMatch(other -> mine.equals(normalise(other)));
+        return school.hasAffiliatedPrimarySchool(primarySchool);
     }
 
     /** True when the school has a range for this posting group; the results page counts the others. */
@@ -72,13 +72,5 @@ public class PsleScoreFilter extends Filter {
 
     private Optional<IndicativePsleScoreRange> applicableRange(School school) {
         return school.getScoreRange(postingGroup, isAffiliatedWith(school));
-    }
-
-    /** Trimmed, inner spaces collapsed, upper case: "  rosyth  school" → "ROSYTH SCHOOL"; blank → null. */
-    private static String normalise(String name) {
-        if (name == null || name.isBlank()) {
-            return null;
-        }
-        return name.strip().replaceAll("\\s+", " ").toUpperCase(Locale.ROOT);
     }
 }

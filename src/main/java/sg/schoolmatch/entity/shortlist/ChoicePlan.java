@@ -44,6 +44,10 @@ public class ChoicePlan {
     public static final String NO_SAFE_WARNING = "None of your choices is SAFE. "
             + "Add at least one school where your score is clearly inside the range.";
 
+    /** DC-74: replaces the range-based warnings when the dataset has no PSLE score ranges at all. */
+    public static final String NO_PSLE_DATA_WARNING = "PSLE score ranges are not available yet, so no choice has a "
+            + "SAFE/MATCH/REACH label and the plan check cannot use them.";
+
     @Id
     @GeneratedValue
     private Long id;
@@ -128,11 +132,23 @@ public class ChoicePlan {
      * Plan warnings (FR-PLAN-02, docs/recommendation-scoring.md §4), one message per rule that fires:
      * no SAFE choice; more than {@link #MAX_REACH_CHOICES} REACH choices; fewer than {@link #MAX_CHOICES}
      * choices; each choice without range data. The first two need a score. The "profile changed" warning
-     * is added by ChoicePlanController.assessPlan.
+     * is added by ChoicePlanController.assessPlan. Same as {@code getRiskWarnings(true)}.
      */
     public List<String> getRiskWarnings() {
+        return getRiskWarnings(true);
+    }
+
+    /**
+     * DC-74: {@code psleData} is false when the active dataset has no PSLE score range at all. The warnings that
+     * need ranges (no SAFE choice, too many REACH, one per choice without range data) are then replaced by one
+     * {@link #NO_PSLE_DATA_WARNING}; "N of 6 choices" and "no longer in the dataset" stay.
+     */
+    public List<String> getRiskWarnings(boolean psleData) {
         List<String> warnings = new ArrayList<>();
-        if (basedOnScore != null && postingGroup != null && !choices.isEmpty()) {
+        if (!psleData) {
+            warnings.add(NO_PSLE_DATA_WARNING);
+        }
+        if (psleData && basedOnScore != null && postingGroup != null && !choices.isEmpty()) {
             long safe = choices.stream().filter(c -> getAdmissionChance(c) == AdmissionChance.SAFE).count();
             long reach = choices.stream().filter(c -> getAdmissionChance(c) == AdmissionChance.REACH).count();
             if (safe == 0) {
@@ -146,12 +162,13 @@ public class ChoicePlan {
             warnings.add("You have " + choices.size() + " of " + MAX_CHOICES + " choices. Fill all " + MAX_CHOICES
                     + " to lower the risk of being posted to a school you did not choose.");
         }
-        if (postingGroup != null) {
+        if (postingGroup != null || !psleData) {
             for (SchoolChoice choice : choices) {
                 if (choice.getSchool() == null) {
-                    warnings.add(choice.getSchoolCode()
-                            + ": this school is no longer in the dataset, so it has no SAFE/MATCH/REACH label.");
-                } else if (choice.getApplicableRange(postingGroup).isEmpty()) {
+                    warnings.add(choice.getSchoolCode() + (psleData
+                            ? ": this school is no longer in the dataset, so it has no SAFE/MATCH/REACH label."
+                            : ": this school is no longer in the dataset."));
+                } else if (psleData && choice.getApplicableRange(postingGroup).isEmpty()) {
                     warnings.add(choice.getSchool().getName() + ": no PSLE range data, so no SAFE/MATCH/REACH label.");
                 }
             }

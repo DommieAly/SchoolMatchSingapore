@@ -43,6 +43,8 @@ import sg.schoolmatch.entity.facility.FacilityType;
 import sg.schoolmatch.entity.school.School;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.NotFoundException;
+import sg.schoolmatch.support.ExternalFailures;
+import sg.schoolmatch.support.LogCapture;
 import sg.schoolmatch.support.TestSchools;
 
 /**
@@ -192,6 +194,23 @@ class FacilityMapUITest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Nearby facility information is temporarily unavailable")))
                 .andExpect(model().attribute("markersJson", containsString("\"id\":\"" + CODE + "\"")));
+    }
+
+    @Test
+    @Tag("FR-FACILITY-01")
+    @Tag("NFR-USE-03")
+    @DisplayName("TC-FacilityMapUI-10: the places service failing → one WARN line naming the exception class")
+    void map_serviceDown_logsOneWarning() throws Exception {
+        when(schoolController.getSchoolDetails(CODE)).thenReturn(school);
+        when(facilityController.filterFacilities(eq(school), any())).thenThrow(ExternalFailures.timeout("Google Places"));
+
+        try (LogCapture log = LogCapture.of(FacilityMapUI.class)) {
+            mvc.perform(get("/schools/" + CODE + "/facilities/map")).andExpect(status().isOk());
+
+            assertThat(log.warnings()).singleElement().asString()
+                    .startsWith("Nearby facilities map unavailable: Google Places: Google failed: no answer")
+                    .contains("ResourceAccessException").contains("SocketTimeoutException");
+        }
     }
 
     @Test

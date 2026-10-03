@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +21,7 @@ import sg.schoolmatch.entity.facility.Facility;
 import sg.schoolmatch.entity.facility.FacilityFilterCriteria;
 import sg.schoolmatch.entity.facility.FacilityType;
 import sg.schoolmatch.entity.school.School;
+import sg.schoolmatch.error.ExternalFailureLog;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
 
@@ -42,6 +45,8 @@ public class NearbyFacilitiesUI {
     /** Singular labels for one facility. */
     private static final Map<FacilityType, String> SINGULAR = Map.of(
             FacilityType.LIBRARY, "Library", FacilityType.TUITION_CENTRE, "Tuition centre");
+
+    private static final Logger log = LoggerFactory.getLogger(NearbyFacilitiesUI.class);
 
     private final SchoolController schoolController;   // DC-37: loads the school from the URL
     private final FacilityController facilityController;
@@ -87,6 +92,7 @@ public class NearbyFacilitiesUI {
                 model.addAttribute("noFacilitiesMessage", noFacilitiesMessage(school, criteria));
             }
         } catch (ExternalServiceUnavailableException e) {
+            ExternalFailureLog.warn(log, "Nearby facilities", e);
             model.addAttribute("serviceUnavailable", true);
             model.addAttribute(PageMessages.FLASH_ERROR, UNAVAILABLE_MESSAGE);
         }
