@@ -4,6 +4,35 @@ SchoolMatch SG helps Primary 6 students and their parents in Singapore choose se
 
 Milestones: prototype in week 9 (12–16 Oct 2026), demo in week 11 (26–30 Oct 2026).
 
+## Quick start: run the app
+
+First time on this computer? Do [Setup](#setup) once (Git, IntelliJ IDEA, JDK 21, clone, `.env`). Then, from the repository folder:
+
+**Option A: default, nothing else to install (H2 database).**
+
+| Mac (Terminal) | Windows (PowerShell) |
+|:--:|:--:|
+| `./mvnw spring-boot:run` | `.\mvnw.cmd spring-boot:run` |
+
+**Option B: on PostgreSQL, like production (needs Docker Desktop running).**
+
+| Step | Mac (Terminal) | Windows (PowerShell) |
+|:--:|:--:|:--:|
+| 1. Start the database | `docker compose up -d` | `docker compose up -d` |
+| 2. Start the app | `./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres` | `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=postgres"` |
+| 3. Stop the database when done (data is kept) | `docker compose down` | `docker compose down` |
+
+Then open http://localhost:8080. Stop the app with `Ctrl+C`.
+
+- **First start** creates the tables and loads the 147 schools into the database (a few seconds). Later starts keep your accounts, shortlists and plans, and skip the school load. Each teammate has their own local database: pulling code gives you the same school data, not other people's accounts.
+- **Wrong Java?** If the build says `release version 21 not supported`, your terminal is using another JDK. Mac: run `export JAVA_HOME=$(/usr/libexec/java_home -v 21)` (or add that line to `~/.zshrc`), then start again. Windows: see [Setup](#windows-powershell), step 2.
+- **Google:** `.env` decides. `GOOGLE_MODE=stub` (default) uses made-up routes and "(stub)" places and needs no key. Key holders set `GOOGLE_MODE=live` and the two keys ([`docs/google-maps-setup.md`](docs/google-maps-setup.md)). Restart the app after editing `.env`.
+- **Look at the PostgreSQL tables** (option B, while the database runs): `docker compose exec db psql -U schoolmatch` (`\dt` lists tables, `\q` quits), or in IntelliJ IDEA Ultimate: View → Tool Windows → Database → + → Data Source → PostgreSQL, host `localhost`, port `5432`, database, user and password `schoolmatch`.
+- **Start over with an empty database:** option A: stop the app and delete `.local/h2/`; option B: `docker compose down -v`. The next start rebuilds everything.
+- **Never edit** `src/main/resources/db/migration/V1…V3` after they are on `main`; add a new `V4__….sql` instead ([`docs/database-design.md`](docs/database-design.md)).
+
+More commands: [Everyday commands](#everyday-commands). More on PostgreSQL: [Run with PostgreSQL](#run-with-postgresql).
+
 ## Current state (3 Oct 2026)
 
 Every page of the dialog map is built, and `./mvnw verify` runs about 1,400 tests. The app runs on real data: 147 secondary schools from data.gov.sg with OneMap coordinates, plus the 2025 PSLE score ranges (139 schools) and affiliated primary schools (27 schools) from MOE SchoolFinder, in `data/curated/`. `data/snapshots/ACTIVE` names the snapshot the app loads into its database at start-up; [`data/README.md`](data/README.md) describes it. The user data and the school data share one database, whose tables Flyway creates ([`docs/database-design.md`](docs/database-design.md)).
@@ -25,7 +54,7 @@ Every page of the dialog map is built, and `./mvnw verify` runs about 1,400 test
 - The old 10-school seed with made-up TEST VALUE ranges stays in `data/snapshots/0000-seed` and as the test fixture.
 - **DC-74 to DC-86 wait for team approval** ([`docs/design-changes.md`](docs/design-changes.md)). DC-75 (school name search ignores punctuation and word order) changes search for every dataset, the seed included, not only what the missing PSLE data needs; every search that matched before still matches. It can go into its own PR if the team wants to review it separately.
 - **The OneMap Terms of Use question is still open** (clause 3 against the licence page; see [`data/README.md`](data/README.md), Licences).
-- **Google runs in stub mode.** Routes are straight lines with three "(stub)" steps, and facilities are made-up "(stub)" places. The live Google code follows Google's REST reference and is tested against a mock server, but it has never run with a real key. Without a browser key, map pages show "Map unavailable"; the lists beside the maps still work.
+- **Google runs in stub mode by default.** Routes are straight lines with three "(stub)" steps, and facilities are made-up "(stub)" places. Live mode was tried with real keys on 3 Oct 2026: the map, nearby libraries and tuition centres, and walk, drive and public-transport routes work (Google returns transit routes in Singapore). The travel-time filter and recommendation commute times have not yet been tried live. Without a browser key, map pages show "Map unavailable"; the lists beside the maps still work.
 - **OneMap runs in stub mode by default.** The stub answers only `579767`, `catholic high school` and `bishan`; set `ONEMAP_MODE=live` for real address search.
 - **Google daily limits.** The amounts in `app.external.budget.monthly-free` are Google's free usage (checked 3 Oct 2026, DC-79). The Routes counters allow 266 elements per day, and the budget day ends at midnight Pacific Time (15:00 or 16:00 in Singapore, DC-80). One island-wide TRANSIT travel-time filter needs up to 147 route-matrix elements, so about one fits per day; a request that does not fit is refused before anything is sent, so it uses up none of the day's elements (DC-63), and the terminal shows one WARN line saying why (DC-81, [`docs/google-maps-setup.md`](docs/google-maps-setup.md)).
 
