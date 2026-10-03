@@ -305,4 +305,18 @@ class ShortlistControllerTest {
         when(shortlistRepository.findById(account.getAccountId())).thenReturn(Optional.of(shortlist));
         return shortlist;
     }
+
+    @Test
+    @Tag("FR-SHORTLIST-05")
+    @Tag("FR-DATA-05")
+    @DisplayName("TC-ShortlistController-13: last-known names of codes that left the dataset come from SchoolDataController; no codes ask nothing")
+    void lastKnownNames() {
+        when(schoolDataController.getLastKnownSchoolNames(List.of("closed-secondary-school")))
+                .thenReturn(Map.of("closed-secondary-school", "CLOSED SECONDARY SCHOOL"));
+
+        assertThat(shortlistController.getLastKnownNames(List.of("closed-secondary-school")))
+                .containsExactly(Map.entry("closed-secondary-school", "CLOSED SECONDARY SCHOOL"));
+        assertThat(shortlistController.getLastKnownNames(List.of())).isEmpty();
+        verify(schoolDataController).getLastKnownSchoolNames(List.of("closed-secondary-school"));
+    }
 }

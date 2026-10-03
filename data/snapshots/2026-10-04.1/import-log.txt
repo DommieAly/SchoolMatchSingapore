@@ -1,4 +1,4 @@
-SchoolMatch dataset import started 2026-10-03T15:06:36.236498Z
+SchoolMatch dataset import started 2026-10-03T17:17:00.242854Z
 data.gov.sg: 147 secondary and mixed-level schools, 7163 CCA rows, 14719 subject rows, 55 planning areas
 subject left out (subject-exclusions.csv): BOON LAY SECONDARY SCHOOL / G1 Test
 subject left out (subject-exclusions.csv): CEDAR GIRLS' SECONDARY SCHOOL / Test rebase A
@@ -47,6 +47,7 @@ anglo-chinese-school-barker-road: coordinate MATCHED (BUILDING 'ANGLO-CHINESE SC
 anglo-chinese-school-independent: coordinate MATCHED (BUILDING 'ANGLO-CHINESE SCHOOL (INDEPENDENT)')
 assumption-english-school: coordinate MATCHED (BUILDING 'ASSUMPTION ENGLISH SCHOOL')
 assumption-pathway-school: coordinate MATCHED (BUILDING 'ASSUMPTION PATHWAY SCHOOL')
+transport-overrides.csv used for assumption-pathway-school bus
 bartley-secondary-school: coordinate MATCHED (BUILDING 'BARTLEY SECONDARY SCHOOL')
 beatty-secondary-school: coordinate MATCHED (BUILDING 'BEATTY SECONDARY SCHOOL')
 bedok-green-secondary-school: coordinate MATCHED (BUILDING 'BEDOK GREEN SECONDARY SCHOOL')
@@ -54,6 +55,7 @@ bedok-south-secondary-school: coordinate MATCHED (BUILDING 'BEDOK SOUTH SECONDAR
 bedok-view-secondary-school: coordinate MATCHED (BUILDING 'BEDOK VIEW SECONDARY SCHOOL')
 bendemeer-secondary-school: coordinate MATCHED (BUILDING 'BENDEMEER SECONDARY SCHOOL')
 boon-lay-secondary-school: coordinate MATCHED (BUILDING 'BOON LAY SECONDARY SCHOOL')
+transport-overrides.csv used for boon-lay-secondary-school bus
 bowen-secondary-school: coordinate MATCHED (BUILDING 'BOWEN SECONDARY SCHOOL')
 broadrick-secondary-school: coordinate MATCHED (BUILDING 'BROADRICK SECONDARY SCHOOL')
 bukit-batok-secondary-school: coordinate MATCHED (BUILDING 'BUKIT BATOK SECONDARY SCHOOL')
@@ -72,7 +74,9 @@ chij-st-theresas-convent: coordinate MATCHED (BUILDING 'CHIJ SAINT THERESA'S CON
 christ-church-secondary-school: coordinate MATCHED (BUILDING 'CHRIST CHURCH SECONDARY SCHOOL')
 chua-chu-kang-secondary-school: coordinate MATCHED (BUILDING 'CHUA CHU KANG SECONDARY SCHOOL')
 chung-cheng-high-school-main: coordinate MATCHED (BUILDING 'CHUNG CHENG HIGH SCHOOL (MAIN)')
+transport-overrides.csv used for chung-cheng-high-school-main bus
 chung-cheng-high-school-yishun: coordinate MATCHED (BUILDING 'CHUNG CHENG HIGH SCHOOL (YISHUN)')
+transport-overrides.csv used for chung-cheng-high-school-yishun bus
 clementi-town-secondary-school: coordinate MATCHED (BUILDING 'CLEMENTI TOWN SECONDARY SCHOOL')
 commonwealth-secondary-school: coordinate MATCHED (BUILDING 'COMMONWEALTH SECONDARY SCHOOL')
 compassvale-secondary-school: coordinate MATCHED (BUILDING 'COMPASSVALE SECONDARY SCHOOL')
@@ -127,8 +131,11 @@ northbrooks-secondary-school: coordinate MATCHED (BUILDING 'NORTHBROOKS SECONDAR
 northland-secondary-school: coordinate MATCHED (BUILDING 'NORTHLAND SECONDARY SCHOOL')
 northlight-school: coordinate MATCHED (BUILDING 'NORTHLIGHT SCHOOL')
 nus-high-school-of-mathematics-and-science: coordinate MATCHED (BUILDING 'NUS HIGH SCHOOL OF MATHEMATICS AND SCIENCE')
+transport-overrides.csv used for nus-high-school-of-mathematics-and-science mrt
 orchid-park-secondary-school: coordinate MATCHED (BUILDING 'ORCHID PARK SECONDARY SCHOOL')
 outram-secondary-school: coordinate MATCHED (BUILDING 'OUTRAM SECONDARY SCHOOL')
+transport-overrides.csv used for outram-secondary-school mrt
+transport-overrides.csv used for outram-secondary-school bus
 pasir-ris-crest-secondary-school: coordinate MATCHED (BUILDING 'PASIR RIS CREST SECONDARY SCHOOL')
 pasir-ris-secondary-school: coordinate MATCHED (BUILDING 'PASIR RIS SECONDARY SCHOOL')
 paya-lebar-methodist-girls-school-secondary: coordinate MATCHED (BUILDING 'PAYA LEBAR METHODIST GIRLS' SCHOOL (SECONDARY)')
@@ -155,6 +162,7 @@ serangoon-secondary-school: coordinate MATCHED (BUILDING 'SERANGOON SECONDARY SC
 singapore-chinese-girls-school: coordinate MATCHED (BUILDING 'SINGAPORE CHINESE GIRLS' SCHOOL')
 singapore-sports-school: coordinate MATCHED (BUILDING 'SINGAPORE SPORTS SCHOOL')
 spectra-secondary-school: coordinate MATCHED (BUILDING 'SPECTRA SECONDARY SCHOOL')
+transport-overrides.csv used for spectra-secondary-school bus
 springfield-secondary-school: coordinate MATCHED (BUILDING 'SPRINGFIELD SECONDARY SCHOOL')
 st-andrews-school-secondary: coordinate MATCHED (BUILDING 'ST ANDREW'S SCHOOL (SECONDARY)')
 st-anthonys-canossian-secondary-school: coordinate MATCHED (BUILDING 'SAINT ANTHONY'S CANOSSIAN SECONDARY SCHOOL')
@@ -168,6 +176,7 @@ tampines-secondary-school: coordinate MATCHED (BUILDING 'TAMPINES SECONDARY SCHO
 tanjong-katong-girls-school: coordinate MATCHED (BUILDING 'TANJONG KATONG GIRLS' SCHOOL')
 tanjong-katong-secondary-school: coordinate MATCHED (BUILDING 'TANJONG KATONG SECONDARY SCHOOL')
 temasek-junior-college: coordinate MATCHED (BUILDING 'TEMASEK JUNIOR COLLEGE')
+transport-overrides.csv used for temasek-junior-college bus
 temasek-secondary-school: coordinate MATCHED (BUILDING 'TEMASEK SECONDARY SCHOOL')
 unity-secondary-school: coordinate MATCHED (BUILDING 'UNITY SECONDARY SCHOOL')
 victoria-school: coordinate MATCHED (BUILDING 'VICTORIA SCHOOL')

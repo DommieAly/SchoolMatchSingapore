@@ -26,6 +26,8 @@ public class ImportLog {
     public static final String DISTRICT_NOT_FOUND = "district-not-found";
     public static final String DISTRICT_SIMPLIFIED = "district-simplified";
     public static final String CURATED = "curated";
+    /** DC-84: a {@code transport-overrides.csv} row whose published_text is no longer MOE's text (not used). */
+    public static final String TRANSPORT_OVERRIDE_STALE = "transport-override-stale";
 
     private final List<String> lines = new ArrayList<>();
     private final Map<String, List<String>> warningsByRule = new LinkedHashMap<>();

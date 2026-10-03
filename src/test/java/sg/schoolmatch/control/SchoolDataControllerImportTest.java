@@ -3,6 +3,8 @@ package sg.schoolmatch.control;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,6 +41,7 @@ import sg.schoolmatch.dataset.SnapshotWriter;
 import sg.schoolmatch.dataset.ValidationReport;
 import sg.schoolmatch.entity.school.ValidationStatus;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
+import sg.schoolmatch.persistence.dataset.SchoolDatasetStore;
 import sg.schoolmatch.support.FixedClock;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -58,6 +61,7 @@ class SchoolDataControllerImportTest {
     private Path out;
     private Path curated;
     private final FixedClock clock = FixedClock.atDefault();
+    private final SchoolDatasetStore store = mock(SchoolDatasetStore.class);
     private final Map<String, List<OneMapHit>> oneMapAnswers = new HashMap<>();
     private final OneMapInterface oneMap = text -> oneMapAnswers.getOrDefault(text, List.of());
 
@@ -73,6 +77,7 @@ class SchoolDataControllerImportTest {
         writeCurated(CuratedCsvReader.GEOCODE_OVERRIDES, "postal_code,school_code,latitude,longitude,reason\n");
         writeCurated(CuratedCsvReader.AFFILIATIONS, "school_code,primary_school,source_url\n");
         writeCurated(CuratedCsvReader.SUBJECT_EXCLUSIONS, "school_name,subject_desc,reason\n");
+        writeCurated(CuratedCsvReader.TRANSPORT_OVERRIDES, "school_code,kind,published_text,elements,reason\n");
     }
 
     @Test
@@ -246,14 +251,70 @@ class SchoolDataControllerImportTest {
         assertThat(out.resolve(VERSION)).doesNotExist();
     }
 
+    // TC-Import-09 ("getActiveManifest() is the manifest of the snapshot the app serves") is retired: the app now
+    // serves the manifest from the database, so that check moved to TC-SchoolDataServing-01. Its id is not reused.
+
     @Test
+    @Tag("FR-DATA-03")
     @Tag("NFR-DATA-01")
-    @DisplayName("TC-Import-09: getActiveManifest() is the manifest of the snapshot the app serves")
-    void activeManifest() {
+    @DisplayName("TC-Import-12: with load-on-startup false (the import profile) the importer reads no served snapshot and never uses the school database")
+    void importUsesNoDatabase() {
         SchoolDataController controller = controller(Map.of(), syntheticDataGovSg(1));
 
-        assertThat(controller.getActiveManifest().version()).isEqualTo("0000-seed");
-        assertThat(controller.getActiveManifest().sources()).hasSize(5);
+        controller.importDataset();
+
+        verifyNoInteractions(store);
+    }
+
+    @Test
+    @Tag("FR-DATA-03")
+    @DisplayName("TC-Import-10: the importer writes snapshot format 2: formatVersion 2 and busServices / mrtStations arrays split from MOE's text")
+    void writesFormat2() throws IOException {
+        controller(Map.of(), fixtureDataGovSg()).importDataset();
+
+        SnapshotManifest manifest = reader().read(out.resolve(VERSION).toUri().toString()).manifest();
+        assertThat(manifest.formatVersion()).isEqualTo(SnapshotManifest.FORMAT_VERSION);
+        SchoolRecord catholic = writtenSchools().get("catholic-high-school");
+        assertThat(catholic.busServices()).containsExactly("13", "52", "54", "88", "156", "162", "162M", "410");
+        assertThat(catholic.mrtStations()).containsExactly("BISHAN MRT");
+        assertThat(writtenSchools().get("chij-st-theresas-convent").mrtStations())
+                .containsExactly("HARBOURFRONT MRT", "TIONG BAHRU MRT");
+        String json = Files.readString(out.resolve(VERSION).resolve(SnapshotReader.SCHOOLS_FILE));
+        assertThat(json).contains("\"busServices\"").contains("\"mrtStations\"")
+                .doesNotContain("\"busInfo\"").doesNotContain("\"nearestMrt\"");
+        assertThat(Files.readString(out.resolve(VERSION).resolve(SnapshotReader.MANIFEST_FILE)))
+                .contains("\"formatVersion\" : 2");
+    }
+
+    @Test
+    @Tag("FR-DATA-03")
+    @Tag("NFR-DATA-01")
+    @DisplayName("TC-Import-11: transport-overrides.csv applies while MOE's text is unchanged; a stale row is reported; an irregular text without a row fails transport-list")
+    void transportOverrides() throws IOException {
+        writeCurated(CuratedCsvReader.TRANSPORT_OVERRIDES, "school_code,kind,published_text,elements,reason\n"
+                + "catholic-high-school,bus,SBS Transit No 13 & 52,13;52,operator name\n"
+                + "hua-yi-secondary-school,mrt,LAKESIDE MRT & CHINESE GARDEN MRT,LAKESIDE MRT;CHINESE GARDEN MRT,old\n"
+                + "no-such-school,bus,1 & 2,1;2,typo\n");
+        List<DataGovSgRecord> schools = new ArrayList<>(fixtureRecords("schools.json"));
+        schools.replaceAll(r -> switch (r.get("school_name")) {
+            case "CATHOLIC HIGH SCHOOL" -> with(r, "bus_desc", "SBS Transit No 13 & 52");
+            case "ST. HILDA'S SECONDARY SCHOOL" -> with(r, "mrt_desc", "TAMPINES MRT & TAMPINES WEST MRT");
+            default -> r;
+        });
+
+        ValidationReport report = controller(Map.of(), dataGovSg(onlySecondary(schools))).importDataset();
+
+        assertThat(writtenSchools().get("catholic-high-school").busServices()).containsExactly("13", "52");
+        assertThat(writtenSchools().get("hua-yi-secondary-school").mrtStations())
+                .containsExactly("LAKESIDE MRT", "CHINESE GARDEN MRT");
+        assertThat(report.getWarnings()).anyMatch(w -> w.startsWith(ImportLog.TRANSPORT_OVERRIDE_STALE
+                + ": hua-yi-secondary-school mrt"));
+        assertThat(report.getWarnings()).anyMatch(w -> w.startsWith(ImportLog.CURATED + ": "
+                + CuratedCsvReader.TRANSPORT_OVERRIDES + ": school_code no-such-school"));
+        assertThat(report.getErrors()).anyMatch(e -> e.startsWith(SnapshotValidator.TRANSPORT_LIST
+                + ": st-hildas-secondary-school: MRT station 'TAMPINES MRT & TAMPINES WEST MRT'"));
+        assertThat(report.getErrors()).filteredOn(e -> e.startsWith(SnapshotValidator.TRANSPORT_LIST + ":"))
+                .as("the override and the stale row's plain split pass").hasSize(1);
     }
 
     // ------------------------------------------------------------------ helpers
@@ -262,9 +323,10 @@ class SchoolDataControllerImportTest {
         Map<String, String> all = new HashMap<>(settings);
         all.put("app.dataset.snapshot-location", "classpath:fixtures/snapshot-mini/");
         all.put("app.dataset.import-output-dir", out.toString());
+        all.put("app.dataset.load-on-startup", "false");   // as in the import profile: no snapshot read, no database
         AppProperties props = props(all);
         return new SchoolDataController(dataGovSg, oneMap, new SnapshotReader(props, new DefaultResourceLoader()),
-                new SnapshotValidator(), new CuratedCsvReader(curated.toString()), new SnapshotWriter(), props, clock);
+                new SnapshotValidator(), new CuratedCsvReader(curated.toString()), new SnapshotWriter(), props, clock, store);
     }
 
     /** {@code count} made-up schools in Bishan, each with a OneMap hit named like it and one CCA and subject. */

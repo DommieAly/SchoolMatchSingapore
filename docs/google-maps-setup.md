@@ -293,7 +293,7 @@ Expected cost of each action (repeats inside the cache time cost nothing):
 | Recommendations | `route-matrix-elements` + up to 20 | same number of elements |
 
 - **In Google Cloud:** **Google Maps Platform → Metrics** (requests per API and response code) and **Google Maps Platform → Quotas** (today's usage against each daily cap). New numbers can take a few minutes to appear.
-- **In the app:** add `H2_CONSOLE=true` to `.env`, restart, open http://localhost:8080/h2-console, JDBC URL `jdbc:h2:file:./.local/h2/dev` (demo profile: `./.local/h2/demo`), user `sa`, empty password, and run `SELECT * FROM external_usage ORDER BY usage_day DESC, sku;`. Remove `H2_CONSOLE=true` afterwards (the README explains why).
+- **In the app:** add `H2_CONSOLE=true` to `.env`, restart, open http://localhost:8080/h2-console, JDBC URL `jdbc:h2:file:./.local/h2/schoolmatch-dev;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH` (demo profile: `./.local/h2/schoolmatch-demo`), user `sa`, empty password, and run `SELECT * FROM external_usage ORDER BY usage_day DESC, sku;`. Remove `H2_CONSOLE=true` afterwards (the README explains why).
 - The two should roughly agree. If Google shows much more than the app, someone else is using the keys: rotate them (see [Security](#security)).
 
 ## Troubleshooting

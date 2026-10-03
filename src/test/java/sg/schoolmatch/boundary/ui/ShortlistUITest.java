@@ -132,6 +132,26 @@ class ShortlistUITest {
     }
 
     @Test
+    @Tag("FR-SHORTLIST-05")
+    @Tag("FR-DATA-05")
+    @DisplayName("TC-ShortlistUI-11: a school that left the dataset is shown with its last-known name and its code (open decision 3)")
+    void displayShortlist_schoolLeftDatasetShowsLastKnownName() throws Exception {
+        Shortlist shortlist = shortlistOf(catholic, TestSchools.named("closed-secondary-school", "CLOSED"));
+        shortlist.resolveSchools(Map.of("catholic-high-school", catholic));
+        when(shortlistController.getShortlist(SESSION)).thenReturn(shortlist);
+        when(shortlistController.getLastKnownNames(List.of("closed-secondary-school")))
+                .thenReturn(Map.of("closed-secondary-school", "CLOSED SECONDARY SCHOOL"));
+
+        mvc.perform(get("/shortlist").cookie(member()))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("missingNames", Map.of("closed-secondary-school", "CLOSED SECONDARY SCHOOL")))
+                .andExpect(content().string(containsString("<strong>CLOSED SECONDARY SCHOOL</strong>")))
+                .andExpect(content().string(containsString("<code>closed-secondary-school</code>")))
+                .andExpect(content().string(containsString("School no longer in the dataset")))
+                .andExpect(content().string(containsString("action=\"/shortlist/closed-secondary-school/remove\"")));
+    }
+
+    @Test
     @Tag("FR-SHORTLIST-04")
     @Tag("NFR-USE-03")
     @DisplayName("TC-ShortlistUI-04: a database failure shows \"temporarily unavailable\" instead of an error page")

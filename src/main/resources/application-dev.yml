@@ -1,17 +1,16 @@
-# Local development: H2 database file in .local/h2/ (delete that folder to reset).
+# Local development: H2 database file in .local/h2/ (delete that folder to reset). Flyway creates the tables.
+# The file is schoolmatch-dev: the older .local/h2/dev was made by Hibernate, has no Flyway history and is no longer
+# used (it can be deleted). MODE=PostgreSQL with lower-case names and NULLs sorted last, as in PostgreSQL.
 # H2 console: off by default. Turn it on for one run with H2_CONSOLE=true (in .env or the environment), then open
-# http://localhost:8080/h2-console  (JDBC URL jdbc:h2:file:./.local/h2/dev, user sa, no password).
+# http://localhost:8080/h2-console  (JDBC URL: the url below, user sa, no password).
 # It is off by default because the console runs any SQL and does not check the Host header, so a web page using
 # DNS rebinding could reach it while the app runs (only this computer can open it, but a browser tab counts).
 # No AUTO_SERVER: H2 opens no network port; the in-app console above works without one.
 spring:
   datasource:
-    url: jdbc:h2:file:./.local/h2/dev;MODE=PostgreSQL
+    url: jdbc:h2:file:./.local/h2/schoolmatch-dev;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
     username: sa
     password: ""
-  jpa:
-    hibernate:
-      ddl-auto: update
   h2:
     console:
       enabled: ${H2_CONSOLE:false}

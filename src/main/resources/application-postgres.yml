@@ -1,0 +1,12 @@
+# A local PostgreSQL 17 instead of the H2 file (docs/database-design.md, section 9). Start one with
+# `docker compose up -d` (compose.yaml), or use your own server, then run with this profile:
+#   ./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres
+# Flyway creates the tables on the first start and the school data is loaded from data/snapshots/ACTIVE, as in dev.
+# The defaults match compose.yaml; set DB_HOST, DB_PORT, DB_NAME, DB_USERNAME or DB_PASSWORD (in .env or the
+# environment) to reach another server. No H2 console in this profile (it is a dev-profile setting).
+spring:
+  datasource:
+    # reWriteBatchedInserts: the driver sends the loader's batches of 500 rows as multi-row INSERTs
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:schoolmatch}?reWriteBatchedInserts=true
+    username: ${DB_USERNAME:schoolmatch}
+    password: ${DB_PASSWORD:schoolmatch}

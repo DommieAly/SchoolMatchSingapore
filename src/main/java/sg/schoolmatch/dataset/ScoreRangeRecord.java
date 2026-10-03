@@ -1,6 +1,7 @@
 package sg.schoolmatch.dataset;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
@@ -36,7 +37,11 @@ public record ScoreRangeRecord(
         this(admissionYear, postingGroup, affiliated, lowerScore, upperScore, integratedProgramme, null);
     }
 
-    /** True when every value is present (the validator reports incomplete ranges). */
+    /**
+     * True when every value is present (the validator reports incomplete ranges). DC-85: a derived value, not a
+     * schools.json field; without {@code @JsonIgnore} Jackson wrote it into every range as {@code "complete"}.
+     */
+    @JsonIgnore
     public boolean isComplete() {
         return admissionYear != null && postingGroup != null && affiliated != null
                 && lowerScore != null && upperScore != null;

@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -19,8 +20,10 @@ import sg.schoolmatch.dataset.CuratedCsvReader.GeocodeOverride;
 import sg.schoolmatch.dataset.CuratedCsvReader.PsleRangeRow;
 import sg.schoolmatch.dataset.CuratedCsvReader.SchoolCodeRow;
 import sg.schoolmatch.dataset.CuratedCsvReader.SubjectExclusion;
+import sg.schoolmatch.dataset.CuratedCsvReader.TransportOverride;
+import sg.schoolmatch.dataset.TransportLists.Kind;
 
-/** CuratedCsvReader: the six hand-maintained CSV files in data/curated (data/README.md, curation rules). */
+/** CuratedCsvReader: the seven hand-maintained CSV files in data/curated (data/README.md, curation rules). */
 class CuratedCsvReaderTest {
 
     private static final String SCHOOLFINDER = "https://www.moe.gov.sg/schoolfinder/schooldetail?schoolname=";
@@ -83,6 +86,10 @@ class CuratedCsvReaderTest {
         assertThat(data.geocodeOverrides()).allMatch(o -> o.reason() != null && !o.reason().isBlank());
         assertThat(data.subjectExclusions()).isNotEmpty()
                 .allMatch(e -> e.reason() != null && !e.reason().isBlank());
+        // DC-84: one row per irregular bus or MRT text (database design 6.1), each with a reason.
+        assertThat(data.transportOverrides()).hasSize(9)
+                .allMatch(o -> o.reason() != null && !o.reason().isBlank())
+                .extracting(o -> o.schoolCode() + "/" + o.kind()).doesNotHaveDuplicates();
     }
 
     @Test
@@ -169,13 +176,37 @@ class CuratedCsvReaderTest {
 
     @Test
     @Tag("FR-DATA-03")
+    @DisplayName("TC-CuratedCsv-09: transport-overrides.csv rows are read (kind bus/mrt, elements split on ';' and trimmed); a bad kind or no elements is skipped and reported")
+    void transportOverrides() throws IOException {
+        writeAllHeaders();
+        write(CuratedCsvReader.TRANSPORT_OVERRIDES, "school_code,kind,published_text,elements,reason\n"
+                + "spectra-secondary-school,BUS,\"901M, 962 (Bus Stop IDs: 47549), 904\",901M; 962 ;904;,labels\n"
+                + "nus-high-school-of-mathematics-and-science,mrt,Nearest MRT Stations - Clementi and Dover,"
+                + "Clementi;Dover,sentence\n"
+                + "x-school,train,a,b,bad kind\n"
+                + "y-school,bus,a,;,no elements\n");
+
+        CuratedData data = new CuratedCsvReader(folder.toString()).read();
+
+        assertThat(data.transportOverrides()).containsExactly(
+                new TransportOverride("spectra-secondary-school", Kind.BUS, "901M, 962 (Bus Stop IDs: 47549), 904",
+                        List.of("901M", "962", "904"), "labels"),
+                new TransportOverride("nus-high-school-of-mathematics-and-science", Kind.MRT,
+                        "Nearest MRT Stations - Clementi and Dover", List.of("Clementi", "Dover"), "sentence"));
+        assertThat(data.problems()).hasSize(2).allMatch(p -> p.contains(CuratedCsvReader.TRANSPORT_OVERRIDES));
+        assertThat(data.problems().get(0)).contains("line 4").contains("kind");
+        assertThat(data.problems().get(1)).contains("line 5").contains("elements");
+    }
+
+    @Test
+    @Tag("FR-DATA-03")
     @DisplayName("TC-CuratedCsv-06: a missing file is reported and read as empty; a missing folder stops the import")
     void missingFiles() throws IOException {
         Files.writeString(folder.resolve(CuratedCsvReader.NAME_ALIASES), "dataset,raw_name,canonical_name\n", UTF_8);
 
         CuratedData data = new CuratedCsvReader(folder.toString()).read();
 
-        assertThat(data.problems()).hasSize(5).allMatch(p -> p.contains("not found"));
+        assertThat(data.problems()).hasSize(6).allMatch(p -> p.contains("not found"));
         assertThatThrownBy(() -> new CuratedCsvReader(folder.resolve("nope").toString()).read())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("nope");
@@ -203,6 +234,7 @@ class CuratedCsvReaderTest {
         write(CuratedCsvReader.GEOCODE_OVERRIDES, "postal_code,school_code,latitude,longitude,reason\n");
         write(CuratedCsvReader.AFFILIATIONS, "school_code,primary_school,source_url\n");
         write(CuratedCsvReader.SUBJECT_EXCLUSIONS, "school_name,subject_desc,reason\n");
+        write(CuratedCsvReader.TRANSPORT_OVERRIDES, "school_code,kind,published_text,elements,reason\n");
     }
 
     private void write(String file, String content) throws IOException {

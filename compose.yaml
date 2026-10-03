@@ -1,0 +1,27 @@
+# A local PostgreSQL 17 for the postgres profile (README, "Run with PostgreSQL"). Optional: the default dev profile
+# needs nothing installed. The app does not start Docker by itself (spring-boot-docker-compose is not used).
+#   docker compose up -d                          start; the data stays in the volume schoolmatch-pg
+#   docker compose exec db psql -U schoolmatch    look at the tables
+#   docker compose down                           stop (down -v also deletes the data)
+# The DB_* values come from .env or the environment, with the same defaults as application-postgres.yml.
+name: schoolmatch
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-schoolmatch}
+      POSTGRES_USER: ${DB_USERNAME:-schoolmatch}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-schoolmatch}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"   # this computer only
+    volumes:
+      - schoolmatch-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  schoolmatch-pg:

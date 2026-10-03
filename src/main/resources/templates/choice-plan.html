@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <!--/* DM 17 ChoicePlanner (login) — ChoicePlanUI.displayPlan (FR-PLAN-01, FR-PLAN-02, DC-20).
-       Model: plan (ChoicePlan), rows (ChoicePlanUI.ChoiceRow), warnings (List<String>), addableSchools
+       Model: plan (ChoicePlan), rows (ChoicePlanUI.ChoiceRow), missingNames (last-known names of choices that
+       left the dataset, code → name, DC-86), warnings (List<String>), addableSchools
        (shortlisted, not in the plan), positions (1..n+1; empty when the plan is full), emptyRanks (n+1..6),
        shortlistEmpty, safeMargin, maxChoices; or unavailable = true. Every button is a POST that redirects back here.
        DC-74: psleDataAvailable = false (LayoutModelAdvice) means the dataset has no PSLE ranges: every label is
@@ -54,6 +55,9 @@
                                 <a th:if="${row.school != null}" th:href="@{/schools/{code}(code=${row.schoolCode})}"
                                    th:text="${row.school.name}">CATHOLIC HIGH SCHOOL</a>
                                 <th:block th:if="${row.school == null}">
+                                    <!--/* DC-86: the last-known name, when the database still has the school row */-->
+                                    <strong th:if="${missingNames != null and missingNames.get(row.schoolCode) != null}"
+                                            th:text="${missingNames.get(row.schoolCode)}">OLD SCHOOL NAME</strong>
                                     <code th:text="${row.schoolCode}">old-school-code</code>
                                     <span class="small text-body-secondary">School no longer in the dataset</span>
                                 </th:block>

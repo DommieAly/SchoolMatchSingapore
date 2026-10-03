@@ -1,12 +1,15 @@
 # Tests (@ActiveProfiles("test")): in-memory database, offline stubs, the small fixture snapshot.
+# Every Spring test context gets its own empty in-memory database (${random.uuid}), created by Flyway; Hibernate
+# validates it (ddl-auto: validate, application.yml). replace: none keeps this URL and Flyway in @DataJpaTest too,
+# instead of a generated embedded database.
 spring:
   datasource:
-    url: jdbc:h2:mem:test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:mem:${random.uuid};MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000
     username: sa
     password: ""
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
+  test:
+    database:
+      replace: none
 
 app:
   external:

@@ -179,13 +179,22 @@ public record AppProperties(
      * snapshot folder and overrides {@code dir} + {@code ACTIVE}.
      * {@code importOutputDir}: folder for new snapshots; blank (default) means {@code dir}.
      * {@code activateOnImport}: when true, a successful import also updates {@code ACTIVE} (default false).
+     * <p>
+     * DC-83 (docs/database-design.md, sections 6.2 and 6.3): the school data is served from the database.
+     * {@code loadOnStartup} (default true): at start-up, read and validate the snapshot and load it into the database
+     * when it is not the active version yet; false reads no snapshot file and builds the cache from the database on
+     * first use (the import profile). {@code recheckAfter}: how often the database's active version is checked.
+     * {@code allowRollback} (default true; false only in prod): whether a snapshot older than the database's active
+     * version may replace it.
      */
     public record DatasetSettings(
             @DefaultValue("data/snapshots") String dir,
             String snapshotLocation,
             @DefaultValue("1h") Duration recheckAfter,
             String importOutputDir,
-            @DefaultValue("false") boolean activateOnImport) {
+            @DefaultValue("false") boolean activateOnImport,
+            @DefaultValue("true") boolean loadOnStartup,
+            @DefaultValue("true") boolean allowRollback) {
 
         public DatasetSettings {
             importOutputDir = importOutputDir == null ? "" : importOutputDir;

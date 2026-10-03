@@ -6,7 +6,7 @@ Milestones: prototype in week 9 (12–16 Oct 2026), demo in week 11 (26–30 Oct
 
 ## Current state (3 Oct 2026)
 
-Every page of the dialog map is built, and `./mvnw verify` runs about 1,050 tests. The app runs on real data: 147 secondary schools from data.gov.sg with OneMap coordinates, plus the 2025 PSLE score ranges (139 schools) and affiliated primary schools (27 schools) from MOE SchoolFinder, in `data/curated/`. `data/snapshots/ACTIVE` names the snapshot the app loads; [`data/README.md`](data/README.md) describes it.
+Every page of the dialog map is built, and `./mvnw verify` runs about 1,400 tests. The app runs on real data: 147 secondary schools from data.gov.sg with OneMap coordinates, plus the 2025 PSLE score ranges (139 schools) and affiliated primary schools (27 schools) from MOE SchoolFinder, in `data/curated/`. `data/snapshots/ACTIVE` names the snapshot the app loads into its database at start-up; [`data/README.md`](data/README.md) describes it. The user data and the school data share one database, whose tables Flyway creates ([`docs/database-design.md`](docs/database-design.md)).
 
 **What works now:**
 
@@ -23,7 +23,7 @@ Every page of the dialog map is built, and `./mvnw verify` runs about 1,050 test
 - **MOE SchoolFinder data: the TA is still to be informed.** The lead approved using it on 3 Oct 2026. If the TA says no, `psle-ranges.csv` and `affiliations.csv` are emptied and the data imported again; every page still works without ranges (DC-74).
 - **8 schools have no PSLE range**: the specialised schools that admit students through their own process (e.g. NUS High, School of the Arts). Their ranges show "Not available". 8 Integrated Programme schools (e.g. Raffles Institution) have only an IP range, which the app uses as their PG3 range and marks "IP" (DC-77); their PG1 and PG2 show "Not available" ([`data/README.md`](data/README.md), MOE SchoolFinder data).
 - The old 10-school seed with made-up TEST VALUE ranges stays in `data/snapshots/0000-seed` and as the test fixture.
-- **DC-74 to DC-82 wait for team approval** ([`docs/design-changes.md`](docs/design-changes.md)). DC-75 (school name search ignores punctuation and word order) changes search for every dataset, the seed included, not only what the missing PSLE data needs; every search that matched before still matches. It can go into its own PR if the team wants to review it separately.
+- **DC-74 to DC-86 wait for team approval** ([`docs/design-changes.md`](docs/design-changes.md)). DC-75 (school name search ignores punctuation and word order) changes search for every dataset, the seed included, not only what the missing PSLE data needs; every search that matched before still matches. It can go into its own PR if the team wants to review it separately.
 - **The OneMap Terms of Use question is still open** (clause 3 against the licence page; see [`data/README.md`](data/README.md), Licences).
 - **Google runs in stub mode.** Routes are straight lines with three "(stub)" steps, and facilities are made-up "(stub)" places. The live Google code follows Google's REST reference and is tested against a mock server, but it has never run with a real key. Without a browser key, map pages show "Map unavailable"; the lists beside the maps still work.
 - **OneMap runs in stub mode by default.** The stub answers only `579767`, `catholic high school` and `bishan`; set `ONEMAP_MODE=live` for real address search.
@@ -37,16 +37,16 @@ Every page of the dialog map is built, and `./mvnw verify` runs about 1,050 test
 | Framework | Spring Boot 4.1.1 (Spring MVC, Spring Data JPA, Bean Validation, Cache) |
 | Build | Maven, run through the wrapper `./mvnw` / `mvnw.cmd` (a script that downloads the right Maven for you) |
 | Pages | Thymeleaf (server-side HTML templates) + Bootstrap 5 (CSS library) + a little plain JavaScript |
-| Database | H2, a Java database that runs inside the app: a file in `.local/h2/` for dev and demo, in memory for tests |
-| School data | JSON snapshot in `data/snapshots/`, loaded into memory at startup (see [`data/README.md`](data/README.md)) |
+| Database | H2 in PostgreSQL mode, a Java database that runs inside the app: a file in `.local/h2/` for dev and demo, in memory for tests. PostgreSQL 17 for the `postgres` profile (Docker, optional) and `prod`. Flyway creates the tables from `src/main/resources/db/migration`; Hibernate only checks them ([`docs/database-design.md`](docs/database-design.md)) |
+| School data | JSON snapshot in `data/snapshots/` (reviewed in git), loaded into the database at start-up when it is not already the active version, then kept in memory for search (see [`data/README.md`](data/README.md)) |
 | Login | our own session table + `SM_SESSION` cookie; passwords hashed with BCrypt (`spring-security-crypto`) |
 | External services | Google Maps Platform (map, routes, places), OneMap (address search), data.gov.sg (school data import) |
-| Tests | JUnit 5, Mockito, MockMvc (calls pages inside a test without a server), ArchUnit (checks package and naming rules) |
+| Tests | JUnit 5, Mockito, MockMvc (calls pages inside a test without a server), ArchUnit (checks package and naming rules); database tests also run on embedded PostgreSQL 17 (`io.zonky.test:embedded-postgres`, downloaded by Maven; no Docker) |
 | CI | GitHub Actions on Ubuntu and Windows: `verify` on every push and pull request |
 
 ## Setup
 
-You need Git, IntelliJ IDEA and JDK 21. You do **not** need to install Maven, Node, Docker or a database.
+You need Git, IntelliJ IDEA and JDK 21. You do **not** need to install Maven, Node, Docker or a database. Docker is optional, only for running the app on PostgreSQL ([Run with PostgreSQL](#run-with-postgresql)).
 
 Clone the repo into a normal folder, **not** one synced by iCloud, OneDrive or Dropbox: syncing corrupts `.git` and `target/`. On Windows, `Desktop` and `Documents` are often OneDrive folders.
 
@@ -137,20 +137,43 @@ Clone the repo into a normal folder, **not** one synced by iCloud, OneDrive or D
 | Tests for one requirement (by `@Tag`) | `./mvnw test -Dgroups=FR-SEARCH-04` | `.\mvnw.cmd test "-Dgroups=FR-SEARCH-04"` |
 | Start with the demo profile | `./mvnw spring-boot:run -Dspring-boot.run.profiles=demo` | `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=demo"` |
 | Reset your local database (app stopped) | `rm -rf .local/h2` | `Remove-Item -Recurse -Force .local\h2` |
+| All tests except the embedded-PostgreSQL ones | `./mvnw verify -DexcludedGroups=postgres` | `.\mvnw.cmd verify "-DexcludedGroups=postgres"` |
+| Start on PostgreSQL (Docker running) | `docker compose up -d`, then `./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres` | `docker compose up -d`, then `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=postgres"` |
 | Is the app up? (while it runs) | open http://localhost:8080/actuator/health | same |
 
 In PowerShell, keep the quotes around `-D…` arguments: without them PowerShell can split the argument at the dot.
 
-**Look inside the dev database:** the H2 console is off by default. Start the app with `H2_CONSOLE=true` (for example `H2_CONSOLE=true ./mvnw spring-boot:run`, or a line `H2_CONSOLE=true` in `.env`), open http://localhost:8080/h2-console and enter JDBC URL `jdbc:h2:file:./.local/h2/dev`, user `sa`, and an empty password. Turn it off again afterwards: the console runs any SQL, and it does not check the Host header, so a web page open in your browser could reach it by DNS rebinding. If an entity change breaks your local database, stop the app and delete `.local/h2/` (command above); the tables are created again on the next start. The column `account.username_key` (DC-70) was added on 2 Oct 2026, so a dev database created before then needs this reset.
+**Look inside the dev database:** the H2 console is off by default. Start the app with `H2_CONSOLE=true` (for example `H2_CONSOLE=true ./mvnw spring-boot:run`, or a line `H2_CONSOLE=true` in `.env`), open http://localhost:8080/h2-console and enter JDBC URL `jdbc:h2:file:./.local/h2/schoolmatch-dev;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH`, user `sa`, and an empty password. Turn it off again afterwards: the console runs any SQL, and it does not check the Host header, so a web page open in your browser could reach it by DNS rebinding. Flyway creates the tables from `src/main/resources/db/migration` on the first start, and Hibernate only checks them (`ddl-auto: validate`). The school tables are filled from `data/snapshots/ACTIVE` at start-up. If your local database gets into a bad state, stop the app and delete `.local/h2/` (command above); the tables are created again on the next start. The old files `.local/h2/dev*` and `.local/h2/demo*` were made by Hibernate before Flyway and are no longer used; you can delete them.
 
 **Profiles** (sets of settings in `src/main/resources/application-<profile>.yml`):
 
 | Profile | Used for | Database | Google |
 |:--:|:--:|:--:|:--:|
-| `dev` (default) | daily work | H2 file `.local/h2/dev` | stub |
-| `test` | automated tests (`@ActiveProfiles("test")`) | H2 in memory | stub (OneMap and data.gov.sg too) |
-| `demo` | rehearsals and the demo | H2 file `.local/h2/demo` | whatever `GOOGLE_MODE` in `.env` says: set `GOOGLE_MODE=live` and the keys on the demo laptop (with no `.env` at all it is live, and stops at start-up without a server key) |
-| `import` | building a new school snapshot (owner B; no web server) | – | – |
+| `dev` (default) | daily work | H2 file `.local/h2/schoolmatch-dev` | stub |
+| `test` | automated tests (`@ActiveProfiles("test")`) | H2 in memory, one database per test context | stub (OneMap and data.gov.sg too) |
+| `demo` | rehearsals and the demo | H2 file `.local/h2/schoolmatch-demo` | whatever `GOOGLE_MODE` in `.env` says: set `GOOGLE_MODE=live` and the keys on the demo laptop (with no `.env` at all it is live, and stops at start-up without a server key) |
+| `import` | building a new school snapshot (owner B; no web server) | H2 in memory; reads no snapshot (`load-on-startup: false`) and writes only the JSON snapshot | – |
+| `postgres` | trying the app on PostgreSQL, as in production | PostgreSQL 17 from `compose.yaml` (or your own server) through `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`; defaults `localhost:5432`, `schoolmatch`/`schoolmatch` | as in `.env` |
+| `prod` | the deployed app (later, design step 9) | PostgreSQL from `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, no defaults; TLS with certificate check (`sslmode=verify-full`); no H2 console; Secure cookie; an older snapshot is not loaded unless `DATASET_ALLOW_ROLLBACK=true` | as in the environment |
+
+### Run with PostgreSQL
+
+Optional: the default `dev` profile needs nothing installed. Use this to check something against the production database, or to look at the tables with SQL.
+
+1. Start Docker Desktop, then start the database (the first run downloads the `postgres:17-alpine` image):
+   ```zsh
+   docker compose up -d
+   ```
+   It listens on `localhost:5432` (this computer only), with database, user and password `schoolmatch`. The data stays in the Docker volume `schoolmatch-pg` until you run `docker compose down -v`. If port 5432 is taken, put `DB_PORT=5433` in `.env`; both `compose.yaml` and the app read it.
+2. Start the app with the `postgres` profile (Windows: `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=postgres"`):
+   ```zsh
+   ./mvnw spring-boot:run -Dspring-boot.run.profiles=postgres
+   ```
+   The first start creates the tables (Flyway V1–V3) and loads the active school snapshot, which takes a few seconds; later starts skip the load.
+3. Look at the tables: `docker compose exec db psql -U schoolmatch`, then for example `\dt` or `SELECT dataset_version, loaded_at FROM dataset_version;` (`\q` quits).
+4. Stop the database with `docker compose down`; add `-v` to delete its data too.
+
+The tests never need Docker. The migration, loader, round-trip and shortlist-repository tests, and three whole-app start-up tests, also run on a real PostgreSQL 17 that Maven downloads (`@Tag("postgres")`, about 20 s the first time). If it cannot start on your machine, run `./mvnw verify -DexcludedGroups=postgres` and tell A; CI still runs them on Ubuntu and Windows.
 
 ## Project structure
 
@@ -168,16 +191,19 @@ src/main/java/sg/schoolmatch/
 ├─ control/                 the 13 design control classes (XxxController, Spring @Service): all the logic
 ├─ entity/                  the design entity classes and enums, one sub-package per area (account, school, search, …)
 ├─ persistence/             database access for Account, AuthenticatedSession, UserProfile, Shortlist (ChoicePlan is saved with its Shortlist), and the Google usage counters
+│  └─ dataset/              the school data in the database: SchoolDatasetStore (loads a snapshot, reads the active one, plain JDBC) and SchoolDatasetMapper (rows → School, District, …); only SchoolDataController uses it
 ├─ dataset/                 reads and checks the school data snapshot; the importer that builds a new one
 ├─ error/                   exceptions used across layers (InvalidInputException, NotFoundException, …)
 └─ config/                  settings (AppProperties), clock, password hashing, caches, the HTTP client for outside calls, login-check registration
 src/main/resources/
 ├─ application*.yml         settings, one file per profile
+├─ db/migration/            Flyway migrations V1 (user tables), V2 (school data), V3 (links from shortlists and plans to schools); never edit one that reached main, add a new V4__…
 ├─ templates/               Thymeleaf pages and layout.html (head, navbar, footer); fragments/ holds shared parts ("Not available", cards, pager)
 ├─ static/                  CSS and browser JavaScript: map.js, loading.js, and the browser-side design classes DeviceLocationInterface.js and GoogleMapsPlatformInterface.js (loadMap, DC-39)
 └─ stub/                    recorded OneMap responses used by StubOneMap
 src/test/java/sg/schoolmatch/   tests in the same packages, plus architecture/, flow/ (whole-app tests) and support/
-src/test/resources/         application-test.yml, fixtures/ (test snapshots), testcases/ (Lab 4 test tables as CSV)
+src/test/resources/         application-test.yml, fixtures/ (test snapshots), testcases/ (Lab 4 test tables as CSV), sql/ (school rows for @DataJpaTest)
+compose.yaml                the optional local PostgreSQL 17 (Run with PostgreSQL)
 data/                       school data snapshots and hand-curated CSV files
 docs/                       design diagrams and the documents listed below
 ```
@@ -198,7 +224,7 @@ Every design class keeps its **exact Lab 2 name**. Spring calls its web classes 
 - If you add a method you have not written yet, make it throw `UnsupportedOperationException("TODO <FR ids> (owner <letter>)")`: the page then shows "Not built yet" instead of failing silently.
 - A change to the design is marked in code with `// DC-xx` and recorded in [`docs/design-changes.md`](docs/design-changes.md).
 - A missing value is `null` in Java and shows as "Not available" on the page. Never use `""`, `0` or `"NA"` for missing data.
-- `School` objects are shared by every request (they live in `SchoolDataCache`). Only `SnapshotReader` calls their setters; everywhere else treat a `School` as read-only.
+- `School` objects are shared by every request (they live in `SchoolDataCache`). Only `SnapshotReader` and `SchoolDatasetMapper` call their setters; everywhere else treat a `School` as read-only.
 - `ArchitectureTest` (ArchUnit) fails the build when a class breaks these rules: a `*Controller` outside `control`, a UI class that is not a `@Controller` named `*UI`, a UI class that uses the database or an external service directly, an entity that depends on another layer, a control calling another control that [`docs/design/control-deps.csv`](docs/design/control-deps.csv) does not allow, or a class outside `boundary.external` making HTTP calls. If an IDE or AI assistant suggests `@RestController SchoolController`, it is wrong for this project.
 
 ## Where to find things
@@ -210,7 +236,8 @@ Every design class keeps its **exact Lab 2 name**. Spring calls its web classes 
 | [`docs/requirements.csv`](docs/requirements.csv) | every FR/NFR id with its use case, dialog-map states, UI class, control method and owner |
 | [`docs/routes.md`](docs/routes.md) | dialog-map state → URL → UI class → template, and every transition |
 | [`docs/recommendation-scoring.md`](docs/recommendation-scoring.md) | PSLE range rules, SAFE / MATCH / REACH, plan warnings, recommendation scores |
-| [`data/README.md`](data/README.md) | data sources, licences, the active snapshot, school codes, curation rules |
+| [`data/README.md`](data/README.md) | data sources, licences, the active snapshot, school codes, curation rules, loading and rollback |
+| [`docs/database-design.md`](docs/database-design.md) | the database as built: tables, keys, normal forms, the loader, profiles and tests |
 | `src/test/resources/testcases/TC-*.csv` | Lab 4 test-case tables (header `tc_id,requirement,technique,input,expected`). Each one is read by the tests of its area, e.g. `TC-SEARCH.csv` by `SchoolControllerTest`, `TC-FILTER.csv` by `FilterFlowTest` |
 | Example tests to copy | `CoordinateTest` (plain JUnit), `SchoolControllerTest` (Mockito), `SchoolSearchUITest` (MockMvc), `SearchFlowTest` (whole app), `ShortlistRepositoryTest` (`@DataJpaTest`, save and reload), `GoogleRoutesApiTest` (`MockRestServiceServer`), `PagesSmokeTest` (every GET route, guest and member; log in with `support/TestMembers`), `ArchitectureTest` |
 
@@ -291,3 +318,10 @@ When in doubt, copy the imports from the example tests listed above, and check t
 | `Port 8080 was already in use` | Another copy of the app is running. Stop it (`Ctrl+C` in its window, or the red square in IntelliJ). |
 | A setting from `.env` seems ignored | Check there are no quotes around the value, and that the app runs from the project folder. Restart after editing `.env`. |
 | The app refuses to start with a snapshot validation error | The active school snapshot is broken. Run `git status` to see whether you changed `data/snapshots/`, and ask B. |
+| `Validate failed: Migrations have failed validation` or `checksum mismatch` (Flyway) | A migration file changed after your local database ran it. Never edit a migration that reached `main`; put the change in a new `V4__…`. For your own H2 database: stop the app and delete `.local/h2/`. |
+| `Found non-empty schema(s) "public" but no schema history table` | The database was made before Flyway (for example an old H2 file passed in by hand). Use the default URLs in `application-dev.yml`, or delete `.local/h2/`. |
+| `Schema-validation: missing table` or `wrong column type` at start-up | An `@Entity` changed without a migration. Add a `V4__….sql` that changes the table the same way. |
+| `Referential integrity constraint violation` or `violates foreign key constraint "fk_shortlist_school_school"` in a test | Since V3 a saved school code must name a `school` row. In a `@DataJpaTest`, add `@Sql("/sql/schools.sql")` (or insert your school there). |
+| `Connection to localhost:5432 refused` (postgres profile) | The database is not running: start Docker Desktop and run `docker compose up -d`. If you changed `DB_PORT`, check it is the same for both. |
+| `Could not resolve placeholder 'DB_URL'` | The `prod` profile needs `DB_URL`, `DB_USERNAME` and `DB_PASSWORD` in the environment. For local runs use `postgres` instead. |
+| `embedded PostgreSQL did not start` in tests | Run `./mvnw verify -DexcludedGroups=postgres` for now and tell A (CI runs those tests). |
