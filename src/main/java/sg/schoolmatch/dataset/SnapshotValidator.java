@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 import sg.schoolmatch.entity.common.Coordinate;
 import sg.schoolmatch.entity.school.District;
+import sg.schoolmatch.entity.school.School;
 
 /**
  * Checks a {@link LoadedSnapshot} before the app serves it (FR-DATA-01, FR-DATA-06, NFR-DATA-01, NFR-DATA-02).
@@ -117,7 +118,12 @@ public class SnapshotValidator {
         }
     }
 
-    /** DC-21/22: ranges are never merged, so each (year, PG, affiliated) appears at most once per school. */
+    /**
+     * DC-21/22: ranges are never merged, so each (year, PG, affiliated) appears at most once per school.
+     * DC-77: an Integrated Programme range is counted apart from the others (it may share year and PG3 with a
+     * non-IP range), and it must be PG3, since it is used only as the PG3 fallback. DC-82: it may be affiliated
+     * (one affiliated and one non-affiliated IP range per year).
+     */
     private static void checkRanges(SchoolRecord r, String label, List<String> errors) {
         Set<String> seen = new HashSet<>();
         for (ScoreRangeRecord range : r.scoreRanges()) {
@@ -131,7 +137,12 @@ public class SnapshotValidator {
                 errors.add(BAD_PSLE_RANGE + ": " + label + ": need " + MIN_SCORE + " ≤ lower ≤ upper ≤ " + MAX_SCORE
                         + " and PG 1–3, got " + range);
             }
-            String key = range.admissionYear() + "/PG" + range.postingGroup() + "/" + range.affiliated();
+            if (range.integratedProgramme() && range.postingGroup() != School.IP_POSTING_GROUP) {
+                errors.add(BAD_PSLE_RANGE + ": " + label + ": an Integrated Programme range must be PG"
+                        + School.IP_POSTING_GROUP + ", got " + range);
+            }
+            String key = range.admissionYear() + "/PG" + range.postingGroup() + "/" + range.affiliated()
+                    + (range.integratedProgramme() ? "/IP" : "");
             if (!seen.add(key)) {
                 errors.add(DUPLICATE_PSLE_RANGE + ": " + label + ": more than one range for " + key);
             }

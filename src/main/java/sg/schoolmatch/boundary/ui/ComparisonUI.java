@@ -33,8 +33,15 @@ import sg.schoolmatch.error.InvalidInputException;
 @Controller
 public class ComparisonUI {
 
-    /** One table row: a field label, one value per school (null = not available), and whether they differ. */
-    public record CompareRow(String label, List<String> values, boolean differs) {
+    /**
+     * One table row: a field label, one value per school (null = not available), whether they differ, and whether
+     * it is a PSLE range row (DC-74: the page leaves those out when the dataset has no PSLE ranges at all).
+     */
+    public record CompareRow(String label, List<String> values, boolean differs, boolean psleRange) {
+
+        public CompareRow(String label, List<String> values, boolean differs) {
+            this(label, values, differs, false);
+        }
     }
 
     private final ShortlistController shortlistController;
@@ -78,7 +85,8 @@ public class ComparisonUI {
         rows.add(row("School nature", schools, School::getSchoolNature));
         for (int postingGroup = 3; postingGroup >= 1; postingGroup--) {
             int pg = postingGroup;
-            rows.add(row("PSLE AL range PG" + pg, schools, s -> latestRange(s, pg)));
+            CompareRow range = row("PSLE AL range PG" + pg, schools, s -> latestRange(s, pg));
+            rows.add(new CompareRow(range.label(), range.values(), range.differs(), true));
         }
         rows.add(row("Number of CCAs", schools, s -> count(s.getCcas())));
         rows.add(row("CCA list", schools, s -> join(s.getCcas())));
@@ -105,7 +113,7 @@ public class ComparisonUI {
     }
 
     private static String rangeText(IndicativePsleScoreRange range) {
-        return range.getLowerScore() + "–" + range.getUpperScore() + " (" + range.getAdmissionYear() + ")";
+        return range.getRangeText() + " (" + range.getAdmissionYear() + ")";   // "IP 4–8 (2025)" for IP (DC-77)
     }
 
     /** An empty list means the source had no data for the school, so it is "Not available", not 0. */

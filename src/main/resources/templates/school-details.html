@@ -36,12 +36,16 @@
                 <dt class="col-sm-4">Telephone</dt>
                 <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${school.telephone})}"></span></dd>
 
-                <!--/* Links only for http(s) URLs, so data can never inject a javascript: link */-->
+                <!--/* Links only for http(s) URLs, so data can never inject a javascript: link. A value starting with
+                       "www." (NUS High in the 3 Oct 2026 data) gets https:// in front; without it the browser would
+                       treat it as a page of this site. */-->
                 <dt class="col-sm-4">Website</dt>
-                <dd class="col-sm-8" th:with="isLink=${school.website != null and school.website.startsWith('http')}">
-                    <a th:if="${isLink}" th:href="${school.website}" th:text="${school.website}"
+                <dd class="col-sm-8" th:with="websiteHref=${school.website == null ? null
+                        : (school.website.startsWith('http') ? school.website
+                        : (school.website.startsWith('www.') ? 'https://' + school.website : null))}">
+                    <a th:if="${websiteHref != null}" th:href="${websiteHref}" th:text="${school.website}"
                        target="_blank" rel="noopener">website</a>
-                    <th:block th:unless="${isLink}">
+                    <th:block th:if="${websiteHref == null}">
                         <span th:replace="~{fragments/value :: value(${school.website})}"></span>
                     </th:block>
                 </dd>
@@ -79,7 +83,9 @@
                 <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${#strings.setJoin(school.ccas, ', ')})}"></span></dd>
 
                 <dt class="col-sm-4">Affiliated primary schools</dt>
-                <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${#strings.setJoin(school.affiliatedPrimarySchools, ', ')})}"></span></dd>
+                <!--/* With curated affiliations (MOE SchoolFinder) an empty list means the school has none. */-->
+                <dd class="col-sm-8" th:if="${affiliationsCurated == true and school.affiliatedPrimarySchools.isEmpty()}">None</dd>
+                <dd class="col-sm-8" th:unless="${affiliationsCurated == true and school.affiliatedPrimarySchools.isEmpty()}"><span th:replace="~{fragments/value :: value(${#strings.setJoin(school.affiliatedPrimarySchools, ', ')})}"></span></dd>
 
                 <dt class="col-sm-4">Location</dt>
                 <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${school.coordinate != null ? school.coordinate.latitude + ', ' + school.coordinate.longitude : null})}"></span></dd>
@@ -90,6 +96,10 @@
                The seed snapshot's ranges are made up, so the page must never present them as real (DC-34). */-->
         <section id="psle-ranges" class="col-12 col-lg-5">
             <h2 class="h5">Indicative PSLE score ranges</h2>
+            <!--/* DC-74: a dataset without any PSLE range says so once */-->
+            <p th:if="${psleDataAvailable == false}" class="text-body-secondary" data-psle-unavailable="true">
+                PSLE score ranges: not available yet</p>
+            <th:block th:unless="${psleDataAvailable == false}">
             <div th:if="${seedData}" class="alert alert-warning small py-2" role="note">
                 <strong>TEST VALUES – not MOE data.</strong> The seed dataset uses made-up PSLE ranges, and leaves
                 some fields (such as one school's email) blank on purpose to test missing values.
@@ -113,16 +123,39 @@
                     <tr th:each="range : ${scoreRanges}">
                         <td th:text="${range.admissionYear}">2025</td>
                         <td th:text="|PG${range.postingGroup}|">PG3</td>
-                        <td th:text="${range.affiliated} ? 'Affiliated' : 'Non-affiliated'">Non-affiliated</td>
-                        <td th:text="|${range.lowerScore}–${range.upperScore}|">8–12</td>
+                        <td th:text="${range.integratedProgramme}
+                                     ? (${range.affiliated} ? 'Integrated Programme (affiliated)' : 'Integrated Programme')
+                                     : (${range.affiliated} ? 'Affiliated' : 'Non-affiliated')">Non-affiliated</td>
+                        <td>
+                            <span th:text="${range.rangeText + (range.hadPlacesLeft() ? '*' : '')}">8–12</span>
+                            <!--/* DC-82: MOE's own text when it holds more than the numbers (Higher Chinese grades). */-->
+                            <span th:if="${range.hasHigherChineseGrades()}" class="small text-body-secondary d-block"
+                                  th:text="|MOE: ${range.moeText}|">MOE: 6(D) - 8(M)</span>
+                        </td>
                     </tr>
                     </tbody>
                 </table>
             </div>
+            <p th:if="${higherChineseNote}" class="small text-body-secondary mb-1">
+                (D) and (M) in MOE's text are the Higher Chinese Language grades (Distinction, Merit) of the first and
+                last student posted. Special Assistance Plan schools use them to order students with the same score.
+            </p>
+            <p th:if="${placesLeftNote}" class="small text-body-secondary mb-1">
+                * The school still had places after posting: the last student posted had a better score than 30,
+                and MOE shows 30 because places were left.
+            </p>
             <p th:if="${scoreRanges.isEmpty()}"><span th:replace="~{fragments/value :: value(null)}"></span></p>
-            <!--/* DC-18: IP-track ranges are a text note, not table rows */-->
+            <p th:unless="${seedData or scoreRanges.isEmpty()}" class="small text-body-secondary">
+                Source: <a href="https://www.moe.gov.sg/schoolfinder" rel="noopener" target="_blank">MOE SchoolFinder</a>
+                (moe.gov.sg), read on 3 Oct 2026.
+            </p>
+            </th:block>
+            <!--/* DC-18: MOE's own text of the IP range (it keeps grades such as "4(D) - 8(M)").
+                   DC-77: the IP range is also a table row; it is used for PG3 only when there is no other PG3 range. */-->
             <p class="small" th:if="${school.ipRangeNote != null}">
-                <strong>Integrated Programme:</strong> <span th:text="${school.ipRangeNote}">note</span>
+                <strong>Integrated Programme:</strong> <span th:text="${school.ipRangeNote}">note</span>.
+                MOE lists Integrated Programme ranges under Posting Group 3. When a school has no other PG3 range,
+                the IP range is the one used for PG3 in search, the choice plan and recommendations.
             </p>
         </section>
     </div>

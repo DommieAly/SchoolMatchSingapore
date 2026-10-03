@@ -42,6 +42,7 @@ public class SchoolDataCache {
 
     private final Map<String, School> schoolsByCode = new LinkedHashMap<>();   // ordered by name, then code
     private final List<District> districts;
+    private final boolean psleData;      // DC-74: at least one school has a PSLE score range
 
     public SchoolDataCache(String sourceName, Instant retrievedAt, Instant expiresAt,
                            Collection<School> schools, Collection<District> districts) {
@@ -50,6 +51,29 @@ public class SchoolDataCache {
         this.expiresAt = expiresAt;
         schools.stream().sorted(BY_NAME_THEN_CODE).forEach(s -> schoolsByCode.put(s.getSchoolCode(), s));
         this.districts = List.copyOf(districts);
+        this.psleData = hasPsleData(schoolsByCode.values());
+    }
+
+    /**
+     * DC-74: true when at least one school of the dataset has a PSLE score range. False for a snapshot built
+     * before any range was curated (data/curated/psle-ranges.csv empty): the PSLE filter, SAFE/MATCH/REACH and
+     * PSLE fit then have nothing to work with, and the pages say the ranges are not available yet.
+     */
+    public boolean hasPsleData() {
+        return psleData;
+    }
+
+    /**
+     * True when at least one school has an affiliated primary school, i.e. the snapshot has curated affiliations
+     * (data/curated/affiliations.csv). Then a school with none has none, rather than unknown.
+     */
+    public boolean hasAffiliationData() {
+        return schoolsByCode.values().stream().anyMatch(s -> !s.getAffiliatedPrimarySchools().isEmpty());
+    }
+
+    /** DC-74: the rule behind {@link #hasPsleData()}: at least one of {@code schools} has a score range. */
+    public static boolean hasPsleData(Collection<School> schools) {
+        return schools.stream().anyMatch(s -> !s.getScoreRanges().isEmpty());
     }
 
     /** True when it is time to check for a newer snapshot. DC-25: the caller passes the time. */
@@ -157,6 +181,6 @@ public class SchoolDataCache {
     @Override
     public String toString() {
         return "SchoolDataCache{version=" + datasetVersion + ", schools=" + schoolsByCode.size()
-                + ", districts=" + districts.size() + "}";
+                + ", districts=" + districts.size() + ", psleData=" + psleData + "}";
     }
 }

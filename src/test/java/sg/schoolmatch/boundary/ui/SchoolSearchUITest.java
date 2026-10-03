@@ -57,6 +57,8 @@ import sg.schoolmatch.entity.search.TransportationFilter;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
 import sg.schoolmatch.error.NotAuthenticatedException;
+import sg.schoolmatch.support.ExternalFailures;
+import sg.schoolmatch.support.LogCapture;
 import sg.schoolmatch.support.TestSchools;
 
 /**
@@ -426,6 +428,27 @@ class SchoolSearchUITest {
         verify(filterController, times(2)).applyFilters(any(), filters.capture());
         assertThat(filters.getAllValues().get(0)).anyMatch(f -> f instanceof TransportationFilter);
         assertThat(filters.getAllValues().get(1)).noneMatch(f -> f instanceof TransportationFilter);
+    }
+
+    @Test
+    @Tag("FR-FILTER-06")
+    @Tag("NFR-MAIN-02")
+    @DisplayName("TC-FILTER-06-12: a travel-time filter refused by the app's daily limit writes one WARN line saying so")
+    void filters_travelUnavailable_logsOneWarning() throws Exception {
+        when(schoolController.searchSchools(null)).thenReturn(new CurrentResultSet(null, List.of(anglican, catholic)));
+        when(filterController.applyFilters(any(), anyList()))
+                .thenThrow(ExternalFailures.dailyLimit("route-matrix-elements", 200, 147, 266))
+                .thenAnswer(call -> applyLikeTheControl(call.getArgument(0), call.getArgument(1)));
+
+        try (LogCapture log = LogCapture.of(sg.schoolmatch.boundary.ui.support.SearchFilterPipeline.class)) {
+            mvc.perform(get("/schools").param("district", "BISHAN").param("travel", "1").param("mode", "TRANSIT")
+                            .param("maxMin", "30").session(sessionWithStart()))
+                    .andExpect(content().string(containsString("Travel-time filter is temporarily unavailable")));
+
+            assertThat(log.warnings()).singleElement().asString()
+                    .startsWith("Travel-time filter unavailable: Google route-matrix-elements: app daily limit reached")
+                    .contains("200 of 266").contains("147 more");
+        }
     }
 
     @Test

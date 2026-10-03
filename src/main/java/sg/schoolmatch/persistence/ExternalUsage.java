@@ -11,7 +11,8 @@ import java.time.LocalDate;
 import java.util.Objects;
 
 /**
- * How many units of one Google SKU were used on one day (Singapore date). Written only by
+ * How many units of one Google SKU were used on one budget day (the date in {@code app.external.budget.zone},
+ * Pacific Time by default, DC-80). Written only by
  * {@code boundary.external.ExternalCallBudget}. Not a design entity (it is bookkeeping for the spending
  * limit), so it lives here and not in {@code entity}.
  * <p>

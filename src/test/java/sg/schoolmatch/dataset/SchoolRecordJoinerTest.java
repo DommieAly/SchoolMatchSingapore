@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import sg.schoolmatch.boundary.external.DataGovSgRecord;
 import sg.schoolmatch.dataset.CuratedCsvReader.NameAlias;
+import sg.schoolmatch.dataset.CuratedCsvReader.SubjectExclusion;
 import sg.schoolmatch.dataset.SchoolRecordJoiner.JoinedSchool;
 
 /** SchoolRecordJoiner: CCAs and subjects are joined to schools by normalised name (DC-12). Fixture data only. */
@@ -110,6 +111,57 @@ class SchoolRecordJoinerTest {
 
         assertThat(joined).hasSize(2);
         assertThat(log.warnings(ImportLog.DUPLICATE_NAME)).hasSize(1);
+    }
+
+    @Test
+    @Tag("FR-DATA-03")
+    @DisplayName("TC-Joiner-08: subject-exclusions.csv rows are left out (any case); an exclusion that matches nothing is reported")
+    void excludesSubjects() {
+        SchoolRecordJoiner withExclusions = new SchoolRecordJoiner(new NameNormaliser(List.of()), List.of(
+                new SubjectExclusion("Catholic High School", "TEST SUBJECT", "placeholder"),
+                new SubjectExclusion("HUA YI SECONDARY SCHOOL", "No Such Row", "stale")));
+        List<DataGovSgRecord> subjects = new java.util.ArrayList<>(records("subjects.json"));
+        subjects.add(row("School_Name", "CATHOLIC HIGH SCHOOL", "Subject_Desc", "Test Subject"));
+        subjects.add(row("School_Name", "HUA YI SECONDARY SCHOOL", "Subject_Desc", "Test Subject"));
+
+        Map<String, JoinedSchool> joined = byName(withExclusions.join(secondarySchools(), records("cca.json"),
+                subjects, log));
+
+        assertThat(joined.get("CATHOLIC HIGH SCHOOL").programmes())
+                .containsExactly("Additional Mathematics", "Appreciation of Chinese Culture");
+        assertThat(joined.get("HUA YI SECONDARY SCHOOL").programmes()).contains("Test Subject");   // other school
+        assertThat(log.counts()).containsEntry(SchoolRecordJoiner.SUBJECTS_EXCLUDED, 1);
+        assertThat(log.warnings(ImportLog.CURATED)).singleElement().asString()
+                .contains(CuratedCsvReader.SUBJECT_EXCLUSIONS).contains("No Such Row");
+    }
+
+    @Test
+    @Tag("FR-DATA-03")
+    @Tag("FR-FILTER-02")
+    @DisplayName("TC-Joiner-09: names that differ only in case get one spelling across schools: not all upper case, then most used")
+    void mergesCaseOnlySpellings() {
+        List<DataGovSgRecord> schools = List.of(row("school_name", "A SCHOOL"), row("school_name", "B SCHOOL"),
+                row("school_name", "C SCHOOL"));
+        List<DataGovSgRecord> subjects = List.of(
+                row("School_Name", "A SCHOOL", "Subject_Desc", "BIOLOGY"),
+                row("School_Name", "A SCHOOL", "Subject_Desc", "Biology"),
+                row("School_Name", "B SCHOOL", "Subject_Desc", "BIOLOGY"),
+                row("School_Name", "C SCHOOL", "Subject_Desc", "ADVANCED MATHEMATICS"),
+                row("School_Name", "B SCHOOL", "Subject_Desc", "ADVANCED MATHEMATICS"),
+                row("School_Name", "A SCHOOL", "Subject_Desc", "Advanced Mathematics"),
+                row("School_Name", "A SCHOOL", "Subject_Desc", "Infocomm Studies"),
+                row("School_Name", "B SCHOOL", "Subject_Desc", "InfoComm Studies"),
+                row("School_Name", "C SCHOOL", "Subject_Desc", "Art"));
+
+        Map<String, JoinedSchool> joined = byName(joiner.join(schools, List.of(), subjects, log));
+
+        assertThat(joined.get("A SCHOOL").programmes())
+                .containsExactly("Advanced Mathematics", "Biology", "InfoComm Studies");
+        assertThat(joined.get("B SCHOOL").programmes())
+                .containsExactly("Advanced Mathematics", "Biology", "InfoComm Studies");
+        assertThat(joined.get("C SCHOOL").programmes()).containsExactly("Advanced Mathematics", "Art");
+        assertThat(log.counts()).containsEntry(SchoolRecordJoiner.SUBJECT_SPELLINGS_MERGED, 3);
+        assertThat(log.warnings(ImportLog.CURATED)).isEmpty();
     }
 
     private static Map<String, JoinedSchool> byName(List<JoinedSchool> joined) {

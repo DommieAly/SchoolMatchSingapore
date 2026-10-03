@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,17 +22,20 @@ import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.WebUtils;
 import sg.schoolmatch.boundary.ui.support.AuthInterceptor;
 import sg.schoolmatch.boundary.ui.support.PageMessages;
+import sg.schoolmatch.boundary.ui.support.PsleAvailability;
 import sg.schoolmatch.boundary.ui.support.ReferenceLocationStore;
 import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.control.FilterController;
 import sg.schoolmatch.control.ProfileController;
 import sg.schoolmatch.control.RecommendationController;
+import sg.schoolmatch.control.SchoolDataController;
 import sg.schoolmatch.entity.account.UserProfile;
 import sg.schoolmatch.entity.recommend.MatchCriteria;
 import sg.schoolmatch.entity.recommend.Recommendation;
 import sg.schoolmatch.entity.route.TravelMode;
 import sg.schoolmatch.entity.search.AttributeCategory;
 import sg.schoolmatch.entity.search.TransportationFilter;
+import sg.schoolmatch.error.ExternalFailureLog;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
 
@@ -46,6 +51,8 @@ import sg.schoolmatch.error.InvalidInputException;
  *       commute-time calls. The last {@value #MAX_STORED_RESULTS} results are kept; only the login session that
  *       asked can open them (another account in the same browser gets the form again).</li>
  *   <li>DM-23: the form has {@code data-loading}, so loading.js shows the overlay while the POST runs.</li>
+ *   <li>DC-74: when the dataset has no PSLE ranges, the PSLE score and posting group are optional and are not
+ *       listed as missing from the profile; the pages say PSLE fit is not used ({@code psleDataAvailable}).</li>
  * </ul>
  */
 @Controller
@@ -55,18 +62,22 @@ public class RecommendationUI {
     static final int MAX_STORED_RESULTS = 5;
     static final String CRITERIA_PATH = "/recommendations";
 
+    private static final Logger log = LoggerFactory.getLogger(RecommendationUI.class);
+
     private final RecommendationController recommendationController;
     private final ProfileController profileController;
     private final FilterController filterController;   // DC-37: CCA and programme option lists
+    private final SchoolDataController schoolDataController;   // DC-74: are there PSLE ranges at all?
     private final ReferenceLocationStore referenceLocationStore;
     private final AppProperties props;
 
     public RecommendationUI(RecommendationController recommendationController, ProfileController profileController,
-                            FilterController filterController, ReferenceLocationStore referenceLocationStore,
-                            AppProperties props) {
+                            FilterController filterController, SchoolDataController schoolDataController,
+                            ReferenceLocationStore referenceLocationStore, AppProperties props) {
         this.recommendationController = recommendationController;
         this.profileController = profileController;
         this.filterController = filterController;
+        this.schoolDataController = schoolDataController;
         this.referenceLocationStore = referenceLocationStore;
         this.props = props;
     }
@@ -98,7 +109,7 @@ public class RecommendationUI {
             criteria.setPreferredCCAs(preferredCCAs);
             criteria.setPreferredProgrammes(preferredProgrammes);
         }
-        List<String> missing = missingProfileFields(profile);
+        List<String> missing = missingProfileFields(profile, PsleAvailability.available(schoolDataController));
         if (!missing.isEmpty()) {
             model.addAttribute("missingProfileFields", missing);
         }
@@ -138,6 +149,7 @@ public class RecommendationUI {
         } catch (InvalidInputException e) {
             model.addAttribute(PageMessages.FIELD_ERRORS, e.getFieldErrors());
         } catch (ExternalServiceUnavailableException e) {
+            ExternalFailureLog.warn(log, "Recommendations", e);
             model.addAttribute(PageMessages.FLASH_ERROR,
                     "School data is temporarily unavailable. Please try again in a few minutes.");
         }
@@ -211,13 +223,16 @@ public class RecommendationUI {
         return encoded.length() <= 1900 ? encoded : CRITERIA_PATH;   // AuthInterceptor accepts up to 2000
     }
 
-    /** AF-1: what the profile still needs before recommendations can use it (UserProfile.isComplete). */
-    private static List<String> missingProfileFields(UserProfile profile) {
+    /**
+     * AF-1: what the profile still needs before recommendations can use it (UserProfile.isComplete).
+     * DC-74: without PSLE data the PSLE score and posting group are not needed.
+     */
+    private static List<String> missingProfileFields(UserProfile profile, boolean psleData) {
         List<String> missing = new ArrayList<>();
-        if (profile.getPsleScore() == null) {
+        if (psleData && profile.getPsleScore() == null) {
             missing.add("PSLE score");
         }
-        if (profile.getPostingGroup() == null) {
+        if (psleData && profile.getPostingGroup() == null) {
             missing.add("posting group");
         }
         if (profile.getHomeLocation() == null) {

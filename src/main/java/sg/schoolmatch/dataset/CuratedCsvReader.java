@@ -30,12 +30,16 @@ public class CuratedCsvReader {
     public static final String PSLE_RANGES = "psle-ranges.csv";
     public static final String GEOCODE_OVERRIDES = "geocode-overrides.csv";
     public static final String AFFILIATIONS = "affiliations.csv";
+    public static final String SUBJECT_EXCLUSIONS = "subject-exclusions.csv";
 
     /** {@code psle-ranges.csv} track values (DC-18). */
     public static final String TRACK_NON_AFFILIATED = "NON_AFFILIATED";
     public static final String TRACK_AFFILIATED = "AFFILIATED";
     public static final String TRACK_IP = "IP";
-    private static final Set<String> TRACKS = Set.of(TRACK_NON_AFFILIATED, TRACK_AFFILIATED, TRACK_IP);
+    /** DC-82: an Integrated Programme value in SchoolFinder's "Affiliated" column (only Nanyang Girls' High has one). */
+    public static final String TRACK_IP_AFFILIATED = "IP_AFFILIATED";
+    private static final Set<String> TRACKS = Set.of(TRACK_NON_AFFILIATED, TRACK_AFFILIATED, TRACK_IP,
+            TRACK_IP_AFFILIATED);
 
     private final Path folder;
 
@@ -48,7 +52,7 @@ public class CuratedCsvReader {
     }
 
     /**
-     * Reads all five files. A missing file reads as empty (and is reported).
+     * Reads all six files. A missing file reads as empty (and is reported).
      *
      * @throws IllegalStateException when the folder itself does not exist (wrong working directory)
      */
@@ -71,7 +75,10 @@ public class CuratedCsvReader {
         List<Affiliation> affiliations = rows(AFFILIATIONS, List.of("school_code", "primary_school", "source_url"),
                 problems, r -> new Affiliation(required(r, "school_code"), required(r, "primary_school"),
                         r.get("source_url")));
-        return new CuratedData(codes, aliases, ranges, overrides, affiliations, problems);
+        List<SubjectExclusion> exclusions = rows(SUBJECT_EXCLUSIONS, List.of("school_name", "subject_desc", "reason"),
+                problems, r -> new SubjectExclusion(required(r, "school_name"), required(r, "subject_desc"),
+                        r.get("reason")));
+        return new CuratedData(codes, aliases, ranges, overrides, affiliations, exclusions, problems);
     }
 
     // ------------------------------------------------------------------ rows → records
@@ -243,6 +250,7 @@ public class CuratedCsvReader {
             List<PsleRangeRow> psleRanges,
             List<GeocodeOverride> geocodeOverrides,
             List<Affiliation> affiliations,
+            List<SubjectExclusion> subjectExclusions,
             List<String> problems) {
 
         public CuratedData {
@@ -251,11 +259,15 @@ public class CuratedCsvReader {
             psleRanges = List.copyOf(psleRanges);
             geocodeOverrides = List.copyOf(geocodeOverrides);
             affiliations = List.copyOf(affiliations);
+            subjectExclusions = List.copyOf(subjectExclusions);
             problems = List.copyOf(problems);
         }
     }
 
-    /** {@code school-codes.csv}: data.gov.sg name → MOE SchoolFinder slug. */
+    /**
+     * {@code school-codes.csv}: data.gov.sg name → the app's frozen school code (our own id, a slug of the name made
+     * by {@link NameNormaliser#slug}; not the MOE SchoolFinder slug, which {@code sourceUrl} holds).
+     */
     public record SchoolCodeRow(String schoolName, String schoolCode, String sourceUrl) {
     }
 
@@ -282,5 +294,13 @@ public class CuratedCsvReader {
 
     /** {@code affiliations.csv}: one affiliated primary school of a secondary school (DC-21). */
     public record Affiliation(String schoolCode, String primarySchool, String sourceUrl) {
+    }
+
+    /**
+     * {@code subject-exclusions.csv}: a row of the Subjects Offered dataset that is not a real subject (e.g. a
+     * placeholder such as "Test Subject"), so the importer leaves it out (DC-76). {@code schoolName} and
+     * {@code subjectDesc} are as published; {@code reason} says why and when it was checked.
+     */
+    public record SubjectExclusion(String schoolName, String subjectDesc, String reason) {
     }
 }

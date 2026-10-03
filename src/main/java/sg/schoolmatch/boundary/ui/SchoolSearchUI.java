@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import sg.schoolmatch.boundary.ui.support.FilterParams;
 import sg.schoolmatch.boundary.ui.support.PageMessages;
+import sg.schoolmatch.boundary.ui.support.PsleAvailability;
 import sg.schoolmatch.boundary.ui.support.ReferenceLocationStore;
 import sg.schoolmatch.boundary.ui.support.SearchFilterPipeline;
 import sg.schoolmatch.boundary.ui.support.SessionCookie;
@@ -19,6 +20,7 @@ import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.control.FilterController;
 import sg.schoolmatch.control.ProfileController;
 import sg.schoolmatch.control.SchoolController;
+import sg.schoolmatch.control.SchoolDataController;
 import sg.schoolmatch.entity.location.ReferenceLocation;
 import sg.schoolmatch.entity.school.IndicativePsleScoreRange;
 import sg.schoolmatch.entity.school.School;
@@ -44,7 +46,8 @@ import sg.schoolmatch.error.InvalidInputException;
  * {@code schools} (this page), {@code totalCount}, {@code page}, {@code totalPages}, {@code baseUrl}, {@code chips},
  * {@code notAppliedChips}, {@code clearAllUrl}, {@code filterUrl}, {@code mapUrl}, {@code sortOrder}, {@code sortOptions} and, when they
  * apply, {@code fieldErrors} (filter input), {@code sortMessage}, {@code flashError} (travel time unavailable),
- * {@code activeFilters}, {@code noPsleDataCount}, {@code pgHint}, {@code startLocation} and the card extras
+ * {@code activeFilters}, {@code noPsleDataCount}, {@code pgHint}, {@code psleNotApplied} (DC-74: the URL has a PSLE
+ * score but the dataset has no ranges), {@code startLocation} and the card extras
  * {@code cardDistanceKm}, {@code cardCommuteMin}, {@code cardCommuteMode}, {@code cardRanges}
  * (see {@code fragments/school-summary-card.html}).
  */
@@ -60,10 +63,11 @@ public class SchoolSearchUI {
     private final int pageSize;
 
     public SchoolSearchUI(SchoolController schoolController, FilterController filterController,
-                          ProfileController profileController, ReferenceLocationStore locationStore,
-                          SessionCookie sessionCookie, AppProperties props) {
+                          ProfileController profileController, SchoolDataController schoolDataController,
+                          ReferenceLocationStore locationStore, SessionCookie sessionCookie, AppProperties props) {
         this.schoolController = schoolController;
-        this.filterPipeline = new SearchFilterPipeline(filterController, profileController, sessionCookie);
+        this.filterPipeline = new SearchFilterPipeline(filterController, profileController, sessionCookie,
+                () -> PsleAvailability.available(schoolDataController));   // DC-74
         this.locationStore = locationStore;
         this.pageSize = props.search().pageSize();
     }
@@ -150,6 +154,7 @@ public class SchoolSearchUI {
         model.addAttribute("sortOptions", sortOptions(params, results, start));
         model.addAttribute("startLocation", start);
         model.addAttribute("noPsleDataCount", results.getHiddenWithoutPsleData());
+        model.addAttribute("psleNotApplied", filtered.psleNotApplied());   // DC-74: the reason under "Not applied"
         if (params.usesDefaultPostingGroup()) {
             model.addAttribute("pgHint", FilterParams.DEFAULT_PG_HINT);
         }
@@ -177,6 +182,7 @@ public class SchoolSearchUI {
                             .ifPresent(range -> ranges.put(school.getSchoolCode(), range));
                 }
                 model.addAttribute("cardRanges", ranges);
+                model.addAttribute("pslePostingGroup", psle.getPostingGroup());   // "no PSLE range for PG3"
             }
         }
     }

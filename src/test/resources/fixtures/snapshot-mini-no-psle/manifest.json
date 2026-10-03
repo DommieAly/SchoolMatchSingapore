@@ -1,0 +1,47 @@
+{
+  "kind": "seed",
+  "version": "0000-seed-no-psle",
+  "effectiveDate": "2026-09-30",
+  "importedAt": "2026-09-30T08:07:34Z",
+  "sources": [
+    {
+      "name": "data.gov.sg General information of schools",
+      "datasetId": "d_688b934f82c1059ed0a6993d2a829089",
+      "downloadedAt": "2026-09-30T08:06:15Z"
+    },
+    {
+      "name": "data.gov.sg Co-curricular activities (CCAs)",
+      "datasetId": "d_9aba12b5527843afb0b2e8e4ed6ac6bd",
+      "downloadedAt": "2026-09-30T08:07:15Z"
+    },
+    {
+      "name": "data.gov.sg Subjects Offered",
+      "datasetId": "d_f1d144e423570c9d84dbc5102c2e664d",
+      "downloadedAt": "2026-09-30T08:07:15Z"
+    },
+    {
+      "name": "data.gov.sg Master Plan 2019 Planning Area Boundary",
+      "datasetId": "d_4765db0e87b9c86336792efe8a1f7a66",
+      "downloadedAt": "2026-09-30T08:07:20Z"
+    },
+    {
+      "name": "OneMap search (coordinates by postal code)",
+      "datasetId": "onemap-elastic-search",
+      "downloadedAt": "2026-09-30T08:07:34Z"
+    }
+  ],
+  "validationStatus": "PASSED_WITH_WARNINGS",
+  "warnings": [
+    "Test fixture (DC-74): a copy of snapshot-mini with every scoreRanges list emptied, like a full snapshot built before data/curated/psle-ranges.csv has checked rows",
+    "schoolCode slugs derived from names; verify against MOE SchoolFinder URLs",
+    "email of jurong-west-secondary-school set to null on purpose (exercises 'Not available'); data.gov.sg has one",
+    "affiliatedPrimarySchools and ipRangeNote left empty; curated later (data/curated/)",
+    "programmes = subjects offered (data.gov.sg d_f1d144e423570c9d84dbc5102c2e664d)"
+  ],
+  "counts": {
+    "schools": 10,
+    "districts": 3,
+    "scoreRanges": 0
+  },
+  "notes": "No PSLE ranges: every scoreRanges list is empty (DC-74 test fixture)."
+}

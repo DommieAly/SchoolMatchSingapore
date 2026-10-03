@@ -10,7 +10,7 @@
     </body>
 
   Model attributes come from LayoutModelAdvice: loggedIn, userName (when logged in), datasetLabel, seedData,
-  dataAccessedOn, googleStub, mapsBrowserKey, mapId, currentPath.
+  psleDataAvailable and noPsleDataMessage (DC-74), dataAccessedOn, googleStub, mapsBrowserKey, mapId, currentPath.
   Bootstrap 5.3.8 is loaded from jsdelivr with Subresource Integrity hashes.
 */-->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
@@ -91,6 +91,8 @@
         </div>
         <div class="text-body-secondary">
             School data: <a href="https://data.gov.sg" rel="noopener" target="_blank">data.gov.sg</a> (Ministry of Education)
+            <th:block th:if="${psleDataAvailable != false and seedData != true}">· PSLE ranges and affiliations:
+                <a href="https://www.moe.gov.sg/schoolfinder" rel="noopener" target="_blank">MOE SchoolFinder</a></th:block>
             · Address search: <a href="https://www.onemap.gov.sg" rel="noopener" target="_blank">OneMap</a> (Singapore Land Authority)
             · Maps and routes: Google Maps Platform
             · <a th:href="@{/about/data}" href="/about/data">About the data</a>

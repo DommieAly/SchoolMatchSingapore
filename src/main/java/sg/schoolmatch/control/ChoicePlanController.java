@@ -3,7 +3,6 @@ package sg.schoolmatch.control;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -148,9 +147,11 @@ public class ChoicePlanController {
     /**
      * Risk warnings for a plan from {@link #getPlan} (FR-PLAN-02; rules in docs/recommendation-scoring.md §4):
      * the plan's own warnings, plus one when the profile's score or posting group changed after the plan was made.
+     * DC-74: when the dataset has no PSLE ranges ({@link SchoolDataController#hasPsleData()}), the range-based
+     * warnings are one note instead ({@link ChoicePlan#NO_PSLE_DATA_WARNING}).
      */
     public List<String> assessPlan(ChoicePlan plan) {
-        List<String> warnings = new ArrayList<>(plan.getRiskWarnings());
+        List<String> warnings = new ArrayList<>(plan.getRiskWarnings(schoolDataController.hasPsleData()));
         if (plan.isOutdated()) {
             warnings.add(profileChangedWarning(plan));
         }
@@ -215,19 +216,11 @@ public class ChoicePlanController {
     }
 
     /**
-     * DC-22: true when the member's primary school is one of the school's affiliated primary schools.
-     * Names are compared ignoring case and extra spaces, because the profile field is free text.
+     * DC-22: true when the member's primary school is one of the school's affiliated primary schools. The name rule
+     * is {@link School#hasAffiliatedPrimarySchool} (shared with search and recommendations).
      */
     private static boolean isAffiliated(School school, String primarySchool) {
-        if (primarySchool == null || primarySchool.isBlank()) {
-            return false;
-        }
-        String wanted = normalise(primarySchool);
-        return school.getAffiliatedPrimarySchools().stream().anyMatch(name -> normalise(name).equals(wanted));
-    }
-
-    private static String normalise(String name) {
-        return name.strip().replaceAll("\\s+", " ").toUpperCase(Locale.ROOT);
+        return school.hasAffiliatedPrimarySchool(primarySchool);
     }
 
     private static Integer scoreOf(UserProfile profile) {

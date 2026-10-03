@@ -89,6 +89,7 @@ class ChoicePlanControllerTest {
         profile.setPostingGroup(3);
         lenient().when(shortlistController.getShortlist(SESSION)).thenReturn(shortlist);
         lenient().when(profileController.getProfile(SESSION)).thenReturn(profile);
+        lenient().when(schoolDataController.hasPsleData()).thenReturn(true);   // DC-74: ranges unless a test says not
         lenient().when(schoolDataController.getSchools())
                 .thenReturn(List.of(catholic, huaYi, jurongWest, kuoChuan, peirce, tampines, westwood));
         // save() returns a copy without the transient school data, like Hibernate's merge
@@ -189,6 +190,19 @@ class ChoicePlanControllerTest {
         profile.setPrimarySchool("Other Primary School");
         assertThat(choicePlanController.getPlan(SESSION).getAdmissionChance(plan.getChoices().getFirst()))
                 .isEqualTo(AdmissionChance.REACH);                                 // 18 vs U = 17
+    }
+
+    @Test
+    @Tag("FR-PLAN-01")
+    @DisplayName("TC-ChoicePlanController-06b: the affiliation check uses School.hasAffiliatedPrimarySchool, so punctuation does not matter")
+    void getPlan_affiliationIgnoresPunctuation() {
+        shortlist.setChoicePlan(planWith(18, 3, kuoChuan, peirce));
+        profile.setPsleScore(18);
+        profile.setPrimarySchool("Kuo-Chuan Presbyterian Primary School.");
+
+        ChoicePlan plan = choicePlanController.getPlan(SESSION);
+
+        assertThat(plan.getChoices()).extracting(SchoolChoice::isAffiliated).containsExactly(true, false);
     }
 
     @Test
@@ -392,6 +406,38 @@ class ChoicePlanControllerTest {
 
         assertInvalid(() -> choicePlanController.useProfileScore(SESSION), "score", ChoicePlanController.NO_SCORE_MESSAGE);
         verify(shortlistRepository, never()).save(any());
+    }
+
+    @Test
+    @Tag("FR-PLAN-02")
+    @Tag("DC-74")
+    @DisplayName("TC-ChoicePlanController-23: without PSLE data assessPlan gives one note instead of the range warnings")
+    void assessPlan_noPsleData() {
+        when(schoolDataController.hasPsleData()).thenReturn(false);
+        shortlist.setChoicePlan(planWith(12, 3, westwood, catholic));
+
+        ChoicePlan plan = choicePlanController.getPlan(SESSION);
+        List<String> warnings = choicePlanController.assessPlan(plan);
+
+        assertThat(warnings).containsExactly(ChoicePlan.NO_PSLE_DATA_WARNING,
+                "You have 2 of 6 choices. Fill all 6 to lower the risk of being posted to a school you did not choose.");
+        assertThat(warnings).doesNotContain(ChoicePlan.NO_SAFE_WARNING);
+    }
+
+    @Test
+    @Tag("FR-PLAN-01")
+    @Tag("DC-74")
+    @DisplayName("TC-ChoicePlanController-24: without PSLE data choices can still be added, moved and removed")
+    void editPlan_noPsleData() {
+        lenient().when(schoolDataController.hasPsleData()).thenReturn(false);   // editing does not ask
+        shortlist.setChoicePlan(planWith(12, 3, westwood));
+
+        choicePlanController.addChoice(SESSION, "catholic-high-school", 1);
+        choicePlanController.reorderChoices(SESSION, 1, 2);
+        choicePlanController.removeChoice(SESSION, "westwood-secondary-school");
+
+        assertThat(shortlist.getChoicePlan().getChoices()).extracting(SchoolChoice::getSchoolCode)
+                .containsExactly("catholic-high-school");
     }
 
     private static ChoicePlan planWith(Integer score, Integer postingGroup, School... schools) {

@@ -23,7 +23,7 @@ import sg.schoolmatch.entity.common.Place;
  */
 public class School extends Place {
 
-    private final String schoolCode;          // MOE SchoolFinder slug, e.g. "catholic-high-school"
+    private final String schoolCode;          // our own id: a slug of the name, frozen in data/curated/school-codes.csv
     private String schoolType;
     private String planningArea;              // planning-area NAME, e.g. "BISHAN"
     private String email;
@@ -35,37 +35,107 @@ public class School extends Place {
     private final Set<String> ccas = new LinkedHashSet<>();
     private final List<IndicativePsleScoreRange> scoreRanges = new ArrayList<>();
     private final Set<String> affiliatedPrimarySchools = new LinkedHashSet<>();   // DC-21
-    private String ipRangeNote;                                                   // DC-18
+    private String ipRangeNote;                                                   // DC-18 (MOE text of IP ranges)
 
     public School(String schoolCode, String name) {
         super(name);
         this.schoolCode = schoolCode;
     }
 
-    /** Case-insensitive substring match on the name only (FR-SEARCH-02). {@code term} is already trimmed. */
+    /**
+     * Case-insensitive partial match on the name only (FR-SEARCH-02). {@code term} is already trimmed.
+     * <p>
+     * DC-75: a plain substring match first; otherwise both sides are compared without punctuation
+     * ({@link #plainName}) and every word of the term must appear in the name. So "st andrews" finds
+     * "ST ANDREW'S SCHOOL (SECONDARY)", "St. Andrew" finds it too, "chij toa payoh" finds "CHIJ SECONDARY (TOA
+     * PAYOH)", and "government" finds "BUKIT PANJANG GOVT. HIGH SCHOOL".
+     */
     public boolean matchesName(String term) {
         if (term == null || getName() == null) {
             return false;
         }
-        return getName().toLowerCase(Locale.ROOT).contains(term.toLowerCase(Locale.ROOT));
+        if (getName().toLowerCase(Locale.ROOT).contains(term.toLowerCase(Locale.ROOT))) {
+            return true;
+        }
+        String plainTerm = plainName(term);
+        if (plainTerm.isEmpty()) {
+            return false;
+        }
+        String plain = plainName(getName());
+        for (String word : plainTerm.split(" ")) {
+            if (!plain.contains(word)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
-     * The applicable range for a student (DC-21, DC-22): the latest admission year among ranges of
+     * DC-75: a name or search term for comparing: lower case, apostrophes and dots dropped ("ST. ANDREW'S" →
+     * "st andrews"), every other run of non-letters and non-digits read as one space, and the word "govt" read as
+     * "government" (the dataset writes "GOVT.").
+     */
+    static String plainName(String text) {
+        String plain = text.toLowerCase(Locale.ROOT)
+                .replaceAll("['\u2018\u2019`.]", "")
+                .replaceAll("[^\\p{L}\\p{N}]+", " ")
+                .trim();
+        return plain.replaceAll("\\bgovt\\b", "government");
+    }
+
+    /** DC-77: MOE SchoolFinder files Integrated Programme ranges under posting group 3. */
+    public static final int IP_POSTING_GROUP = 3;
+
+    /**
+     * The applicable range for a student (DC-21, DC-22): the latest admission year among the non-IP ranges of
      * {@code postingGroup} with the given affiliation. When {@code affiliated} is true but the school
      * has no affiliated range for that posting group, falls back to the non-affiliated range (DC-22).
+     * DC-77: when {@code postingGroup} is 3 and the school has <em>no</em> non-IP PG3 range at all (the 8 IP-only
+     * schools), the latest Integrated Programme range is used instead; a school with any non-IP PG3 range (even only
+     * an affiliated one) never uses its IP range. DC-82: among the IP ranges the same affiliation rule applies (an
+     * affiliated student gets the affiliated IP range when there is one).
      * Empty when no range applies ("Not available"; DC-29: Optional instead of null).
      */
     public Optional<IndicativePsleScoreRange> getScoreRange(int postingGroup, boolean affiliated) {
-        Optional<IndicativePsleScoreRange> match = latestRange(postingGroup, affiliated);
+        Optional<IndicativePsleScoreRange> match = latestRange(postingGroup, affiliated, false);
         if (match.isEmpty() && affiliated) {
-            match = latestRange(postingGroup, false);
+            match = latestRange(postingGroup, false, false);
+        }
+        boolean hasNonIpPg3Range = scoreRanges.stream()
+                .anyMatch(r -> !r.isIntegratedProgramme() && r.getPostingGroup() == IP_POSTING_GROUP);
+        if (match.isEmpty() && postingGroup == IP_POSTING_GROUP && !hasNonIpPg3Range) {
+            match = latestRange(IP_POSTING_GROUP, affiliated, true);
+            if (match.isEmpty() && affiliated) {
+                match = latestRange(IP_POSTING_GROUP, false, true);
+            }
         }
         return match;
     }
 
-    private Optional<IndicativePsleScoreRange> latestRange(int postingGroup, boolean affiliated) {
+    /**
+     * DC-22, DC-40: true when {@code primarySchool} (the member's profile field, free text) names one of this school's
+     * affiliated primary schools. The one name rule for search, the choice plan and recommendations: names are
+     * compared by {@link #plainName} (case, spaces, dots, apostrophes and brackets ignored) and a trailing
+     * "(Primary)" is ignored, because data.gov.sg calls e.g. MOE's "Catholic High School (Primary)" just
+     * "CATHOLIC HIGH SCHOOL". Words are never guessed: "Catholic High" does not match. Null or blank → false.
+     */
+    public boolean hasAffiliatedPrimarySchool(String primarySchool) {
+        String wanted = primarySchoolKey(primarySchool);
+        return !wanted.isEmpty()
+                && affiliatedPrimarySchools.stream().anyMatch(name -> primarySchoolKey(name).equals(wanted));
+    }
+
+    /** "CHIJ St. Nicholas Girls' School (Primary)" → "chij st nicholas girls school"; null → "". */
+    private static String primarySchoolKey(String name) {
+        if (name == null) {
+            return "";
+        }
+        return plainName(name).replaceAll("(^| )primary$", "").trim();
+    }
+
+    private Optional<IndicativePsleScoreRange> latestRange(int postingGroup, boolean affiliated, boolean ip) {
         return scoreRanges.stream()
+                .filter(r -> r.isIntegratedProgramme() == ip)
                 .filter(r -> r.getPostingGroup() == postingGroup && r.isAffiliated() == affiliated)
                 .max(Comparator.comparingInt(IndicativePsleScoreRange::getAdmissionYear));
     }

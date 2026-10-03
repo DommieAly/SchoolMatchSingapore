@@ -106,6 +106,37 @@ class SnapshotValidatorTest {
                 .hasError(SnapshotValidator.BAD_PSLE_RANGE)).isTrue();
     }
 
+    @Test
+    @Tag("NFR-DATA-03")
+    @DisplayName("TC-SnapshotValidator-07: an IP range (PG3, non-affiliated) may sit next to a PG3 range of the same year; two IP ranges of one year are duplicates")
+    void integratedProgrammeRanges() {
+        ScoreRangeRecord pg3 = new ScoreRangeRecord(2025, 3, false, 6, 8);
+        ScoreRangeRecord ip = new ScoreRangeRecord(2025, 3, false, 4, 7, true);
+
+        assertThat(validateWithFirst(withRanges(first(), List.of(pg3, ip))).getErrors()).isEmpty();
+        assertThat(validateWithFirst(withRanges(first(), List.of(ip))).getErrors()).isEmpty();
+        assertThat(validateWithFirst(withRanges(first(), List.of(ip, new ScoreRangeRecord(2025, 3, false, 4, 6, true))))
+                .hasError(SnapshotValidator.DUPLICATE_PSLE_RANGE)).isTrue();
+        // An IP range is used only as the PG3 fallback, so another posting group is a typo.
+        assertThat(validateWithFirst(withRanges(first(), List.of(new ScoreRangeRecord(2025, 2, false, 4, 7, true))))
+                .hasError(SnapshotValidator.BAD_PSLE_RANGE)).isTrue();
+    }
+
+    @Test
+    @Tag("NFR-DATA-03")
+    @DisplayName("TC-SnapshotValidator-08: an affiliated IP range may sit next to the non-affiliated one (DC-82); two affiliated IP ranges of one year are duplicates")
+    void affiliatedIntegratedProgrammeRanges() {
+        ScoreRangeRecord ip = new ScoreRangeRecord(2025, 3, false, 4, 6, true);
+        ScoreRangeRecord ipAffiliated = new ScoreRangeRecord(2025, 3, true, 4, 8, true);
+
+        assertThat(validateWithFirst(withRanges(first(), List.of(ip, ipAffiliated))).getErrors()).isEmpty();
+        assertThat(validateWithFirst(withRanges(first(), List.of(ipAffiliated,
+                new ScoreRangeRecord(2025, 3, true, 4, 7, true)))).hasError(SnapshotValidator.DUPLICATE_PSLE_RANGE))
+                .isTrue();
+        assertThat(validateWithFirst(withRanges(first(), List.of(new ScoreRangeRecord(2025, 1, true, 4, 8, true))))
+                .hasError(SnapshotValidator.BAD_PSLE_RANGE)).isTrue();
+    }
+
     private SchoolRecord first() {
         return mini.records().get(0);
     }

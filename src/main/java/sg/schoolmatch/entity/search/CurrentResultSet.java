@@ -159,7 +159,7 @@ public class CurrentResultSet {
 
     /**
      * After {@link #applyFilters()}: how many schools passed every other filter but were left out because a PSLE
-     * filter found no range for them (page: "N schools have no PSLE data and are hidden").
+     * filter found no range for them (page: "N schools have no PSLE range for PG3 and are hidden").
      */
     public int getHiddenWithoutPsleData() {
         return hiddenWithoutPsleData;

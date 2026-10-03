@@ -2,6 +2,8 @@ package sg.schoolmatch.boundary.ui;
 
 import java.util.Arrays;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +17,7 @@ import sg.schoolmatch.control.SchoolController;
 import sg.schoolmatch.entity.facility.Facility;
 import sg.schoolmatch.entity.facility.FacilityType;
 import sg.schoolmatch.entity.school.School;
+import sg.schoolmatch.error.ExternalFailureLog;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.NotFoundException;
 
@@ -29,6 +32,8 @@ public class FacilityDetailsUI {
 
     static final String UNAVAILABLE_MESSAGE = "Facility details are temporarily unavailable. "
             + "Please try again in a few minutes.";
+
+    private static final Logger log = LoggerFactory.getLogger(FacilityDetailsUI.class);
 
     private final FacilityController facilityController;
     private final SchoolController schoolController;   // DC-37-style arrow: the school in "from" (distance, back link)
@@ -65,6 +70,7 @@ public class FacilityDetailsUI {
                                 school.getName()));
             }
         } catch (ExternalServiceUnavailableException e) {
+            ExternalFailureLog.warn(log, "Facility details", e);
             model.addAttribute("serviceUnavailable", true);
             model.addAttribute(PageMessages.FLASH_ERROR, UNAVAILABLE_MESSAGE);
         }

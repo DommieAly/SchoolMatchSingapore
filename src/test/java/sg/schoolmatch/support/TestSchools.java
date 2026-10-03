@@ -154,6 +154,13 @@ public final class TestSchools {
             return this;
         }
 
+        /** Adds an Integrated Programme range (DC-77: PG3, non-affiliated, IP). */
+        public Builder ipRange(int admissionYear, int lowerScore, int upperScore) {
+            ranges.add(new IndicativePsleScoreRange(admissionYear, School.IP_POSTING_GROUP, false,
+                    lowerScore, upperScore, true));
+            return this;
+        }
+
         public School build() {
             School school = new School(schoolCode, name);
             school.setCoordinate(coordinate);

@@ -1,12 +1,12 @@
 # SchoolMatch SG
 
-SchoolMatch SG helps Primary 6 students and their parents in Singapore choose secondary schools. You can search and filter the 140-plus secondary schools, see them on a map with planning-area boundaries, read each school's details and past PSLE score ranges, find libraries and tuition centres nearby, and get directions. After logging in you can keep a shortlist, compare schools, plan your 6 school choices with SAFE / MATCH / REACH labels, and get recommendations. It is our SC2006 (Software Engineering) team project, built from the Lab 2 design in [`docs/design/`](docs/design/).
+SchoolMatch SG helps Primary 6 students and their parents in Singapore choose secondary schools. You can search and filter the 140-plus secondary schools, see them on a map with planning-area boundaries, read each school's details with its past (2025) PSLE score ranges, find libraries and tuition centres nearby, and get directions. After logging in you can keep a shortlist, compare schools, plan your 6 school choices with SAFE / MATCH / REACH labels, and get recommendations. It is our SC2006 (Software Engineering) team project, built from the Lab 2 design in [`docs/design/`](docs/design/).
 
 Milestones: prototype in week 9 (12–16 Oct 2026), demo in week 11 (26–30 Oct 2026).
 
-## Current state (2 Oct 2026)
+## Current state (3 Oct 2026)
 
-Every page of the dialog map is built, and `./mvnw verify` runs about 960 tests. The app runs on the 10-school seed dataset.
+Every page of the dialog map is built, and `./mvnw verify` runs about 1,050 tests. The app runs on real data: 147 secondary schools from data.gov.sg with OneMap coordinates, plus the 2025 PSLE score ranges (139 schools) and affiliated primary schools (27 schools) from MOE SchoolFinder, in `data/curated/`. `data/snapshots/ACTIVE` names the snapshot the app loads; [`data/README.md`](data/README.md) describes it.
 
 **What works now:**
 
@@ -16,15 +16,18 @@ Every page of the dialog map is built, and `./mvnw verify` runs about 960 tests.
 - Nearby libraries and tuition centres (list, filter, details, map) and directions to a school or a facility (walk, drive, public transport).
 - Shortlist, compare 2–4 schools, the 6-choice plan with SAFE / MATCH / REACH labels and warnings, and recommendations with a reason for every factor.
 - "About the data" (`/about/data`, footer link) and a health check at `/actuator/health`.
-- The dataset importer (`import` profile). A dry run on 2 Oct 2026 built 147 schools with 0 errors (see [`data/README.md`](data/README.md)).
+- The dataset importer (`import` profile). It built the active snapshot on 3 Oct 2026: 147 schools, 0 errors (see [`data/README.md`](data/README.md)).
 
-**What is still stub or test data:**
+**What is still open, stub or test data:**
 
-- **PSLE ranges are TEST VALUES.** The seed's ranges are made up, and every page that shows them says so. Real ranges wait for the TA to approve using MOE SchoolFinder data (`data/curated/psle-ranges.csv` is empty).
-- **Only the 10-school seed is active** (`data/snapshots/ACTIVE` = `0000-seed`). No full snapshot is committed yet: the OneMap terms, the MOE school codes and the PSLE ranges are still open. A full snapshot without ranges would hide every school from the PSLE filter and from recommendations.
+- **MOE SchoolFinder data: the TA is still to be informed.** The lead approved using it on 3 Oct 2026. If the TA says no, `psle-ranges.csv` and `affiliations.csv` are emptied and the data imported again; every page still works without ranges (DC-74).
+- **8 schools have no PSLE range**: the specialised schools that admit students through their own process (e.g. NUS High, School of the Arts). Their ranges show "Not available". 8 Integrated Programme schools (e.g. Raffles Institution) have only an IP range, which the app uses as their PG3 range and marks "IP" (DC-77); their PG1 and PG2 show "Not available" ([`data/README.md`](data/README.md), MOE SchoolFinder data).
+- The old 10-school seed with made-up TEST VALUE ranges stays in `data/snapshots/0000-seed` and as the test fixture.
+- **DC-74 to DC-82 wait for team approval** ([`docs/design-changes.md`](docs/design-changes.md)). DC-75 (school name search ignores punctuation and word order) changes search for every dataset, the seed included, not only what the missing PSLE data needs; every search that matched before still matches. It can go into its own PR if the team wants to review it separately.
+- **The OneMap Terms of Use question is still open** (clause 3 against the licence page; see [`data/README.md`](data/README.md), Licences).
 - **Google runs in stub mode.** Routes are straight lines with three "(stub)" steps, and facilities are made-up "(stub)" places. The live Google code follows Google's REST reference and is tested against a mock server, but it has never run with a real key. Without a browser key, map pages show "Map unavailable"; the lists beside the maps still work.
 - **OneMap runs in stub mode by default.** The stub answers only `579767`, `catholic high school` and `bishan`; set `ONEMAP_MODE=live` for real address search.
-- **The Google free-tier numbers are not confirmed.** The daily limits in `app.external.budget.monthly-free` still need a check in Google Cloud Console.
+- **Google daily limits.** The amounts in `app.external.budget.monthly-free` are Google's free usage (checked 3 Oct 2026, DC-79). The Routes counters allow 266 elements per day, and the budget day ends at midnight Pacific Time (15:00 or 16:00 in Singapore, DC-80). One island-wide TRANSIT travel-time filter needs up to 147 route-matrix elements, so about one fits per day; a request that does not fit is refused before anything is sent, so it uses up none of the day's elements (DC-63), and the terminal shows one WARN line saying why (DC-81, [`docs/google-maps-setup.md`](docs/google-maps-setup.md)).
 
 ## Stack
 
@@ -67,7 +70,7 @@ Clone the repo into a normal folder, **not** one synced by iCloud, OneDrive or D
    git clone https://github.com/DommieAly/SchoolMatchSingapore.git
    cd SchoolMatchSingapore
    ```
-4. Create your local settings file (it will hold keys, so git ignores it):
+4. Create your local settings file (it will hold keys, so git ignores it; you can leave it as copied, since stub mode needs no key. Key holders fill it in with [`docs/google-maps-setup.md`](docs/google-maps-setup.md)):
    ```zsh
    cp .env.example .env
    ```
@@ -102,7 +105,7 @@ Clone the repo into a normal folder, **not** one synced by iCloud, OneDrive or D
    git clone https://github.com/DommieAly/SchoolMatchSingapore.git
    cd SchoolMatchSingapore
    ```
-4. Create your local settings file:
+4. Create your local settings file (you can leave it as copied, since stub mode needs no key; key holders fill it in with [`docs/google-maps-setup.md`](docs/google-maps-setup.md)):
    ```powershell
    Copy-Item .env.example .env
    ```
@@ -207,7 +210,7 @@ Every design class keeps its **exact Lab 2 name**. Spring calls its web classes 
 | [`docs/requirements.csv`](docs/requirements.csv) | every FR/NFR id with its use case, dialog-map states, UI class, control method and owner |
 | [`docs/routes.md`](docs/routes.md) | dialog-map state → URL → UI class → template, and every transition |
 | [`docs/recommendation-scoring.md`](docs/recommendation-scoring.md) | PSLE range rules, SAFE / MATCH / REACH, plan warnings, recommendation scores |
-| [`data/README.md`](data/README.md) | data sources, licences, the seed snapshot, curation rules |
+| [`data/README.md`](data/README.md) | data sources, licences, the active snapshot, school codes, curation rules |
 | `src/test/resources/testcases/TC-*.csv` | Lab 4 test-case tables (header `tc_id,requirement,technique,input,expected`). Each one is read by the tests of its area, e.g. `TC-SEARCH.csv` by `SchoolControllerTest`, `TC-FILTER.csv` by `FilterFlowTest` |
 | Example tests to copy | `CoordinateTest` (plain JUnit), `SchoolControllerTest` (Mockito), `SchoolSearchUITest` (MockMvc), `SearchFlowTest` (whole app), `ShortlistRepositoryTest` (`@DataJpaTest`, save and reload), `GoogleRoutesApiTest` (`MockRestServiceServer`), `PagesSmokeTest` (every GET route, guest and member; log in with `support/TestMembers`), `ArchitectureTest` |
 
@@ -230,11 +233,12 @@ Every design class keeps its **exact Lab 2 name**. Spring calls its web classes 
 
 ## Google keys and external services
 
+- **Setting up Google (key owner):** follow [`docs/google-maps-setup.md`](docs/google-maps-setup.md), step by step: the Google Cloud project, the three APIs, the two keys and their restrictions, daily caps, a budget alert, putting the keys into `.env`, and a two-stage test.
 - **Stub mode is the default.** `GOOGLE_MODE=stub` in `.env` (or an empty value) makes the app use made-up straight-line routes and "(stub)" libraries and tuition centres, with no Google calls, and pages show a "Demo data (stub)" badge. Most teammates never need a key.
 - **Key owner: E (backup A).** The server key (Routes + Places) is held only by E, A and the demo laptop. The browser key (Maps JavaScript) is held by E, D and the demo laptop. Without a browser key, map pages show "Map unavailable" and the list views still work; that is expected.
 - To use live Google (key holders only): put the keys in `.env`, set `GOOGLE_MODE=live`, and restart the app. Live mode without `GOOGLE_MAPS_SERVER_KEY` stops at start-up with a message saying so. Write values without quotes: `.env` is read as a `.properties` file, so quotes become part of the value.
 - **Never commit a key**, and never paste one into an issue, chat, screenshot or code. `.env` is gitignored for this reason. If a key leaks, tell E at once; E deletes it in Google Cloud Console and issues a new one.
-- **Spending limit:** every live Google call first takes from a daily allowance (`ExternalCallBudget`): the monthly free amount × 0.8 ÷ 30 per kind of call, counted per Singapore day in the database. When today's allowance is used up, the page says the service is temporarily unavailable. Stub mode never counts. The free amounts in `application.yml` are still to be confirmed in Cloud Console (owner E).
+- **Spending limit:** every live Google call first takes from a daily allowance (`ExternalCallBudget`): the monthly free amount × 0.8 ÷ 30 per kind of call, counted per budget day in the database; the day ends at midnight Pacific Time, like Google's own daily quotas (`app.external.budget.zone`, DC-80). When today's allowance is used up, the page says the service is temporarily unavailable and the terminal shows one WARN line with the reason (DC-81). Stub mode never counts. The free amounts in `application.yml` were checked against Google's pricing pages on 3 Oct 2026 (DC-79).
 - **OneMap** (address search) is free and needs no key. `OneMapClient` works: set `ONEMAP_MODE=live` in `.env` for real address search. It sends at most one request per second and caches answers for 24 hours. Stub mode answers only a few recorded searches (`src/main/resources/stub/onemap`: `579767`, `catholic high school`, `bishan`). Still open: the OneMap terms on storing coordinates (see [`data/README.md`](data/README.md)).
 - **data.gov.sg** is used only by the dataset importer (`import` profile, see [`data/README.md`](data/README.md)). The running app reads the committed snapshot.
 

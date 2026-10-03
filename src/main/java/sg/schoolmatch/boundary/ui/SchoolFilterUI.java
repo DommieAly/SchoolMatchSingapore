@@ -14,8 +14,10 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import sg.schoolmatch.boundary.ui.support.FilterParams;
 import sg.schoolmatch.boundary.ui.support.PageMessages;
+import sg.schoolmatch.boundary.ui.support.PsleAvailability;
 import sg.schoolmatch.boundary.ui.support.ReferenceLocationStore;
 import sg.schoolmatch.control.FilterController;
+import sg.schoolmatch.control.SchoolDataController;
 import sg.schoolmatch.entity.location.ReferenceLocation;
 import sg.schoolmatch.entity.route.TravelMode;
 import sg.schoolmatch.entity.search.AttributeCategory;
@@ -29,15 +31,20 @@ import sg.schoolmatch.entity.search.TransportationFilter;
  * submits GET /schools with the filter params (confirmFilters); "Clear all" links to /schools?q=… (clearAllFilters).
  * Values the URL holds but the form cannot accept are highlighted (highlightInvalidFields, NFR-USE-03).
  * The starting point comes from {@link ReferenceLocationStore}; D's location picker returns to this page.
+ * DC-74: when the dataset has no PSLE ranges ({@link PsleAvailability}), the PSLE score and posting group are shown
+ * disabled with the reason ({@code psleUnavailableMessage}), and a psle/pg value in the URL is not checked.
  */
 @Controller
 public class SchoolFilterUI {
 
     private final FilterController filterController;
+    private final SchoolDataController schoolDataController;   // DC-74: are there PSLE ranges at all?
     private final ReferenceLocationStore locationStore;
 
-    public SchoolFilterUI(FilterController filterController, ReferenceLocationStore locationStore) {
+    public SchoolFilterUI(FilterController filterController, SchoolDataController schoolDataController,
+                          ReferenceLocationStore locationStore) {
         this.filterController = filterController;
+        this.schoolDataController = schoolDataController;
         this.locationStore = locationStore;
     }
 
@@ -61,6 +68,12 @@ public class SchoolFilterUI {
 
         Map<String, String> errors = new LinkedHashMap<>();
         params.toFilters(start, null, errors);   // only for the messages; /schools builds the real filters
+        boolean psleAvailable = PsleAvailability.available(schoolDataController);
+        if (!psleAvailable) {   // DC-74: the PSLE inputs are disabled, so their values are not checked
+            errors.remove(FilterParams.PSLE);
+            errors.remove(FilterParams.PG);
+            model.addAttribute("psleUnavailableMessage", PsleAvailability.NOT_AVAILABLE_MESSAGE);
+        }
         List<FilterGroup> groups = new ArrayList<>();
         for (AttributeCategory category : AttributeCategory.values()) {
             String param = param(category);
@@ -88,7 +101,7 @@ public class SchoolFilterUI {
         model.addAttribute("returnTo", params.toUrl("/schools/filter"));
         model.addAttribute("clearAllUrl", new FilterParams(params.q(), null, null, null, null, null, null, null,
                 null, null, false, null).toUrl("/schools"));
-        if (params.usesDefaultPostingGroup()) {
+        if (params.usesDefaultPostingGroup() && psleAvailable) {
             model.addAttribute("pgHint", FilterParams.DEFAULT_PG_HINT);
         }
         model.addAttribute("resultsUrl", params.toUrl("/schools"));

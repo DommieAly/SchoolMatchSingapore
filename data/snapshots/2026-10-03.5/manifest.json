@@ -1,0 +1,39 @@
+{
+  "kind" : "full",
+  "version" : "2026-10-03.5",
+  "effectiveDate" : "2026-10-03",
+  "importedAt" : "2026-10-03T15:10:19.380353Z",
+  "sources" : [ {
+    "name" : "data.gov.sg General information of schools",
+    "datasetId" : "d_688b934f82c1059ed0a6993d2a829089",
+    "downloadedAt" : "2026-10-03T15:06:39.574500Z"
+  }, {
+    "name" : "data.gov.sg Co-curricular activities (CCAs)",
+    "datasetId" : "d_9aba12b5527843afb0b2e8e4ed6ac6bd",
+    "downloadedAt" : "2026-10-03T15:07:01.238163Z"
+  }, {
+    "name" : "data.gov.sg Subjects Offered",
+    "datasetId" : "d_f1d144e423570c9d84dbc5102c2e664d",
+    "downloadedAt" : "2026-10-03T15:07:46.655138Z"
+  }, {
+    "name" : "data.gov.sg Master Plan 2019 Planning Area Boundary (No Sea)",
+    "datasetId" : "d_4765db0e87b9c86336792efe8a1f7a66",
+    "downloadedAt" : "2026-10-03T15:07:52.696765Z"
+  }, {
+    "name" : "OneMap search (coordinates by postal code)",
+    "datasetId" : "onemap-elastic-search",
+    "downloadedAt" : "2026-10-03T15:10:19.187134Z"
+  }, {
+    "name" : "SchoolMatch curated CSV files (school codes, name aliases, PSLE ranges, geocode overrides, affiliations, subject exclusions)",
+    "datasetId" : "data/curated",
+    "downloadedAt" : "2026-10-03T15:06:36.236498Z"
+  } ],
+  "validationStatus" : "PASSED_WITH_WARNINGS",
+  "warnings" : [ "cca-join-miss: 2 warnings, e.g. NUS HIGH SCHOOL OF MATHEMATICS AND SCIENCE has no rows in the CCA dataset", "district-mismatch: 2 warnings, e.g. school-of-science-and-technology-singapore is in QUEENSTOWN by its coordinate, but its dgp_code says CLEMENTI", "no-psle-ranges: 8 warnings, e.g. assumption-pathway-school has no PSLE score ranges", "no-ccas: 2 warnings, e.g. nus-high-school-of-mathematics-and-science has no CCAs" ],
+  "counts" : {
+    "scoreRanges" : 444,
+    "schools" : 147,
+    "districts" : 55
+  },
+  "notes" : "PSLE ranges come from data/curated/psle-ranges.csv (MOE SchoolFinder; each value read twice by independent scripts and spot-checked by hand, see data/README.md). They are historical, not a guarantee."
+}

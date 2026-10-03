@@ -1,6 +1,7 @@
 package sg.schoolmatch.config;
 
 import java.time.Duration;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -46,11 +47,17 @@ public record AppProperties(
      * Daily limit of a SKU = floor(monthlyFree × safety ÷ 30), at least 1.
      * {@code monthlyFree} keys are the SKU names in ExternalCallBudget ({@code routes}, {@code route-matrix-elements},
      * {@code places-search}, {@code place-details}, {@code map-loads}); a key that is not set keeps its default.
-     * The defaults are UNVERIFIED placeholders (owner E checks the free tier in Google Cloud Console).
+     * The defaults are Google's free usage per month (checked on Google's pricing page on 2026-10-03; see
+     * docs/google-maps-setup.md). {@code zone}: the time zone of the budget day; the default
+     * {@code America/Los_Angeles} is Google's quota day (daily quotas reset at midnight Pacific Time).
      */
     public record BudgetSettings(
             @DefaultValue("0.8") double safety,
-            Map<String, Integer> monthlyFree) {
+            Map<String, Integer> monthlyFree,
+            @DefaultValue(BudgetSettings.GOOGLE_QUOTA_ZONE) ZoneId zone) {
+
+        /** Google resets daily quotas at midnight Pacific Time. */
+        public static final String GOOGLE_QUOTA_ZONE = "America/Los_Angeles";
 
         public BudgetSettings {
             if (!(safety > 0 && safety <= 1)) {
@@ -68,12 +75,13 @@ public record AppProperties(
                 }
             });
             monthlyFree = Collections.unmodifiableMap(merged);
+            zone = zone == null ? ZoneId.of(GOOGLE_QUOTA_ZONE) : zone;
         }
 
         private static Map<String, Integer> defaultMonthlyFree() {
             Map<String, Integer> free = new LinkedHashMap<>();
-            free.put("routes", 5000);
-            free.put("route-matrix-elements", 5000);
+            free.put("routes", 10000);                  // Compute Routes Essentials
+            free.put("route-matrix-elements", 10000);   // Compute Route Matrix Essentials
             free.put("places-search", 5000);
             free.put("place-details", 1000);
             free.put("map-loads", 10000);
@@ -253,11 +261,12 @@ public record AppProperties(
      * Travel-time filter (FilterController, FR-FILTER-06). {@code maxSpeedKmh}: fastest plausible straight-line speed
      * per travel mode; a school farther than speed × time is left out without asking the routing service (a mode
      * that is not set keeps its default: WALK 6, TRANSIT 45, DRIVE 80). {@code maxRoutedSchools}: at most this many
-     * schools (the nearest) are sent to the routing service per request.
+     * schools (the nearest) are sent to the routing service per request; the default 160 is the most schools a full
+     * snapshot may have ({@code SnapshotValidator.FULL_MAX_SCHOOLS}), so no reachable school is ever left out.
      */
     public record TransportFilterSettings(
             Map<TravelMode, Integer> maxSpeedKmh,
-            @DefaultValue("150") int maxRoutedSchools) {
+            @DefaultValue("160") int maxRoutedSchools) {
 
         public TransportFilterSettings {
             Map<TravelMode, Integer> merged = new EnumMap<>(TravelMode.class);

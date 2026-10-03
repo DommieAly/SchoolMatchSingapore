@@ -1,6 +1,8 @@
 # PSLE ranges, SAFE / MATCH / REACH, plan warnings and recommendation scoring
 
 **Status: proposed — team to confirm** (DC-20, DC-22 in [`design-changes.md`](design-changes.md)).
+
+**Current data:** the active snapshot has the 2025 MOE SchoolFinder ranges for 139 of the 147 schools (lead-approved on 3 Oct 2026, TA to be informed; DC-78). The 8 specialised schools publish no range and show "Not available". The 8 IP-only schools use their IP range for PG3 (DC-77). DC-74 (no PSLE filter, no plan labels, no PSLE fit) applies only if the curated CSVs are emptied again.
 Before accepting, check the rules by hand against 3 real schools. The recommendation numbers are settings under `app.recommendation.*`, so the team can change them without changing code. The plan numbers (SAFE margin, plan size, REACH warning limit) are constants on the entities, because an entity cannot read settings (DC-20). Section 6 lists where each number lives.
 
 PSLE scores here are Achievement Level (AL) totals from 4 to 32. **Lower is better.**
@@ -15,11 +17,13 @@ A school has one `IndicativePsleScoreRange` per admission year, posting group (P
 3. Use the **latest admission year** among those.
 4. No such range → the result is "Not available". Never guess.
 
-Code: `School.getScoreRange(postingGroup, affiliated)`. With `affiliated = true` it falls back to the non-affiliated range when no affiliated range exists.
+Code: `School.getScoreRange(postingGroup, affiliated)`. With `affiliated = true` it falls back to the non-affiliated range when no affiliated range exists. For PG3, when the school has no non-IP PG3 range at all, it uses the school's Integrated Programme range (DC-77), the affiliated IP range for an affiliated student when there is one (DC-82, Nanyang Girls').
+
+Whether the student is affiliated: `School.hasAffiliatedPrimarySchool(primarySchool)` (DC-82), the same rule for search, the plan and recommendations. Names are compared ignoring case, spaces, dots, apostrophes and brackets, and a trailing "(Primary)" is ignored, so "Catholic High School" (data.gov.sg) matches MOE's "Catholic High School (Primary)". Missing words are never guessed.
 
 The **summary card** (search results and shortlist) shows the range the PSLE filter used: the filter's posting group, affiliated or not by the rules above. Without a PSLE filter it shows the non-affiliated PG3 / PG2 / PG1 ranges on one line, also for a logged-in member whose profile has a posting group (the profile is read only when a PSLE score is given, DC-58, DC-67).
 
-Integrated Programme ranges do not fit the affiliated/non-affiliated split; they appear as a text note on the details page (`School.ipRangeNote`, DC-18).
+Integrated Programme ranges usually have no affiliated/non-affiliated split (Nanyang Girls' is the one exception, DC-82). MOE files them under PG3, so a school's IP range is its PG3 range only when it has no other PG3 range (8 IP-only schools); pages mark it "IP" (e.g. "PG3 IP 4–8 (2025)", and the PSLE fit reason "2025 PG3 range IP 4–8"). The details page also keeps MOE's text as a note (`School.ipRangeNote`, DC-18, DC-77).
 
 ## 2. SAFE / MATCH / REACH (DC-20)
 
@@ -44,6 +48,8 @@ The lower bound of the range is not used: a score better than `lowerScore` is st
 
 `PsleScoreFilter` keeps a school when `score ≤ U` for the applicable range, i.e. the SAFE and MATCH schools. Schools with no applicable range are left out.
 
+**No ranges in the dataset (DC-74):** a `psle` in the URL is not turned into a filter, so every school stays. The page lists it under "Not applied" with "PSLE filter not applied: PSLE score ranges are not available in the current dataset", and the filter page disables the PSLE score and posting group inputs with the same note.
+
 Boundary test cases (Lab 4): `score < lowerScore`, `score = lowerScore`, `score = U` (kept), `score = U + 1` (dropped); a guest gets the non-affiliated range; a logged-in affiliated user gets the affiliated range.
 
 ## 4. Plan warnings
@@ -58,9 +64,13 @@ Boundary test cases (Lab 4): `score < lowerScore`, `score = lowerScore`, `score 
 | A choice has no range data | "<school>: no PSLE range data, so no SAFE/MATCH/REACH label." |
 | `basedOnScore` differs from the profile's PSLE score | "This plan was made for a score of X, but your profile now says Y." (read through `ProfileController`, DC-14) |
 
+**No ranges in the dataset (DC-74):** every choice shows "Not available", and the three range rules (no SAFE, more than 3 REACH, a choice without range data) are replaced by one note, `ChoicePlan.NO_PSLE_DATA_WARNING`: "PSLE score ranges are not available yet, so no choice has a SAFE/MATCH/REACH label and the plan check cannot use them." The "N of 6 choices" warning stays. Code: `ChoicePlan.getRiskWarnings(boolean psleData)`.
+
 ## 5. Recommendations (`RecommendationController.recommend`)
 
-**Candidates:** schools that have a range for the student's posting group. Until more ranges are curated this is about 40 schools, and the results page says so.
+**Candidates:** schools that have a range for the student's posting group.
+
+**No ranges in the dataset (DC-74):** every school is a candidate, `PSLE_FIT` gets weight 0 (the other weights are rescaled, as for a factor without a preference), and every result's reasons include "PSLE fit not used: no score ranges in the current dataset" (`RecommendationController.PSLE_FIT_NOT_USED`). The PSLE score and posting group become optional, but are still checked when given. The criteria and results pages show PSLE fit as "not used".
 
 **Factor scores** (each from 0 to 1, stored as a `ScoreComponent` with a reason):
 

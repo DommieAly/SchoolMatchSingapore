@@ -4,6 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sg.schoolmatch.entity.account.Account;
@@ -11,6 +13,7 @@ import sg.schoolmatch.entity.account.UserProfile;
 import sg.schoolmatch.entity.common.Coordinate;
 import sg.schoolmatch.entity.location.ReferenceLocation;
 import sg.schoolmatch.entity.search.TransportationFilter;
+import sg.schoolmatch.error.ExternalFailureLog;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
 import sg.schoolmatch.persistence.UserProfileRepository;
@@ -36,6 +39,8 @@ public class ProfileController {
             "Address search is temporarily unavailable. Try again later, or leave the address blank.";
     public static final String COMMUTE_MESSAGE = "Choose 15, 30, 45 or 60 minutes";
     public static final String TRAVEL_MODE_MESSAGE = "Choose walk, drive or public transport";
+
+    private static final Logger log = LoggerFactory.getLogger(ProfileController.class);
 
     private static final int DISPLAY_NAME_MAX = 50;
     private static final int PRIMARY_SCHOOL_MAX = 100;
@@ -144,6 +149,7 @@ public class ProfileController {
         try {
             candidates = locationController.findCandidates(address);
         } catch (ExternalServiceUnavailableException e) {
+            ExternalFailureLog.warn(log, "Home address search", e);
             throw new InvalidInputException("homeAddress", ADDRESS_UNAVAILABLE_MESSAGE);
         } catch (InvalidInputException e) {
             throw new InvalidInputException("homeAddress", e.getFieldErrors().values().iterator().next());

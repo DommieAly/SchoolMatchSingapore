@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.TreeMap;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -28,6 +29,9 @@ public class HomeUI {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH);
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Locale.ENGLISH);
 
+    /** Dataset id prefix of the OneMap source in a manifest (e.g. {@code onemap-elastic-search}). */
+    static final String ONEMAP_SOURCE_PREFIX = "onemap";
+
     private final SchoolDataController schoolDataController;
 
     public HomeUI(SchoolDataController schoolDataController) {
@@ -45,7 +49,8 @@ public class HomeUI {
 
     /**
      * GET /about/data — the active snapshot: version, kind, effective and import dates, validation status, sources
-     * with dataset ids and download dates, counts, warnings, and the Singapore Open Data Licence notice.
+     * with dataset ids and download dates, counts, warnings, and the Singapore Open Data Licence notices: one per
+     * data.gov.sg dataset and one for the OneMap coordinates ({@code oneMapAccessedOn}, data/README.md "Licences").
      */
     @GetMapping("/about/data")
     public String displayDataSources(Model model) {
@@ -57,6 +62,11 @@ public class HomeUI {
         model.addAttribute("importedAt", format(manifest.importedAt(), DATE_TIME));
         model.addAttribute("counts", new TreeMap<>(manifest.counts()));
         model.addAttribute("sources", manifest.sources().stream().map(HomeUI::toRow).toList());
+        model.addAttribute("oneMapAccessedOn", manifest.sources().stream()
+                .filter(source -> source.datasetId() != null && source.datasetId().startsWith(ONEMAP_SOURCE_PREFIX))
+                .map(source -> format(source.downloadedAt(), DATE))
+                .filter(Objects::nonNull)
+                .findFirst().orElse(null));
         return "about-data";
     }
 

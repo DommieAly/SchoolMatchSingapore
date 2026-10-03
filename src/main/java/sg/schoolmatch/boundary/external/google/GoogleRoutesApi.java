@@ -25,9 +25,11 @@ import sg.schoolmatch.error.ExternalServiceUnavailableException;
  * Live calls to the Google Routes API v2 for {@link GoogleMapsPlatformClient} (FR-ROUTE-05, DC-05, NFR-MAIN-02).
  * <ul>
  *   <li>Every request first calls {@link ExternalCallBudget#charge}; when today's limit is used up nothing is
- *       sent.</li>
+ *       sent. A route matrix is charged once for all its elements before the first batch, so a request that
+ *       does not fit in today's limit sends nothing and spends nothing.</li>
  *   <li>The server key goes in the {@code X-Goog-Api-Key} header, never in a URL or a log line.</li>
- *   <li>4xx/5xx, timeouts and unreadable answers → {@code ExternalServiceUnavailableException("Google Routes")}.</li>
+ *   <li>4xx/5xx, timeouts and unreadable answers → {@code ExternalServiceUnavailableException("Google Routes")} with a
+ *       {@link GoogleApiFailure} cause that says what happened, for the page's log line.</li>
  *   <li>Caching ({@code routes} cache, 30 min): a route by (origin, destination, mode); the matrix per
  *       destination, so a repeated travel-time filter costs nothing. The client rounds the coordinates first.</li>
  * </ul>
@@ -90,8 +92,11 @@ public class GoogleRoutesApi {   // DC-63
     /**
      * Commute time and distance from one origin to each destination, in the same order (DC-05).
      * A null destination gives an unavailable route without a request. Destinations already in the cache are
-     * not sent again; the rest go in batches of {@code app.google.matrix-batch-size}, each charged as
-     * {@code ROUTE_MATRIX_ELEMENTS} = batch size before it is sent.
+     * not sent again; the rest go in batches of {@code app.google.matrix-batch-size}. All of them are charged
+     * as {@code ROUTE_MATRIX_ELEMENTS} in one call before the first batch is sent: when today's limit cannot
+     * cover the whole request it fails at once, with nothing sent and nothing charged, instead of paying for
+     * the first batches and then failing. If Google fails part-way, the unsent elements stay charged (the
+     * budget then counts more than Google does, never less).
      */
     public List<Route> computeRouteMatrix(Coordinate origin, List<Coordinate> destinations, TravelMode mode) {
         Route[] result = new Route[destinations.size()];
@@ -110,6 +115,10 @@ public class GoogleRoutesApi {   // DC-63
             }
         }
         List<Coordinate> pending = new ArrayList<>(toFetch.keySet());
+        if (pending.isEmpty()) {
+            return List.of(result);
+        }
+        budget.charge(ExternalCallBudget.ROUTE_MATRIX_ELEMENTS, pending.size());
         int size = Math.min(batchSize, mode == TravelMode.TRANSIT ? MAX_TRANSIT_ELEMENTS : MAX_ELEMENTS);
         for (int start = 0; start < pending.size(); start += size) {
             List<Coordinate> batch = pending.subList(start, Math.min(start + size, pending.size()));
@@ -123,9 +132,11 @@ public class GoogleRoutesApi {   // DC-63
         return List.of(result);
     }
 
-    /** One matrix request; answers are cached, except elements Google did not return or marked as errors. */
+    /**
+     * One matrix request (already charged by {@link #computeRouteMatrix}); answers are cached, except elements
+     * Google did not return or marked as errors.
+     */
     private Route[] fetchBatch(Coordinate origin, List<Coordinate> batch, TravelMode mode) {
-        budget.charge(ExternalCallBudget.ROUTE_MATRIX_ELEMENTS, batch.size());
         List<RoutesJson.MatrixElement> elements = post(COMPUTE_ROUTE_MATRIX_PATH, MATRIX_FIELD_MASK,
                 RoutesJson.ComputeRouteMatrixRequest.of(origin, batch, mode), MATRIX_RESPONSE);
         Route[] routes = new Route[batch.size()];
@@ -158,7 +169,7 @@ public class GoogleRoutesApi {   // DC-63
                     .retrieve()
                     .body(type);
         } catch (RestClientException e) {   // HTTP 4xx/5xx, timeout or I/O error, unreadable JSON
-            throw new ExternalServiceUnavailableException(SERVICE, e);
+            throw new ExternalServiceUnavailableException(SERVICE, GoogleApiFailure.of(e));
         }
     }
 

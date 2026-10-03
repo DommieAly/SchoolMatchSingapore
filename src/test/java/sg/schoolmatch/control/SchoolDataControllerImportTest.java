@@ -72,6 +72,7 @@ class SchoolDataControllerImportTest {
                 "school_code,admission_year,posting_group,track,lower,upper,raw_text,source_url,entered_by,checked_by\n");
         writeCurated(CuratedCsvReader.GEOCODE_OVERRIDES, "postal_code,school_code,latitude,longitude,reason\n");
         writeCurated(CuratedCsvReader.AFFILIATIONS, "school_code,primary_school,source_url\n");
+        writeCurated(CuratedCsvReader.SUBJECT_EXCLUSIONS, "school_name,subject_desc,reason\n");
     }
 
     @Test
@@ -152,7 +153,7 @@ class SchoolDataControllerImportTest {
     @Test
     @Tag("FR-DATA-03")
     @Tag("NFR-DATA-03")
-    @DisplayName("TC-Import-05: curated codes, checked PSLE ranges, IP notes, affiliations and overrides are applied")
+    @DisplayName("TC-Import-05: curated codes, checked PSLE ranges with MOE text, IP ranges (also affiliated) and notes, affiliations and overrides are applied")
     void appliesCuratedData() throws IOException {
         writeCurated(CuratedCsvReader.SCHOOL_CODES, "school_name,school_code,source_url\n"
                 + "Catholic High School,catholic-high,https://example.test/chs\n");
@@ -162,6 +163,7 @@ class SchoolDataControllerImportTest {
                         + "catholic-high,2025,3,AFFILIATED,8,14,8 - 14,https://example.test,Ann,Ben\n"
                         + "catholic-high,2025,2,NON_AFFILIATED,10,15,10 - 15,https://example.test,Ann,\n"
                         + "catholic-high,2025,3,IP,4,6,4 - 6,https://example.test,Ann,Ben\n"
+                        + "catholic-high,2025,3,IP_AFFILIATED,4,8,4(D) - 8(M),https://example.test,Ann,Ben\n"
                         + "no-such-school,2025,3,NON_AFFILIATED,8,12,8 - 12,https://example.test,Ann,Ben\n");
         writeCurated(CuratedCsvReader.AFFILIATIONS, "school_code,primary_school,source_url\n"
                 + "catholic-high,Catholic High School (Primary),https://example.test\n");
@@ -174,9 +176,13 @@ class SchoolDataControllerImportTest {
         assertThat(catholic).isNotNull();
         assertThat(catholic.latitude()).isEqualTo(1.3546);
         assertThat(catholic.planningAreaName()).isEqualTo("BISHAN");
-        assertThat(catholic.scoreRanges()).containsExactly(new ScoreRangeRecord(2025, 3, false, 8, 12),
-                new ScoreRangeRecord(2025, 3, true, 8, 14));
-        assertThat(catholic.ipRangeNote()).isEqualTo("IP 2025 PG3: 4 - 6");
+        // DC-77: the IP row is kept as a range (PG3, non-affiliated, integratedProgramme), after the others.
+        // DC-82: an IP_AFFILIATED row is an affiliated IP range; every range keeps raw_text as moeText.
+        assertThat(catholic.scoreRanges()).containsExactly(new ScoreRangeRecord(2025, 3, false, 8, 12, false, "8 - 12"),
+                new ScoreRangeRecord(2025, 3, true, 8, 14, false, "8 - 14"),
+                new ScoreRangeRecord(2025, 3, false, 4, 6, true, "4 - 6"),
+                new ScoreRangeRecord(2025, 3, true, 4, 8, true, "4(D) - 8(M)"));
+        assertThat(catholic.ipRangeNote()).isEqualTo("IP 2025 PG3: 4 - 6; IP 2025 PG3 affiliated: 4(D) - 8(M)");
         assertThat(catholic.affiliatedPrimarySchools()).containsExactly("CATHOLIC HIGH SCHOOL (PRIMARY)");
         assertThat(catholic.ccas()).containsExactly("ART AND CRAFTS", "ARTISTIC GYMNASTICS", "BASKETBALL");
         String log = Files.readString(out.resolve(VERSION).resolve(SnapshotWriter.IMPORT_LOG_FILE));

@@ -2,7 +2,7 @@
 <!--/* DM 07 SchoolSearch / DM 08 SearchResults — SchoolSearchUI.submitSearch (FR-SEARCH-01..06, FR-FILTER-01..09).
        Model: term, params, and either fieldErrors for an invalid term (no results) or schools, totalCount, page,
        totalPages, baseUrl, chips, notAppliedChips, clearAllUrl, filterUrl, mapUrl, sortOrder, sortOptions, searchCount, hasFilters,
-       activeFilters, noPsleDataCount, plus when they apply: fieldErrors (filter input), sortMessage, flashError,
+       activeFilters, noPsleDataCount, psleNotApplied (DC-74), plus when they apply: fieldErrors (filter input), sortMessage, flashError,
        pgHint, startLocation and the card extras (cardDistanceKm, cardCommuteMin, cardCommuteMode, cardRanges).
        The design's display operations are the th:fragment names below. */-->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
@@ -81,6 +81,10 @@
                 </th:block>
                 <a class="btn btn-link btn-sm" th:href="@{${clearAllUrl}}">Clear all</a>
             </div>
+            <!--/* DC-74: why the PSLE chip is under "Not applied" */-->
+            <p th:if="${psleNotApplied}" class="small text-body-secondary mt-2 mb-0" data-psle-not-applied="true"
+               th:text="|PSLE filter not applied: ${noPsleDataMessage}.|">
+                PSLE filter not applied: PSLE score ranges are not available in the current dataset.</p>
         </section>
 
         <!--/* PSLE notes (FR-FILTER-03, DC-22, NFR-DATA-03) */-->
@@ -88,9 +92,9 @@
             <p class="mb-1" th:if="${pgHint != null}" th:text="${pgHint}">
                 No posting group chosen, so posting group 3 is used.</p>
             <p class="mb-1" th:if="${noPsleDataCount > 0}"
-               th:text="${noPsleDataCount == 1 ? '1 school has no PSLE data and is hidden.'
-                                                : noPsleDataCount + ' schools have no PSLE data and are hidden.'}">
-                2 schools have no PSLE data and are hidden.</p>
+               th:text="${noPsleDataCount == 1 ? '1 school has no PSLE range for PG' + pslePostingGroup + ' and is hidden.'
+                                                : noPsleDataCount + ' schools have no PSLE range for PG' + pslePostingGroup + ' and are hidden.'}">
+                2 schools have no PSLE range for PG3 and are hidden.</p>
             <p class="mb-1 text-warning-emphasis" th:if="${seedData}">
                 <strong>TEST VALUES – not MOE data.</strong> The PSLE filter uses made-up seed ranges.</p>
             <p class="mb-1 text-body-secondary" th:unless="${seedData}">

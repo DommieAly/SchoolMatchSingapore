@@ -13,7 +13,11 @@
     <!--/* selectSearchSchools: the main entry point for guests and members (FR-SEARCH-01) */-->
     <section class="py-5 text-center">
         <h1 class="display-6 mb-3">Find a secondary school in Singapore</h1>
-        <p class="lead text-muted mb-4">Search by school name, then compare details, PSLE ranges and travel options.</p>
+        <!--/* DC-74: do not promise PSLE ranges when the active dataset has none */-->
+        <p class="lead text-muted mb-4" th:text="${psleDataAvailable == false}
+                ? 'Search by school name, then compare details, CCAs, subjects and travel options.'
+                : 'Search by school name, then compare details, PSLE ranges and travel options.'">Search by school
+            name, then compare details, PSLE ranges and travel options.</p>
         <form class="row justify-content-center g-2" th:action="@{/schools}" method="get" role="search">
             <div class="col-12 col-md-7">
                 <label for="home-q" class="visually-hidden">School name</label>

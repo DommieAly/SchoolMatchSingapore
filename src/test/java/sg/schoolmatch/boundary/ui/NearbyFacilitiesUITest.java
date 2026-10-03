@@ -43,6 +43,8 @@ import sg.schoolmatch.entity.school.School;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
 import sg.schoolmatch.error.NotFoundException;
+import sg.schoolmatch.support.ExternalFailures;
+import sg.schoolmatch.support.LogCapture;
 import sg.schoolmatch.support.TestSchools;
 
 /**
@@ -221,6 +223,23 @@ class NearbyFacilitiesUITest {
                 .andExpect(model().attribute("serviceUnavailable", true))
                 .andExpect(content().string(containsString("Nearby facility information is temporarily unavailable")))
                 .andExpect(content().string(containsString("href=\"/schools/catholic-high-school\"")));
+    }
+
+    @Test
+    @Tag("FR-FACILITY-01")
+    @Tag("NFR-USE-03")
+    @DisplayName("TC-NearbyUI-10: Google refusing → one WARN line with the HTTP status and Google's status and message")
+    void serviceDown_logsOneWarning() throws Exception {
+        when(facilityController.filterFacilities(any(), any())).thenThrow(ExternalFailures.googleRefused(
+                "Google Places", 403, "PERMISSION_DENIED", "Requests to this API are blocked."));
+
+        try (LogCapture log = LogCapture.of(NearbyFacilitiesUI.class)) {
+            mvc.perform(get("/schools/" + CODE + "/facilities"))
+                    .andExpect(model().attribute("serviceUnavailable", true));
+
+            assertThat(log.warnings()).containsExactly("Nearby facilities unavailable: Google Places: Google refused "
+                    + "the request: HTTP 403, PERMISSION_DENIED: Requests to this API are blocked.");
+        }
     }
 
     @Test

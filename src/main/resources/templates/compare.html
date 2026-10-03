@@ -2,7 +2,8 @@
 <!--/* DM 18 Compare Schools (login) — ComparisonUI.displayComparison (FR-COMPARE-01, DC-07, DC-28).
        Model: schools (2–4 columns, in the order chosen), rows (ComparisonUI.CompareRow: label, values, differs).
        highlightDifferences: a row whose values differ gets class table-warning and data-differs="true".
-       Missing values show "Not available" (AF-2). Each column header links to the school's details (DC-08). */-->
+       Missing values show "Not available" (AF-2). Each column header links to the school's details (DC-08).
+       DC-74: rows with row.psleRange are left out when the dataset has no PSLE ranges (psleDataAvailable = false). */-->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Compare schools')}"></head>
 <body>
@@ -27,7 +28,8 @@
             </tr>
             </thead>
             <tbody>
-            <tr th:each="row : ${rows}" th:classappend="${row.differs} ? 'table-warning'"
+            <tr th:each="row : ${rows}" th:unless="${row.psleRange and psleDataAvailable == false}"
+                th:classappend="${row.differs} ? 'table-warning'"
                 th:attr="data-differs=${row.differs}">
                 <th scope="row" class="fw-normal text-body-secondary" th:text="${row.label}">School type</th>
                 <td th:each="cell : ${row.values}" class="small">
@@ -39,6 +41,10 @@
         </table>
     </div>
 
+    <!--/* DC-74: no PSLE ranges in the dataset: the three PSLE rows are left out and this line says why */-->
+    <p th:if="${psleDataAvailable == false}" class="small text-body-secondary mt-3" data-psle-unavailable="true">
+        PSLE score ranges: not available yet</p>
+    <th:block th:unless="${psleDataAvailable == false}">
     <!--/* NFR-DATA-03; the seed snapshot's ranges are made up (DC-34) */-->
     <div th:if="${seedData}" class="alert alert-warning small mt-3" role="note">
         <strong>TEST VALUES – not MOE data.</strong> The seed dataset uses made-up PSLE ranges.
@@ -48,6 +54,7 @@
         PSLE AL ranges are the latest non-affiliated ranges from past years (a lower score is better):
         historical, not guaranteed.
     </p>
+    </th:block>
 </main>
 
 <footer th:replace="~{layout :: footer}"></footer>

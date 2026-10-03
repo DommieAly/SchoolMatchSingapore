@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!--/* About the data (not a dialog-map state) — HomeUI.displayDataSources, GET /about/data (NFR-DATA-01, NFR-DATA-03,
        DC-09). Model: manifest (SnapshotManifest), dataset (SchoolDataCache), fullSnapshot, effectiveDate, importedAt
-       (formatted, Singapore time), counts (sorted map), sources (List<HomeUI.DataSourceRow>); seedData from
+       (formatted, Singapore time), counts (sorted map), sources (List<HomeUI.DataSourceRow>), oneMapAccessedOn
+       (download date of the OneMap source, or null); seedData from
        LayoutModelAdvice. The licence notice wording is required by the Singapore Open Data Licence v1.0. */-->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('About the data')}"></head>
@@ -88,7 +89,21 @@
                     <a href="https://data.gov.sg/open-data-licence" rel="noopener" target="_blank">Singapore Open Data Licence version 1.0</a>
                     (https://data.gov.sg/open-data-licence).
                 </li>
+                <li th:if="${oneMapAccessedOn != null}">
+                    <span th:text="|Contains information from OneMap search accessed on ${oneMapAccessedOn} from OneMap (onemap.gov.sg, Singapore Land Authority) which is made available under the terms of the|">Contains
+                        information from OneMap search accessed on 3 Oct 2026 from OneMap (onemap.gov.sg, Singapore
+                        Land Authority) which is made available under the terms of the</span>
+                    <a href="https://www.onemap.gov.sg/legal/opendatalicence.html" rel="noopener" target="_blank">Singapore Open Data Licence version 1.0</a>
+                    (https://www.onemap.gov.sg/legal/opendatalicence.html).
+                </li>
                 <li>School coordinates and address search: OneMap, Singapore Land Authority.</li>
+                <!--/* DC-78: the curated PSLE ranges and affiliations come from MOE SchoolFinder. */-->
+                <li th:if="${!seedData and counts['scoreRanges'] != null and counts['scoreRanges'] > 0}">PSLE score
+                    ranges and affiliated primary schools:
+                    <a href="https://www.moe.gov.sg/schoolfinder" rel="noopener" target="_blank">MOE SchoolFinder</a>
+                    (moe.gov.sg, Ministry of Education), read on 3 Oct 2026 (2025 S1 posting).</li>
+                <li>School codes in page addresses (e.g. <span class="font-monospace">catholic-high-school</span>) are
+                    SchoolMatch's own ids, made from the school names. They are not MOE codes.</li>
                 <li>Maps, routes and nearby places: Google Maps Platform (not stored in this snapshot).</li>
             </ul>
         </section>

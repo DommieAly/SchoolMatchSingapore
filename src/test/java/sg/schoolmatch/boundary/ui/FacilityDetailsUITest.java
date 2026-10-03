@@ -1,5 +1,6 @@
 package sg.schoolmatch.boundary.ui;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.when;
@@ -31,6 +32,8 @@ import sg.schoolmatch.entity.facility.FacilityType;
 import sg.schoolmatch.entity.school.School;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.NotFoundException;
+import sg.schoolmatch.support.ExternalFailures;
+import sg.schoolmatch.support.LogCapture;
 import sg.schoolmatch.support.TestSchools;
 
 /**
@@ -132,6 +135,24 @@ class FacilityDetailsUITest {
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("serviceUnavailable", true))
                 .andExpect(content().string(containsString("Facility details are temporarily unavailable")));
+    }
+
+    @Test
+    @Tag("NFR-USE-03")
+    @Tag("NFR-MAIN-02")
+    @DisplayName("TC-FacilityDetailsUI-06: the app's daily limit → one WARN line saying so (not 'Google refused')")
+    void serviceDown_logsOneWarning() throws Exception {
+        when(facilityController.getFacilityDetails("lib-1"))
+                .thenThrow(ExternalFailures.dailyLimit("place-details", 26, 1, 26));
+
+        try (LogCapture log = LogCapture.of(FacilityDetailsUI.class)) {
+            mvc.perform(get("/facilities/lib-1"))
+                    .andExpect(content().string(containsString("Facility details are temporarily unavailable")));
+
+            assertThat(log.warnings()).singleElement().asString()
+                    .startsWith("Facility details unavailable: Google place-details: app daily limit reached")
+                    .contains("26 of 26");
+        }
     }
 
     @Test

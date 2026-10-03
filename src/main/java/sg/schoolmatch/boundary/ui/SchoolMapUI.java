@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import sg.schoolmatch.boundary.ui.support.FilterParams;
 import sg.schoolmatch.boundary.ui.support.MapMarker;
 import sg.schoolmatch.boundary.ui.support.PageMessages;
+import sg.schoolmatch.boundary.ui.support.PsleAvailability;
 import sg.schoolmatch.boundary.ui.support.ReferenceLocationStore;
 import sg.schoolmatch.boundary.ui.support.SearchFilterPipeline;
 import sg.schoolmatch.boundary.ui.support.SessionCookie;
@@ -25,6 +26,7 @@ import sg.schoolmatch.control.FilterController;
 import sg.schoolmatch.control.MapController;
 import sg.schoolmatch.control.ProfileController;
 import sg.schoolmatch.control.SchoolController;
+import sg.schoolmatch.control.SchoolDataController;
 import sg.schoolmatch.entity.location.ReferenceLocation;
 import sg.schoolmatch.entity.school.School;
 import sg.schoolmatch.entity.search.CurrentResultSet;
@@ -43,8 +45,8 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>
  * Model: {@code q}, {@code chips}, {@code notAppliedChips}, {@code hiddenFields}, {@code resultCount}, {@code schools} (with a map location),
  * {@code omittedCount}, {@code interactive}, {@code markersJson}, {@code resultsUrl}, {@code filterUrl},
- * {@code startLocation}, {@code usesStartingPoint}, {@code psleActive}, and {@code fieldErrors} / {@code notice}
- * when something went wrong.
+ * {@code startLocation}, {@code usesStartingPoint}, {@code psleActive}, {@code psleNotApplied} (DC-74), and
+ * {@code fieldErrors} / {@code notice} when something went wrong.
  */
 @Controller
 public class SchoolMapUI {
@@ -63,9 +65,11 @@ public class SchoolMapUI {
 
     public SchoolMapUI(SchoolController schoolController, FilterController filterController,
                        MapController mapController, ProfileController profileController,
-                       ReferenceLocationStore locationStore, SessionCookie sessionCookie, JsonMapper jsonMapper) {
+                       SchoolDataController schoolDataController, ReferenceLocationStore locationStore,
+                       SessionCookie sessionCookie, JsonMapper jsonMapper) {
         this.schoolController = schoolController;
-        this.filterPipeline = new SearchFilterPipeline(filterController, profileController, sessionCookie);
+        this.filterPipeline = new SearchFilterPipeline(filterController, profileController, sessionCookie,
+                () -> PsleAvailability.available(schoolDataController));   // DC-74
         this.mapController = mapController;
         this.locationStore = locationStore;
         this.jsonMapper = jsonMapper;
@@ -110,7 +114,8 @@ public class SchoolMapUI {
         model.addAttribute("filterUrl", params.toUrl("/schools/filter"));
         model.addAttribute("startLocation", start.orElse(null));
         model.addAttribute("usesStartingPoint", params.radiusKm() != null || params.travel());
-        model.addAttribute("psleActive", params.psle() != null);
+        model.addAttribute("psleActive", params.psle() != null && !filtered.psleNotApplied());
+        model.addAttribute("psleNotApplied", filtered.psleNotApplied());   // DC-74
         if (!errors.isEmpty()) {
             model.addAttribute(PageMessages.FIELD_ERRORS, errors);
         }

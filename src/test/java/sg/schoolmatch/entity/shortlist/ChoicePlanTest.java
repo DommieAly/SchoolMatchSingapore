@@ -238,6 +238,39 @@ class ChoicePlanTest {
         assertThat(plan.isOutdated()).isFalse();        // profile values not filled in: nothing to compare
     }
 
+    @Test
+    @Tag("FR-PLAN-02")
+    @Tag("DC-74")
+    @DisplayName("TC-ChoicePlan-18: without PSLE data the range-based warnings become one note; the count warning stays")
+    void warnings_noPsleData() {
+        ChoicePlan noRanges = new ChoicePlan(12, 3);
+        noRanges.addChoice(TestSchools.school("no-range-a").name("No Range A").build(), 1);
+        noRanges.addChoice(TestSchools.school("no-range-b").name("No Range B").build(), 2);
+
+        assertThat(noRanges.getRiskWarnings(false)).containsExactly(
+                ChoicePlan.NO_PSLE_DATA_WARNING,
+                "You have 2 of 6 choices. Fill all 6 to lower the risk of being posted to a school you did not choose.");
+        assertThat(noRanges.getChoices()).extracting(noRanges::getAdmissionChance).containsOnlyNulls();
+        // with PSLE data (the default) the same plan gets the usual range warnings
+        assertThat(noRanges.getRiskWarnings()).contains(ChoicePlan.NO_SAFE_WARNING,
+                "No Range A: no PSLE range data, so no SAFE/MATCH/REACH label.");
+    }
+
+    @Test
+    @Tag("FR-PLAN-02")
+    @Tag("DC-74")
+    @DisplayName("TC-ChoicePlan-19: without PSLE data a full plan has only the note, and a removed school is still named")
+    void warnings_noPsleData_fullPlanAndRemovedSchool() {
+        addInOrder(safe, match, reach, sixth("x4", 12), sixth("x5", 12), sixth("gone-school", 12));
+        plan.resolveSchools(TestSchools.byCode(plan.getChoices().stream()
+                .map(SchoolChoice::getSchool).filter(s -> !s.getSchoolCode().equals("gone-school"))
+                .toArray(School[]::new)));
+
+        assertThat(plan.getRiskWarnings(false)).containsExactly(ChoicePlan.NO_PSLE_DATA_WARNING,
+                "gone-school: this school is no longer in the dataset.");
+        assertThat(plan.getRiskWarnings(true)).isEqualTo(plan.getRiskWarnings());
+    }
+
     /** A school with a PG3 range whose upper score is {@code upper}. */
     private static School sixth(String code, int upper) {
         return TestSchools.school(code).range(2025, 3, upper - 3, upper).build();

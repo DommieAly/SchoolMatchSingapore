@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import sg.schoolmatch.entity.common.Coordinate;
 import sg.schoolmatch.entity.school.District;
+import sg.schoolmatch.entity.school.IndicativePsleScoreRange;
 import sg.schoolmatch.entity.school.ValidationStatus;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -91,6 +92,32 @@ class SnapshotWriterTest {
         assertThat(back.districts()).extracting(District::getPlanningAreaCode).containsExactly("BS", "JW", "TM");
         assertThat(report.isUsable()).as(report.toString()).isTrue();
         assertThat(report.getStatus()).isEqualTo(ValidationStatus.PASSED_WITH_WARNINGS);
+    }
+
+    @Test
+    @Tag("NFR-DATA-01")
+    @Tag("FR-DATA-03")
+    @DisplayName("TC-SnapshotWriter-08: the integratedProgramme flag survives write and read; a range without it reads as non-IP")
+    void integratedProgrammeFlag() throws IOException {
+        assertThat(mini.records()).flatExtracting(SchoolRecord::scoreRanges).isNotEmpty()
+                .as("snapshot-mini has no integratedProgramme field").allMatch(r -> Boolean.FALSE.equals(r.integratedProgramme()));
+        List<SchoolRecord> records = new ArrayList<>(mini.records());
+        records.set(0, DatasetTestSupport.withRanges(records.get(0), List.of(
+                new ScoreRangeRecord(2025, 3, false, 6, 8), new ScoreRangeRecord(2025, 3, false, 4, 7, true))));
+
+        Path folder = write("2026-10-02.1", records);
+        LoadedSnapshot back = reader(Map.of()).read(folder.toUri().toString());
+
+        assertThat(Files.readString(folder.resolve(SnapshotReader.SCHOOLS_FILE)))
+                .contains("\"integratedProgramme\" : true");
+        String code = records.get(0).schoolCode();
+        assertThat(back.records()).filteredOn(r -> r.schoolCode().equals(code)).singleElement()
+                .satisfies(r -> assertThat(r.scoreRanges()).extracting(ScoreRangeRecord::integratedProgramme)
+                        .containsExactly(false, true));
+        assertThat(back.schools()).filteredOn(school -> school.getSchoolCode().equals(code)).singleElement()
+                .satisfies(school -> assertThat(school.getScoreRanges())
+                        .extracting(IndicativePsleScoreRange::isIntegratedProgramme).containsExactly(false, true));
+        assertThat(new SnapshotValidator().validate(back).getErrors()).isEmpty();
     }
 
     @Test

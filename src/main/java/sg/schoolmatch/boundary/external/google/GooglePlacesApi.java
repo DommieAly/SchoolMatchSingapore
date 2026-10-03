@@ -33,7 +33,8 @@ import sg.schoolmatch.error.ExternalServiceUnavailableException;
  *       page on 2026-10-02.</li>
  *   <li>Every request first calls {@link ExternalCallBudget#charge}; the key goes in the {@code X-Goog-Api-Key}
  *       header only. 4xx/5xx, timeouts and unreadable answers → {@code ExternalServiceUnavailableException
- *       ("Google Places")}, except that details for an unknown place id give an empty result.</li>
+ *       ("Google Places")} (cause {@link GoogleApiFailure}, for the log line), except that details for an unknown place id
+ *       give an empty result.</li>
  *   <li>Cached 24 h: searches by (type, centre) in {@code places}, details by id in {@code placeDetails}.</li>
  * </ul>
  */
@@ -86,7 +87,7 @@ public class GooglePlacesApi {
                     .body(PlacesJson.SearchResponse.class);
             return response == null ? List.of() : response.toFacilities(type);
         } catch (RestClientException e) {   // HTTP 4xx/5xx, timeout or I/O error, unreadable JSON
-            throw new ExternalServiceUnavailableException(SERVICE, e);
+            throw new ExternalServiceUnavailableException(SERVICE, GoogleApiFailure.of(e));
         }
     }
 
@@ -111,9 +112,9 @@ public class GooglePlacesApi {
                 log.warn("Google Places has no place with id {} (HTTP {})", placeId, e.getStatusCode().value());
                 return Optional.empty();
             }
-            throw new ExternalServiceUnavailableException(SERVICE, e);
+            throw new ExternalServiceUnavailableException(SERVICE, GoogleApiFailure.of(e));
         } catch (RestClientException e) {
-            throw new ExternalServiceUnavailableException(SERVICE, e);
+            throw new ExternalServiceUnavailableException(SERVICE, GoogleApiFailure.of(e));
         }
     }
 }

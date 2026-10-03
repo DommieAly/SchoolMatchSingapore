@@ -60,6 +60,7 @@ import sg.schoolmatch.entity.school.SchoolDataCache;
 import sg.schoolmatch.entity.search.AttributeCategory;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
+import sg.schoolmatch.support.LogCapture;
 import sg.schoolmatch.support.TestSchools;
 
 /**
@@ -247,6 +248,24 @@ class RecommendationUITest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("recommendation-criteria"))
                 .andExpect(content().string(containsString("temporarily unavailable")));
+    }
+
+    @Test
+    @Tag("FR-REC-01")
+    @Tag("NFR-USE-03")
+    @DisplayName("TC-RecommendationUI-15: a school data error writes one WARN line naming the service")
+    void schoolDataError_logsOneWarning() throws Exception {
+        when(profileController.getProfile(SESSION)).thenReturn(completeProfile());
+        when(recommendationController.recommend(any()))
+                .thenThrow(new ExternalServiceUnavailableException("School data", new IllegalStateException("no snapshot")));
+
+        try (LogCapture log = LogCapture.of(RecommendationUI.class)) {
+            mvc.perform(post("/recommendations").cookie(member()).param("psleScore", "12").param("postingGroup", "3"))
+                    .andExpect(content().string(containsString("temporarily unavailable")));
+
+            assertThat(log.warnings()).containsExactly(
+                    "Recommendations unavailable: School data: School data failed: IllegalStateException: no snapshot");
+        }
     }
 
     @Test

@@ -230,8 +230,8 @@ class FilterControllerTest {
 
     @Test
     @Tag("FR-FILTER-06")
-    @DisplayName("TC-FilterController-09: at most 150 schools are sent to the routing service, nearest first")
-    void travel_capAt150() {
+    @DisplayName("TC-FilterController-09: at most max-routed-schools (160) schools are sent to the routing service, nearest first")
+    void travel_capAtMaxRoutedSchools() {
         List<School> many = new ArrayList<>();
         for (int i = 0; i < 200; i++) {
             many.add(TestSchools.school(String.format("school-%03d", i))
@@ -247,7 +247,7 @@ class FilterControllerTest {
         verify(directionsController).getCommuteTimes(eq(bishan), asked.capture(), eq(TravelMode.DRIVE));
         assertThat(asked.getValue()).hasSize(PROPS.transportFilter().maxRoutedSchools());
         assertThat(asked.getValue().subList(0, 2)).containsExactly(many.get(0), many.get(1));   // nearest first
-        assertThat(filtered.size()).isEqualTo(150);
+        assertThat(filtered.size()).isEqualTo(PROPS.transportFilter().maxRoutedSchools());
     }
 
     @Test

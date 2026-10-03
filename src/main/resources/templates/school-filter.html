@@ -4,8 +4,8 @@
        The form submits GET /schools (confirmFilters); "Clear all" goes back to /schools?q= (clearAllFilters).
        Model: params (FilterParams), q, groups (label, param, values, selected, error), radiusOptions,
        durationOptions, travelModes (value, label), startLocation, returnTo, resultsUrl,
-       clearAllUrl, errors (field → message, maybe empty), and when they apply pgHint and fieldErrors
-       (highlightInvalidFields). */-->
+       clearAllUrl, errors (field → message, maybe empty), and when they apply pgHint, fieldErrors
+       (highlightInvalidFields) and psleUnavailableMessage (DC-74: no PSLE ranges, so the PSLE inputs are disabled). */-->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Filter schools')}"></head>
 <body>
@@ -33,6 +33,11 @@
                             <legend class="form-label fs-6 fw-semibold" th:text="${group.label()}">School type</legend>
                             <p th:if="${#sets.isEmpty(group.values())}" class="small text-body-secondary mb-0">
                                 No values in the current dataset.</p>
+                            <!--/* Long lists (programmes, CCAs) get a type-to-narrow box (js/option-search.js); it stays
+                                   hidden without JavaScript, and the form never submits it (no name attribute) */-->
+                            <input th:if="${group.values().size() > 15}" type="search" data-option-search
+                                   class="form-control form-control-sm mb-1 d-none" autocomplete="off"
+                                   aria-label="Narrow this list" placeholder="Type to narrow this list">
                             <div class="filter-options border rounded p-2" th:unless="${#sets.isEmpty(group.values())}"
                                  th:classappend="${group.error() != null} ? 'border-danger'">
                                 <div class="form-check" th:each="value, stat : ${group.values()}">
@@ -50,6 +55,10 @@
 
                     <!--/* enterPsleScore (FR-FILTER-03, DC-22) */-->
                     <h2 class="h5 mb-1">PSLE score</h2>
+                    <!--/* DC-74: a dataset without PSLE ranges cannot filter by score; the inputs stay, disabled */-->
+                    <p th:if="${psleUnavailableMessage != null}" class="small text-warning-emphasis mb-2"
+                       id="psle-unavailable" data-psle-unavailable="true"
+                       th:text="|${psleUnavailableMessage}.|">PSLE score ranges are not available in the current dataset.</p>
                     <p class="small text-body-secondary" id="psle-rule">
                         A school is shown when your score is the same as or better than (lower than or equal to) the
                         highest score admitted in its latest range for your posting group. Ranges are from past
@@ -58,16 +67,17 @@
                         <div class="col-sm-6">
                             <label for="psle" class="form-label">Your PSLE score (AL)</label>
                             <input id="psle" name="psle" type="number" min="4" max="32" step="1" class="form-control"
-                                   th:value="${params.psle()}"
+                                   th:value="${params.psle()}" th:disabled="${psleUnavailableMessage != null}"
                                    th:classappend="${errors['psle'] != null} ? 'is-invalid'"
-                                   aria-describedby="psle-help psle-rule">
+                                   th:attr="aria-describedby=${psleUnavailableMessage != null
+                                            ? 'psle-unavailable psle-help psle-rule' : 'psle-help psle-rule'}">
                             <div class="invalid-feedback" th:if="${errors['psle'] != null}"
                                  th:text="${errors['psle']}">Enter a whole number from 4 to 32</div>
                             <div id="psle-help" class="form-text">4 to 32; lower is better.</div>
                         </div>
                         <div class="col-sm-6">
                             <label for="pg" class="form-label">Posting group</label>
-                            <select id="pg" name="pg" class="form-select"
+                            <select id="pg" name="pg" class="form-select" th:disabled="${psleUnavailableMessage != null}"
                                     th:classappend="${errors['pg'] != null} ? 'is-invalid'" aria-describedby="pg-help">
                                 <option value="" th:selected="${params.pg() == null}">Not chosen (PG3 is used)</option>
                                 <option value="3" th:selected="${params.pg() == '3'}">PG3</option>
@@ -161,5 +171,6 @@
 </main>
 
 <footer th:replace="~{layout :: footer}"></footer>
+<script defer th:src="@{/js/option-search.js}"></script>
 </body>
 </html>
