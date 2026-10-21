@@ -12,57 +12,69 @@
 <nav th:replace="~{layout :: navbar}"></nav>
 
 <main class="container py-4">
-    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
-        <div>
-            <h1 class="h3 mb-1">Schools on the map</h1>
-            <p class="text-body-secondary mb-0"
-               th:text="|${#lists.size(schools)} of ${resultCount} schools shown|">10 of 10 schools shown</p>
+    <header class="page-header">
+        <a class="back-link" th:href="${resultsUrl}"><svg
+                th:replace="~{fragments/icon :: icon('arrow-left')}"></svg>Back to results</a>
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md">
+                <h1 class="page-title">Schools on the map</h1>
+                <p class="page-subtitle"
+                   th:text="|${#lists.size(schools)} of ${resultCount} schools shown|">10 of 10 schools shown</p>
+            </div>
+            <div class="col-12 col-md-auto">
+                <div class="d-flex flex-wrap gap-2">
+                    <form method="get" th:action="@{/schools/map}" class="flex-grow-1" role="search">
+                        <label for="map-q" class="visually-hidden">School name</label>
+                        <div class="input-group">
+                            <input id="map-q" name="q" type="search" maxlength="100" class="form-control"
+                                   placeholder="School name" th:value="${q}">
+                            <input th:each="field : ${hiddenFields}" type="hidden" th:name="${field.name}" th:value="${field.value}">
+                            <button type="submit" class="btn btn-primary"><svg
+                                    th:replace="~{fragments/icon :: icon('search')}"></svg>Show</button>
+                        </div>
+                    </form>
+                    <a class="btn btn-outline-primary" th:href="${filterUrl}"><svg
+                            th:replace="~{fragments/icon :: icon('filter')}"></svg>Filters</a>
+                </div>
+            </div>
         </div>
-        <form method="get" th:action="@{/schools/map}" class="d-flex gap-2" role="search">
-            <label for="map-q" class="visually-hidden">School name</label>
-            <input id="map-q" name="q" type="search" maxlength="100" class="form-control" placeholder="School name"
-                   th:value="${q}">
-            <input th:each="field : ${hiddenFields}" type="hidden" th:name="${field.name}" th:value="${field.value}">
-            <button type="submit" class="btn btn-outline-primary">Show</button>
-        </form>
-    </div>
+    </header>
 
     <!--/* active filters (FR-FILTER-08); removing one stays on the map */-->
     <div th:unless="${#lists.isEmpty(chips) and (notAppliedChips == null or #lists.isEmpty(notAppliedChips))}"
          class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <span class="small text-body-secondary" th:unless="${#lists.isEmpty(chips)}">Filters:</span>
-        <span th:each="chip : ${chips}" class="badge rounded-pill text-bg-light border d-inline-flex align-items-center gap-1">
+        <span class="small fw-semibold text-body-secondary" th:unless="${#lists.isEmpty(chips)}">Filters:</span>
+        <span th:each="chip : ${chips}" class="chip">
             <span th:text="${chip.label}">Type: GOVERNMENT SCHOOL</span>
-            <a th:href="${chip.removeUrl}" class="link-secondary text-decoration-none"
+            <a th:href="${chip.removeUrl}" class="chip-remove"
                th:aria-label="|Remove filter ${chip.label}|">&times;</a>
         </span>
         <th:block th:if="${notAppliedChips != null and !#lists.isEmpty(notAppliedChips)}">
-            <span class="small text-body-secondary">Not applied:</span>
-            <span th:each="chip : ${notAppliedChips}"
-                  class="badge rounded-pill text-bg-light border border-warning d-inline-flex align-items-center gap-1">
+            <span class="small fw-semibold text-body-secondary">Not applied:</span>
+            <span th:each="chip : ${notAppliedChips}" class="chip chip-warning">
                 <span th:text="${chip.label}">Within 3 km</span>
-                <a th:href="${chip.removeUrl}" class="link-secondary text-decoration-none"
+                <a th:href="${chip.removeUrl}" class="chip-remove"
                    th:aria-label="|Remove filter ${chip.label}|">&times;</a>
             </span>
         </th:block>
-        <a th:href="${filterUrl}" class="small">Change filters</a>
     </div>
     <!--/* DC-74: a PSLE score in the URL is not applied when the dataset has no PSLE ranges */-->
-    <p th:if="${psleNotApplied}" class="small text-body-secondary" data-psle-not-applied="true"
+    <p th:if="${psleNotApplied}" class="note" data-psle-not-applied="true"
        th:text="|PSLE filter not applied: ${noPsleDataMessage}.|">
         PSLE filter not applied: PSLE score ranges are not available in the current dataset.</p>
-    <p th:if="${startLocation != null and usesStartingPoint}" class="small text-body-secondary">
-        Distances and travel times are from <span th:text="${startLocation.inputText}">200 BISHAN ROAD</span>.
-    </p>
+    <p th:if="${startLocation != null and usesStartingPoint}" class="note"><svg
+            th:replace="~{fragments/icon :: icon('pin')}"></svg><span>Distances and travel times are from
+        <strong class="caps" th:text="${startLocation.inputText}">200 BISHAN ROAD</strong>.</span></p>
 
     <div th:replace="~{fragments/messages :: messages}"></div>
     <div th:if="${notice != null}" class="alert alert-warning" role="status" th:text="${notice}">
         Travel-time filter is temporarily unavailable.</div>
 
     <!--/* AF-1: no school to show */-->
-    <div th:if="${#lists.isEmpty(schools)}" class="alert alert-info" role="status">
-        <p class="fw-semibold mb-1">No schools to show on the map.</p>
-        <p class="mb-0">No school in these results has a map location, or no school matches.
+    <div th:if="${#lists.isEmpty(schools)}" class="empty-state mb-4" role="status">
+        <span class="empty-state-icon"><svg th:replace="~{fragments/icon :: icon('map')}"></svg></span>
+        <p class="empty-state-title">No schools to show on the map.</p>
+        <p>No school in these results has a map location, or no school matches.
             <a th:href="${resultsUrl}">Back to the result list</a> or <a th:href="${filterUrl}">change the filters</a>.</p>
     </div>
 
@@ -72,42 +84,40 @@
             <div th:replace="~{fragments/map-canvas :: mapCanvas(${markersJson}, ${interactive})}"></div>
 
             <!--/* toggleDistrictLayer (FR-MAP-06, FR-MAP-07): the browser loads /api/districts; markers stay */-->
-            <div class="form-check form-switch mt-3">
+            <div class="form-check form-switch mt-3 mb-0">
                 <input th:if="${interactive}" class="form-check-input" type="checkbox" role="switch"
                        id="district-layer" aria-describedby="district-status">
                 <input th:unless="${interactive}" class="form-check-input" type="checkbox" role="switch"
                        id="district-layer" disabled aria-describedby="district-status">
-                <label class="form-check-label" for="district-layer">Show planning areas</label>
+                <label class="form-check-label fw-semibold" for="district-layer">Show planning areas</label>
                 <span id="district-status" class="small text-body-secondary ms-2" role="status"
                       th:text="${interactive} ? 'Hover over an area to see its name.'
                                             : 'Needs the interactive map.'">Hover over an area to see its name.</span>
             </div>
-            <p th:if="${omittedCount > 0}" class="small text-body-secondary mt-2 mb-0"
+            <p th:if="${omittedCount > 0}" class="note mt-2 mb-0"
                th:text="${omittedCount == 1} ? '1 school has no map location and is not shown on the map (it is still in the list of results).'
                                             : |${omittedCount} schools have no map location and are not shown on the map (they are still in the list of results).|">
                 1 school has no map location.</p>
-            <p th:if="${psleActive}" class="small text-body-secondary mt-2 mb-0">
+            <p th:if="${psleActive}" class="note mt-2 mb-0"><span>
                 The PSLE filter uses past cut-off ranges: they are historical, not a guarantee.
-                <strong th:if="${seedData}">These ranges are TEST VALUES – not MOE data.</strong>
+                <strong th:if="${seedData}">These ranges are TEST VALUES – not MOE data.</strong></span>
             </p>
         </div>
         <div class="col-12 col-lg-4">
-            <section class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <h2 class="h6 mb-2">Schools on this map</h2>
-                    <p th:if="${#lists.isEmpty(schools)}" class="small text-body-secondary mb-0">No schools to show.</p>
-                    <ol class="map-list small mb-0 ps-4" th:unless="${#lists.isEmpty(schools)}">
-                        <li th:each="school : ${schools}" class="mb-1">
-                            <a th:href="@{/schools/{code}(code=${school.schoolCode})}" th:text="${school.name}">School</a>
-                            <span class="d-block text-body-secondary">District:
-                                <span th:replace="~{fragments/value :: value(${school.planningArea})}"></span></span>
-                        </li>
-                    </ol>
+            <section class="card" aria-labelledby="map-list-title">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="h6 mb-0" id="map-list-title">Schools on this map</h2>
+                    <span class="tag" th:text="${#lists.size(schools)}">10</span>
                 </div>
-                <div class="card-footer bg-body small d-flex flex-wrap gap-3">
-                    <a th:href="${resultsUrl}">Back to results</a>
-                    <a th:href="${filterUrl}">Filters</a>
-                </div>
+                <p th:if="${#lists.isEmpty(schools)}" class="card-body small text-body-secondary mb-0">No schools to show.</p>
+                <ol class="map-list list-group list-group-flush list-group-numbered mb-0" th:unless="${#lists.isEmpty(schools)}">
+                    <li th:each="school : ${schools}" class="list-group-item">
+                        <a class="fw-semibold text-decoration-none" th:href="@{/schools/{code}(code=${school.schoolCode})}"
+                           th:text="${school.name}">School</a>
+                        <span class="d-block small text-body-secondary">District:
+                            <span th:replace="~{fragments/value :: value(${school.planningArea})}"></span></span>
+                    </li>
+                </ol>
             </section>
         </div>
     </div>

@@ -12,16 +12,14 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <body>
 <div th:fragment="mapCanvas(markersJson, interactive)" class="map-wrapper">
-    <div th:if="${interactive}" id="map" class="map-canvas rounded border" role="region" aria-label="Map"
+    <div th:if="${interactive}" id="map" class="map-canvas" role="region" aria-label="Map"
          th:attr="data-markers=${markersJson},data-maps-key=${mapsBrowserKey},data-map-id=${mapId},data-route=${routePolyline}"></div>
-    <div id="map-unavailable" class="map-unavailable rounded border" th:classappend="${interactive} ? 'd-none'"
-         role="note">
+    <div id="map-unavailable" class="map-unavailable" th:classappend="${interactive} ? 'd-none'" role="note">
+        <span class="map-unavailable-icon"><svg th:replace="~{fragments/icon :: icon('map')}"></svg></span>
         <div>
-            <p class="fw-semibold mb-1">Map unavailable</p>
-            <p class="small text-body-secondary mb-0">
-                The interactive map cannot be shown right now (no Google Maps key on this computer, today's map
-                limit reached, or no place here has a map location). The list on this page still works.
-            </p>
+            <p class="map-unavailable-title">Map unavailable</p>
+            <p class="map-unavailable-text">The interactive map cannot be shown right now (no map key, today's map
+                limit reached, or no map location). The list on this page still works.</p>
         </div>
     </div>
     <th:block th:if="${interactive}">

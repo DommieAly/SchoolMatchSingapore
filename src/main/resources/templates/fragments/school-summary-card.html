@@ -5,7 +5,8 @@
   Shows name (link to details), type, address, district and the latest non-affiliated PSLE AL range for
   PG3, PG2 and PG1 (school.getScoreRange(pg, false), DC-22; an IP-only school shows "PG3 IP 4–8 (2025)", DC-77),
   with the NFR-DATA-03 note, or the
-  "TEST VALUES" warning while the seed snapshot is active (model attribute seedData).
+  "TEST VALUES" warning while the seed snapshot is active (model attribute seedData). Each card keeps its own note
+  (tests count one per card). Styles: .school-card, .data-list, .range-chip, .note, .notice-test (app.css).
   DC-74: when the dataset has no PSLE ranges at all (psleDataAvailable = false, LayoutModelAdvice) the card shows
   one line "PSLE score ranges: not available yet" instead of the PSLE row and its note.
 
@@ -23,69 +24,67 @@
     <div class="card-body d-flex flex-column"
          th:with="km=${cardDistanceKm != null ? cardDistanceKm.get(school.schoolCode) : null},
                   minutes=${cardCommuteMin != null ? cardCommuteMin.get(school.schoolCode) : null}">
-        <h3 class="h5 card-title mb-1">
-            <a class="link-body-emphasis link-underline-opacity-0 link-underline-opacity-75-hover"
-               th:href="@{/schools/{code}(code=${school.schoolCode})}" th:text="${school.name}">CATHOLIC HIGH SCHOOL</a>
+        <h3 class="school-card-title">
+            <a th:href="@{/schools/{code}(code=${school.schoolCode})}" th:text="${school.name}">CATHOLIC HIGH SCHOOL</a>
         </h3>
-        <p class="small text-body-secondary mb-3">
-            <span th:replace="~{fragments/value :: value(${school.schoolType})}">Type</span>
-        </p>
-        <dl class="row small mb-2">
-            <dt class="col-4 fw-normal text-body-secondary">Address</dt>
-            <dd class="col-8 mb-1"><span th:replace="~{fragments/value :: value(${school.address})}"></span></dd>
-            <dt class="col-4 fw-normal text-body-secondary">District</dt>
-            <dd class="col-8 mb-1"><span th:replace="~{fragments/value :: value(${school.planningArea})}"></span></dd>
+        <p class="mb-3"><span class="tag"><span th:replace="~{fragments/value :: value(${school.schoolType})}">Type</span></span></p>
+        <dl class="data-list">
+            <dt>Address</dt>
+            <dd class="caps"><span th:replace="~{fragments/value :: value(${school.address})}"></span></dd>
+            <dt>District</dt>
+            <dd class="caps"><span th:replace="~{fragments/value :: value(${school.planningArea})}"></span></dd>
             <th:block th:if="${cardDistanceKm != null}">
-                <dt class="col-4 fw-normal text-body-secondary">Distance</dt>
-                <dd class="col-8 mb-1">
-                    <span th:if="${km != null}"
-                          th:text="|${#numbers.formatDecimal(km, 1, 'NONE', 1, 'POINT')} km (straight line)|">
-                        0.6 km (straight line)</span>
+                <dt>Distance</dt>
+                <dd>
+                    <strong th:if="${km != null}"
+                            th:text="|${#numbers.formatDecimal(km, 1, 'NONE', 1, 'POINT')} km|">0.6 km</strong>
+                    <span th:if="${km != null}" class="text-body-secondary">(straight line)</span>
                     <span th:if="${km == null}" class="text-body-secondary">Not available</span>
                 </dd>
             </th:block>
             <th:block th:if="${cardCommuteMin != null}">
-                <dt class="col-4 fw-normal text-body-secondary">Travel time</dt>
-                <dd class="col-8 mb-1">
+                <dt>Travel time</dt>
+                <dd>
                     <span th:if="${minutes != null}" th:text="|${minutes} min ${cardCommuteMode}|">
                         17 min by public transport</span>
                     <span th:if="${minutes == null}" class="text-body-secondary">Not available</span>
                 </dd>
             </th:block>
-            <th:block th:unless="${psleDataAvailable == false}">
-            <dt class="col-4 fw-normal text-body-secondary">PSLE AL</dt>
+        </dl>
+
+        <!--/* DC-74: no PSLE ranges in the dataset: one line instead of the PSLE row and its note */-->
+        <p th:if="${psleDataAvailable == false}" class="note mt-auto pt-3 mb-0" data-psle-unavailable="true">
+            PSLE score ranges: not available yet</p>
+        <div th:unless="${psleDataAvailable == false}" class="school-card-psle mt-auto">
+            <p class="school-card-psle-label mb-1">PSLE AL</p>
             <!--/* DC-22: with a PSLE filter, the range it used; otherwise the non-affiliated PG3/PG2/PG1 ranges */-->
-            <dd class="col-8 mb-0" th:if="${cardRanges != null}"
-                th:with="filterRange=${cardRanges.get(school.schoolCode)}">
-                <span th:if="${filterRange != null}" th:text="${filterRange.describe()}">PG3 8–12 (2025, non-affiliated)</span>
-                <span th:if="${filterRange == null}" class="text-body-secondary">Not available</span>
-            </dd>
-            <dd class="col-8 mb-0" th:if="${cardRanges == null}"
-                th:with="hasRange=${school.getScoreRange(3, false).isPresent()
-                                    or school.getScoreRange(2, false).isPresent()
-                                    or school.getScoreRange(1, false).isPresent()}">
-                <span th:unless="${hasRange}" class="text-body-secondary">Not available</span>
-                <ul th:if="${hasRange}" class="list-inline mb-0">
+            <th:block th:if="${cardRanges != null}" th:with="filterRange=${cardRanges.get(school.schoolCode)}">
+                <ul th:if="${filterRange != null}" class="range-list">
+                    <li class="range-chip is-filter" th:text="${filterRange.describe()}">PG3 8–12 (2025, non-affiliated)</li>
+                </ul>
+                <p th:if="${filterRange == null}" class="small text-body-secondary mb-0">Not available</p>
+            </th:block>
+            <th:block th:if="${cardRanges == null}"
+                      th:with="hasRange=${school.getScoreRange(3, false).isPresent()
+                                          or school.getScoreRange(2, false).isPresent()
+                                          or school.getScoreRange(1, false).isPresent()}">
+                <p th:unless="${hasRange}" class="small text-body-secondary mb-0">Not available</p>
+                <ul th:if="${hasRange}" class="range-list">
                     <th:block th:each="pg : ${#numbers.sequence(3, 1, -1)}">
                         <th:block th:with="range=${school.getScoreRange(pg, false).orElse(null)}">
-                            <li th:if="${range != null}" class="list-inline-item"
-                                th:text="|PG${range.postingGroup} ${range.rangeText} (${range.admissionYear})|">
-                                PG3 8–12 (2025)</li>
+                            <li th:if="${range != null}" class="range-chip"><span class="range-pg"
+                                    th:text="|PG${range.postingGroup}|">PG3</span> <span class="range-al"
+                                    th:text="${range.rangeText}">8–12</span> <span class="range-year"
+                                    th:text="|(${range.admissionYear})|">(2025)</span></li>
                         </th:block>
                     </th:block>
                 </ul>
-            </dd>
             </th:block>
-        </dl>
-        <!--/* DC-74: no PSLE ranges in the dataset: one line instead of the PSLE row and its note */-->
-        <p th:if="${psleDataAvailable == false}" class="small text-body-secondary mt-auto mb-0" data-psle-unavailable="true">
-            PSLE score ranges: not available yet</p>
-        <th:block th:unless="${psleDataAvailable == false}">
-        <!--/* seedData (LayoutModelAdvice): the seed snapshot's ranges are made up (DC-34) */-->
-        <p th:if="${seedData}" class="small text-warning-emphasis mt-auto mb-0">
-            <strong>TEST VALUES – not MOE data.</strong> Seed PSLE ranges are made up.</p>
-        <p th:unless="${seedData}" class="small text-body-secondary mt-auto mb-0">PSLE ranges from past years: historical, not guaranteed.</p>
-        </th:block>
+            <!--/* seedData (LayoutModelAdvice): the seed snapshot's ranges are made up (DC-34) */-->
+            <p th:if="${seedData}" class="notice-test mt-2 mb-0">
+                <strong>TEST VALUES – not MOE data.</strong> Seed PSLE ranges are made up.</p>
+            <p th:unless="${seedData}" class="note mt-2 mb-0">Ranges from past years: historical, not guaranteed.</p>
+        </div>
     </div>
 </article>
 </body>

@@ -10,12 +10,16 @@
 <nav th:replace="~{layout :: navbar}"></nav>
 
 <main class="container py-4">
-    <p class="mb-2">
-        <a th:href="${listUrl}">&larr; Back to the facilities list</a>
-    </p>
-    <h1 class="h3 mb-1">Facilities around <span th:text="${school.name}">the school</span></h1>
-    <p class="text-body-secondary" th:text="|${typesLabel} within ${radiusKm} km of the school|">
-        Libraries and tuition centres within 3 km of the school</p>
+    <header class="page-header">
+        <a class="back-link" th:href="${listUrl}"><svg
+                th:replace="~{fragments/icon :: icon('arrow-left')}"></svg>Back to the facilities list</a>
+        <h1 class="page-title">Facilities around <span th:text="${school.name}">the school</span></h1>
+        <p class="page-subtitle">
+            <span th:text="|${typesLabel} within ${radiusKm} km|">Libraries and tuition centres within 3 km</span>
+            · <a th:href="@{/schools/{code}(code=${school.schoolCode})}">School details</a>
+            <span th:if="${googleStub}" class="badge-stub ms-1">Demo data (stub)</span>
+        </p>
+    </header>
     <div th:replace="~{fragments/messages :: messages}"></div>
 
     <div th:if="${schoolNotMappable}" class="alert alert-warning" role="alert">
@@ -33,40 +37,41 @@
         No libraries or tuition centres to show.</div>
 
     <div class="row g-4">
-        <div class="col-12 col-lg-8">
+        <!--/* without an interactive map the list is the main content, so it gets the wide column */-->
+        <div class="col-12" th:classappend="${interactive} ? 'col-lg-8'">
             <!--/* displayFacilityMarkers / displayMapUnavailable (EX-1) */-->
             <div th:replace="~{fragments/map-canvas :: mapCanvas(${markersJson}, ${interactive})}"></div>
             <!--/* legend: facility types can be told apart (UC View Facilities on Map, special requirement) */-->
-            <p class="small mt-2 mb-0 d-flex flex-wrap gap-3" th:if="${interactive}">
-                <span><span class="badge rounded-pill" style="background-color:#0d6efd">S</span> School</span>
-                <span><span class="badge rounded-pill" style="background-color:#198754">L</span> Library</span>
-                <span><span class="badge rounded-pill" style="background-color:#fd7e14">T</span> Tuition centre</span>
-            </p>
-            <p th:if="${omittedCount > 0}" class="small text-body-secondary mt-2 mb-0"
-               th:text="${omittedCount == 1} ? '1 facility has no map location and is not shown on the map.'
-                                            : |${omittedCount} facilities have no map location and are not shown on the map.|">
-                1 facility has no map location.</p>
+            <ul class="map-legend mt-3" th:if="${interactive}">
+                <li class="legend-item"><span class="legend-dot is-school"></span>School</li>
+                <li class="legend-item"><span class="legend-dot is-library"></span>Library</li>
+                <li class="legend-item"><span class="legend-dot is-tuition"></span>Tuition centre</li>
+            </ul>
+            <p th:if="${omittedCount > 0}" class="note mt-2 mb-0"><svg th:replace="~{fragments/icon :: icon('info')}"></svg><span
+                    th:text="${omittedCount == 1} ? '1 facility has no map location and is not shown on the map.'
+                                                 : |${omittedCount} facilities have no map location and are not shown on the map.|">
+                1 facility has no map location.</span></p>
         </div>
-        <div class="col-12 col-lg-4">
-            <section class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <h2 class="h6 mb-2">Facilities on this map</h2>
-                    <p th:if="${#lists.isEmpty(facilities)}" class="small text-body-secondary mb-0">None to show.</p>
-                    <ol class="map-list small mb-0 ps-4" th:unless="${#lists.isEmpty(facilities)}">
-                        <li th:each="row : ${facilities}" class="mb-1">
-                            <a th:href="${row.detailsUrl}" th:text="${row.facility.name}">Library</a>
-                            <span class="d-block text-body-secondary"
-                                  th:text="|${row.typeLabel} · ${row.distanceKm} km|">Library · 0.6 km</span>
-                        </li>
-                    </ol>
-                    <p th:if="${googleStub}" class="small mt-2 mb-0">
-                        <span class="badge text-bg-warning">Demo data (stub)</span> Facilities marked (stub) are not real.
-                    </p>
-                </div>
-                <div class="card-footer bg-body small d-flex flex-wrap gap-3">
-                    <a th:href="${listUrl}">Back to the list</a>
-                    <a th:href="@{/schools/{code}(code=${school.schoolCode})}">School details</a>
-                </div>
+        <div class="col-12" th:classappend="${interactive} ? 'col-lg-4' : 'col-lg-8'">
+            <section class="card">
+                <div class="card-header">Facilities on this map</div>
+                <p th:if="${#lists.isEmpty(facilities)}" class="card-body small text-body-secondary mb-0">None to show.</p>
+                <ol class="map-list list-group list-group-flush list-group-numbered" th:unless="${#lists.isEmpty(facilities)}">
+                    <li th:each="row : ${facilities}" class="list-group-item d-flex gap-2">
+                        <div class="ms-1">
+                            <a class="fw-semibold link-underline link-underline-opacity-0 link-underline-opacity-100-hover"
+                               th:href="${row.detailsUrl}" th:text="${row.facility.name}">Library</a>
+                            <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                                <span class="facility-tag"
+                                      th:classappend="${row.facility.facilityType != null and row.facility.facilityType.name() == 'TUITION_CENTRE'} ? 'is-tuition' : 'is-library'"
+                                      th:text="${row.typeLabel}">Library</span>
+                                <span class="small text-body-secondary" th:text="|${row.distanceKm} km|">0.6 km</span>
+                            </div>
+                        </div>
+                    </li>
+                </ol>
+                <p th:if="${googleStub}" class="card-footer small text-body-secondary mb-0">
+                    Facilities marked (stub) are not real.</p>
             </section>
         </div>
     </div>

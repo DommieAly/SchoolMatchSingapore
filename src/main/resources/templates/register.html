@@ -1,42 +1,58 @@
 <!DOCTYPE html>
 <!--/* DM 03 RegistrationForm — RegisterUI.displayRegistrationForm / submitRegistration (FR-REG-01..05, NFR-SEC-04).
        Model: form (RegisterUI.RegistrationForm; passwords are never sent back), fieldErrors (highlightInvalidFields),
-       optional flashError (EX-1). */-->
+       optional flashError (EX-1).
+       Each field error is shown once next to its field (plus the summary from fragments/messages); the username rule
+       is hidden while the username error, which repeats it, is shown. */-->
 <!-- DM-03 RegistrationForm · RegisterUI -->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Register')}"></head>
 <body>
 <nav th:replace="~{layout :: navbar}"></nav>
 
-<main class="container py-4">
+<main class="container py-4 py-md-5">
     <div class="row justify-content-center">
-        <div class="col-12 col-md-8 col-lg-6 col-xl-5">
-            <h1 class="h3 mb-3">Create an account</h1>
+        <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4">
+            <header class="page-header text-center">
+                <h1 class="page-title">Create an account</h1>
+                <p class="page-subtitle">Keep a shortlist, plan your six choices and get recommendations.</p>
+            </header>
             <div th:replace="~{fragments/messages :: messages}"></div>
-            <div class="card shadow-sm">
+            <div class="card">
                 <div class="card-body p-4">
-                    <form method="post" th:action="@{/register}" th:object="${form}" novalidate>
+                    <form method="post" th:action="@{/register}" th:object="${form}" novalidate
+                          th:with="usernameError=${fieldErrors?.get('username')},
+                                   emailError=${fieldErrors?.get('email')},
+                                   passwordError=${fieldErrors?.get('password')},
+                                   confirmError=${fieldErrors?.get('confirm')}">
                         <div class="mb-3">
                             <label for="username" class="form-label">Username</label>
                             <input id="username" type="text" name="username" th:value="*{username}" class="form-control"
-                                   required maxlength="30" autocomplete="username" aria-describedby="username-help"
-                                   th:classappend="${fieldErrors?.get('username') != null} ? 'is-invalid'">
-                            <div class="invalid-feedback" th:text="${fieldErrors?.get('username')}">Error</div>
-                            <div id="username-help" class="form-text">3–30 letters, digits or underscores (_).</div>
+                                   required maxlength="30" autocomplete="username"
+                                   th:classappend="${usernameError != null} ? 'is-invalid'"
+                                   th:aria-invalid="${usernameError != null} ? 'true'"
+                                   th:aria-describedby="${usernameError != null} ? 'username-error' : 'username-help'">
+                            <div id="username-error" class="invalid-feedback" th:text="${usernameError}">Error</div>
+                            <div id="username-help" class="form-text" th:if="${usernameError == null}">3–30 letters,
+                                digits or underscores (_).</div>
                         </div>
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
                             <input id="email" type="email" name="email" th:value="*{email}" class="form-control"
                                    required maxlength="254" autocomplete="email"
-                                   th:classappend="${fieldErrors?.get('email') != null} ? 'is-invalid'">
-                            <div class="invalid-feedback" th:text="${fieldErrors?.get('email')}">Error</div>
+                                   th:classappend="${emailError != null} ? 'is-invalid'"
+                                   th:aria-invalid="${emailError != null} ? 'true'"
+                                   th:aria-describedby="${emailError != null} ? 'email-error'">
+                            <div id="email-error" class="invalid-feedback" th:text="${emailError}">Error</div>
                         </div>
                         <div class="mb-3">
                             <label for="password" class="form-label">Password</label>
                             <input id="password" type="password" name="password" class="form-control" required
-                                   maxlength="64" autocomplete="new-password" aria-describedby="password-help"
-                                   th:classappend="${fieldErrors?.get('password') != null} ? 'is-invalid'">
-                            <div class="invalid-feedback" th:text="${fieldErrors?.get('password')}">Error</div>
+                                   maxlength="64" autocomplete="new-password"
+                                   th:classappend="${passwordError != null} ? 'is-invalid'"
+                                   th:aria-invalid="${passwordError != null} ? 'true'"
+                                   th:aria-describedby="${passwordError != null} ? 'password-error password-help' : 'password-help'">
+                            <div id="password-error" class="invalid-feedback" th:text="${passwordError}">Error</div>
                             <div id="password-help" class="form-text">
                                 8–64 characters with an upper-case letter, a lower-case letter and a digit.
                                 English letters, digits, spaces and keyboard symbols only.
@@ -46,17 +62,19 @@
                             <label for="confirm" class="form-label">Confirm password</label>
                             <input id="confirm" type="password" name="confirm" class="form-control" required
                                    maxlength="64" autocomplete="new-password"
-                                   th:classappend="${fieldErrors?.get('confirm') != null} ? 'is-invalid'">
-                            <div class="invalid-feedback" th:text="${fieldErrors?.get('confirm')}">Error</div>
+                                   th:classappend="${confirmError != null} ? 'is-invalid'"
+                                   th:aria-invalid="${confirmError != null} ? 'true'"
+                                   th:aria-describedby="${confirmError != null} ? 'confirm-error'">
+                            <div id="confirm-error" class="invalid-feedback" th:text="${confirmError}">Error</div>
                         </div>
-                        <div class="d-flex gap-2">
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">Create account</button>
                             <a class="btn btn-outline-secondary" th:href="@{/}">Cancel</a>
-                            <button type="submit" class="btn btn-primary flex-grow-1">Create account</button>
                         </div>
                     </form>
                 </div>
             </div>
-            <p class="text-center small mt-3">Already registered? <a th:href="@{/login}">Log in</a></p>
+            <p class="text-center mt-3 mb-0">Already registered? <a class="fw-semibold" th:href="@{/login}">Log in</a></p>
         </div>
     </div>
 </main>

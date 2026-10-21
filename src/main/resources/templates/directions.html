@@ -10,12 +10,17 @@
 <nav th:replace="~{layout :: navbar}"></nav>
 
 <main class="container py-4">
-    <p class="mb-2"><a th:href="${changeUrl}">&larr; Change starting point or travel mode</a></p>
-    <h1 class="h3 mb-1">Directions</h1>
-    <p class="text-body-secondary">
-        To <a th:href="${destinationUrl}" class="fw-semibold" th:text="${destination.name}">school</a>
-        from <strong th:text="${startLocation.inputText != null ? startLocation.inputText : 'your starting point'}">start</strong>
-    </p>
+    <header class="page-header">
+        <a class="back-link" th:href="${changeUrl}"><svg
+                th:replace="~{fragments/icon :: icon('arrow-left')}"></svg>Change starting point or travel mode</a>
+        <h1 class="page-title">Directions</h1>
+        <p class="page-subtitle">
+            To <a th:href="${destinationUrl}" class="fw-semibold" th:text="${destination.name}">school</a>
+        </p>
+        <p class="page-subtitle small">
+            From <span th:text="${startLocation.inputText != null ? startLocation.inputText : 'your starting point'}">start</span>
+        </p>
+    </header>
     <div th:replace="~{fragments/messages :: messages}"></div>
 
     <!--/* selectTravelMode: switch mode without entering the start again (the overlay shows while it loads) */-->
@@ -29,45 +34,46 @@
     </ul>
 
     <div class="row g-4">
-        <div class="col-12 col-lg-5 order-lg-2">
+        <!--/* without an interactive map the route summary is the main content: it comes first and gets the wide column */-->
+        <div class="col-12" th:classappend="${interactive} ? 'col-lg-5 order-lg-2' : 'col-lg-7'">
             <!--/* displayDirections (FR-ROUTE-07): distance, duration, steps */-->
-            <section class="card shadow-sm mb-4">
-                <div class="card-body p-4">
-                    <dl class="row mb-3">
-                        <dt class="col-5">Travel by</dt>
-                        <dd class="col-7" th:text="${modeLabel}">Walk</dd>
-                        <dt class="col-5">Distance</dt>
-                        <dd class="col-7">
-                            <span th:replace="~{fragments/value :: value(${distanceKm != null ? distanceKm + ' km' : null})}"></span>
-                        </dd>
-                        <dt class="col-5">Travel time</dt>
-                        <dd class="col-7"><span th:replace="~{fragments/value :: value(${durationText})}"></span></dd>
-                    </dl>
-                    <h2 class="h6">Steps</h2>
-                    <ol class="list-group list-group-numbered small mb-0">
+            <section class="card">
+                <div class="card-body">
+                    <div class="stat-grid mb-4">
+                        <div class="stat">
+                            <span class="stat-value"><span th:replace="~{fragments/value :: value(${durationText})}"></span></span>
+                            <span class="stat-label" th:text="|Travel time · ${modeLabel}|">Travel time · Walk</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value"><span
+                                    th:replace="~{fragments/value :: value(${distanceKm != null ? distanceKm + ' km' : null})}"></span></span>
+                            <span class="stat-label">Distance</span>
+                        </div>
+                    </div>
+                    <h2 class="section-title">Steps</h2>
+                    <ol class="list-group list-group-numbered mb-0">
                         <li class="list-group-item d-flex justify-content-between align-items-start gap-3"
                             th:each="step : ${steps}">
                             <span class="me-auto">
                                 <span th:replace="~{fragments/value :: value(${step.instruction})}"></span>
                             </span>
-                            <span class="text-body-secondary text-nowrap" th:if="${step.distance != null}"
+                            <span class="small text-body-secondary text-nowrap" th:if="${step.distance != null}"
                                   th:text="${step.distance}">350 m</span>
                         </li>
                     </ol>
-                    <p class="small text-body-secondary mt-3 mb-0">
+                    <p class="note mt-3 mb-0"><svg th:replace="~{fragments/icon :: icon('info')}"></svg><span>
                         <th:block th:unless="${googleStub}">Estimated by Google Maps Platform.</th:block>
-                        Check the route before you travel.
-                        <span th:if="${googleStub}" class="d-block mt-1">
-                            <span class="badge text-bg-warning">Demo data (stub)</span>
-                            Straight-line estimate, not real directions.
-                        </span>
+                        Check the route before you travel.</span></p>
+                    <p th:if="${googleStub}" class="small mt-2 mb-0">
+                        <span class="badge-stub">Demo data (stub)</span>
+                        Straight-line estimate, not real directions.
                     </p>
                 </div>
             </section>
-            <a class="btn btn-outline-secondary" th:href="${cancelUrl}">
-                Back to <span th:text="${destination.name}">the school</span></a>
+            <a class="btn btn-outline-secondary mt-3" th:href="${cancelUrl}"
+               th:text="|Back to ${destination.name}|">Back to the school</a>
         </div>
-        <div class="col-12 col-lg-7 order-lg-1">
+        <div class="col-12 col-lg-7" th:classappend="${interactive} ? 'order-lg-1'">
             <!--/* the map draws Route.encodedPolyline (DC-05) between the start (A) and the destination */-->
             <div th:replace="~{fragments/map-canvas :: mapCanvas(${markersJson}, ${interactive})}"></div>
         </div>

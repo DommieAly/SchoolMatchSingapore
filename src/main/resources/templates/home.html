@@ -6,60 +6,119 @@
 <body>
 <nav th:replace="~{layout :: navbar}"></nav>
 
-<main class="container py-4" th:fragment="displayHomePage">
+<main class="container py-4 py-md-5" th:fragment="displayHomePage">
     <!--/* Banners, e.g. "You have logged out." after POST /logout (DC-03, FR-LOGOUT-03) */-->
     <div th:replace="~{fragments/messages :: messages}"></div>
 
     <!--/* selectSearchSchools: the main entry point for guests and members (FR-SEARCH-01) */-->
-    <section class="py-5 text-center">
-        <h1 class="display-6 mb-3">Find a secondary school in Singapore</h1>
+    <section class="hero" aria-labelledby="home-title">
+        <h1 id="home-title" class="hero-title">Find a secondary school in Singapore</h1>
         <!--/* DC-74: do not promise PSLE ranges when the active dataset has none */-->
-        <p class="lead text-muted mb-4" th:text="${psleDataAvailable == false}
+        <p class="hero-lead" th:text="${psleDataAvailable == false}
                 ? 'Search by school name, then compare details, CCAs, subjects and travel options.'
                 : 'Search by school name, then compare details, PSLE ranges and travel options.'">Search by school
             name, then compare details, PSLE ranges and travel options.</p>
-        <form class="row justify-content-center g-2" th:action="@{/schools}" method="get" role="search">
-            <div class="col-12 col-md-7">
+        <form class="hero-search" th:action="@{/schools}" method="get" role="search">
+            <div class="hero-search-field">
                 <label for="home-q" class="visually-hidden">School name</label>
+                <svg th:replace="~{fragments/icon :: icon('search')}"></svg>
                 <input id="home-q" name="q" type="search" maxlength="100" class="form-control form-control-lg"
                        placeholder="School name, e.g. Catholic High" autocomplete="off">
             </div>
-            <div class="col-12 col-md-auto">
-                <button type="submit" class="btn btn-primary btn-lg w-100">Search</button>
-            </div>
+            <button type="submit" class="btn btn-accent btn-lg">Search</button>
         </form>
-        <p class="mt-3 mb-0"><a th:href="@{/schools}">Browse all schools A–Z</a></p>
+        <p class="hero-links"><a th:href="@{/schools}">Browse all schools A–Z</a></p>
     </section>
 
-    <!--/* Guest block: selectLogin, selectRegister */-->
-    <section th:unless="${loggedIn}" class="row justify-content-center">
-        <div class="col-12 col-md-8 col-lg-6">
-            <div class="card">
-                <div class="card-body">
-                    <h2 class="h5 card-title">Planning your six choices?</h2>
-                    <p class="card-text">Log in to keep a shortlist, plan your choices and get recommendations.</p>
-                    <a class="btn btn-outline-primary me-2" th:href="@{/login}">Log in</a>
-                    <a class="btn btn-outline-secondary" th:href="@{/register}">Register</a>
+    <!--/* Guest block: what the site does, then selectLogin, selectRegister */-->
+    <th:block th:unless="${loggedIn}">
+        <section class="mt-4 mt-md-5" aria-labelledby="home-features">
+            <h2 id="home-features" class="section-title">What you can do</h2>
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+                <div class="col">
+                    <a class="tile" th:href="@{/schools/filter}">
+                        <span class="tile-icon is-indigo"><svg th:replace="~{fragments/icon :: icon('filter')}"></svg></span>
+                        <span class="tile-title">Filter schools</span>
+                        <span class="tile-text" th:text="${psleDataAvailable == false}
+                                ? 'By type, CCA, programme, distance or travel time.'
+                                : 'By type, CCA, distance, travel time or PSLE score.'">By type, CCA, distance, travel
+                            time or PSLE score.</span>
+                    </a>
+                </div>
+                <div class="col">
+                    <a class="tile" th:href="@{/schools/map}">
+                        <span class="tile-icon is-cyan"><svg th:replace="~{fragments/icon :: icon('map')}"></svg></span>
+                        <span class="tile-title">See them on a map</span>
+                        <span class="tile-text">Schools and planning areas on one map.</span>
+                    </a>
+                </div>
+                <div class="col">
+                    <a class="tile" th:href="@{/shortlist}">
+                        <span class="tile-icon is-violet"><svg th:replace="~{fragments/icon :: icon('compare')}"></svg></span>
+                        <span class="tile-title">Shortlist and compare</span>
+                        <span class="tile-text">Save schools and compare them side by side.</span>
+                        <span class="tile-tag">Needs an account</span>
+                    </a>
+                </div>
+                <div class="col">
+                    <a class="tile" th:href="@{/recommendations}">
+                        <span class="tile-icon is-pink"><svg th:replace="~{fragments/icon :: icon('sparkle')}"></svg></span>
+                        <span class="tile-title">Recommendations</span>
+                        <span class="tile-text">Get a ranked list, then order your six choices.</span>
+                        <span class="tile-tag">Needs an account</span>
+                    </a>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
+
+        <section class="cta-card mt-4" aria-labelledby="home-cta">
+            <div>
+                <h2 id="home-cta" class="cta-card-title">Planning your six choices?</h2>
+                <p class="cta-card-text">Log in to keep a shortlist, plan your choices and get recommendations.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-primary" th:href="@{/register}">Register</a>
+                <a class="btn btn-outline-secondary" th:href="@{/login}">Log in</a>
+            </div>
+        </section>
+    </th:block>
 
     <!--/* Member block (DM 04 HomePage (Authenticated)): selectGetRecommendations, selectProfile */-->
-    <section th:if="${loggedIn}" class="row justify-content-center">
-        <div class="col-12 col-md-8 col-lg-6">
-            <div class="card">
-                <div class="card-body">
-                    <h2 class="h5 card-title"
-                        th:text="${userName != null} ? |Welcome back, ${userName}| : 'Welcome back'">Welcome back</h2>
-                    <p class="card-text">Continue planning your six choices.</p>
-                    <div class="d-flex flex-wrap gap-2">
-                        <a class="btn btn-primary" th:href="@{/recommendations}">Get recommendations</a>
-                        <a class="btn btn-outline-primary" th:href="@{/shortlist}">My shortlist</a>
-                        <a class="btn btn-outline-primary" th:href="@{/plan}">Plan my 6 choices</a>
-                        <a class="btn btn-outline-secondary" th:href="@{/profile}">Profile</a>
-                    </div>
-                </div>
+    <section th:if="${loggedIn}" class="mt-4 mt-md-5" aria-labelledby="home-welcome">
+        <h2 id="home-welcome" class="section-title mb-1"
+            th:text="${userName != null} ? |Welcome back, ${userName}| : 'Welcome back'">Welcome back</h2>
+        <p class="text-body-secondary mb-3">Continue planning your six choices.</p>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+            <div class="col">
+                <a class="tile tile-featured" th:href="@{/recommendations}">
+                    <span class="tile-icon"><svg th:replace="~{fragments/icon :: icon('sparkle')}"></svg></span>
+                    <span class="tile-title">Get recommendations</span>
+                    <span class="tile-text" th:text="${psleDataAvailable == false}
+                            ? 'A ranked list for your travel time and interests.'
+                            : 'A ranked list for your score, travel time and interests.'">A ranked list for your
+                        score, travel time and interests.</span>
+                </a>
+            </div>
+            <div class="col">
+                <a class="tile" th:href="@{/shortlist}">
+                    <span class="tile-icon is-violet"><svg th:replace="~{fragments/icon :: icon('bookmark')}"></svg></span>
+                    <span class="tile-title">My shortlist</span>
+                    <span class="tile-text">Saved schools. Compare them side by side.</span>
+                </a>
+            </div>
+            <div class="col">
+                <a class="tile" th:href="@{/plan}">
+                    <span class="tile-icon is-cyan"><svg th:replace="~{fragments/icon :: icon('plan')}"></svg></span>
+                    <span class="tile-title">Plan my 6 choices</span>
+                    <span class="tile-text">Order your choices and check the plan.</span>
+                </a>
+            </div>
+            <div class="col">
+                <a class="tile" th:href="@{/profile}">
+                    <span class="tile-icon is-indigo"><svg th:replace="~{fragments/icon :: icon('user')}"></svg></span>
+                    <span class="tile-title">Profile</span>
+                    <span class="tile-text">Your score, home address and interests.</span>
+                </a>
             </div>
         </div>
     </section>
