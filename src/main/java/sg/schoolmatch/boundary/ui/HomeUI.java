@@ -1,7 +1,6 @@
 package sg.schoolmatch.boundary.ui;
 
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Objects;
@@ -9,6 +8,8 @@ import java.util.TreeMap;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import sg.schoolmatch.boundary.ui.support.LayoutModelAdvice;
+import sg.schoolmatch.config.ClockConfig;
 import sg.schoolmatch.control.SchoolDataController;
 import sg.schoolmatch.dataset.SnapshotManifest;
 
@@ -25,8 +26,7 @@ import sg.schoolmatch.dataset.SnapshotManifest;
 @Controller
 public class HomeUI {
 
-    private static final ZoneId SINGAPORE = ZoneId.of("Asia/Singapore");
-    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH);
+    private static final DateTimeFormatter DATE = LayoutModelAdvice.DATE;
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Locale.ENGLISH);
 
     /** Dataset id prefix of the OneMap source in a manifest (e.g. {@code onemap-elastic-search}). */
@@ -63,7 +63,7 @@ public class HomeUI {
         model.addAttribute("counts", new TreeMap<>(manifest.counts()));
         model.addAttribute("sources", manifest.sources().stream().map(HomeUI::toRow).toList());
         model.addAttribute("oneMapAccessedOn", manifest.sources().stream()
-                .filter(source -> source.datasetId() != null && source.datasetId().startsWith(ONEMAP_SOURCE_PREFIX))
+                .filter(source -> source.datasetId().startsWith(ONEMAP_SOURCE_PREFIX))
                 .map(source -> format(source.downloadedAt(), DATE))
                 .filter(Objects::nonNull)
                 .findFirst().orElse(null));
@@ -76,13 +76,13 @@ public class HomeUI {
     }
 
     private static DataSourceRow toRow(SnapshotManifest.Source source) {
-        String name = source.name() == null ? source.datasetId() : source.name().replaceFirst("^data\\.gov\\.sg ", "");
-        boolean dataGovSg = source.datasetId() != null && source.datasetId().startsWith("d_");
+        String name = source.name().replaceFirst("^data\\.gov\\.sg ", "");
+        boolean dataGovSg = source.datasetId().startsWith("d_");
         return new DataSourceRow(name, source.datasetId(), format(source.downloadedAt(), DATE),
                 format(source.downloadedAt(), DATE_TIME), dataGovSg);
     }
 
     private static String format(Instant instant, DateTimeFormatter formatter) {
-        return instant == null ? null : formatter.format(instant.atZone(SINGAPORE));
+        return instant == null ? null : formatter.format(instant.atZone(ClockConfig.SINGAPORE));
     }
 }

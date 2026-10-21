@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -47,10 +48,6 @@ public class CuratedCsvReader {
 
     public CuratedCsvReader(@Value("${app.dataset.curated-dir:data/curated}") String folder) {
         this.folder = Path.of(folder);
-    }
-
-    public Path getFolder() {
-        return folder;
     }
 
     /**
@@ -151,12 +148,12 @@ public class CuratedCsvReader {
 
     // ------------------------------------------------------------------ CSV
 
-    /** Maps one CSV row (column → value, empty cells null) to a record, or throws IllegalArgumentException. */
-    private interface RowMapper<T> {
-        T map(Map<String, String> row);
-    }
-
-    private <T> List<T> rows(String file, List<String> columns, List<String> problems, RowMapper<T> mapper) {
+    /**
+     * @param mapper maps one CSV row (column → value, empty cells null) to a record, or throws
+     *               IllegalArgumentException
+     */
+    private <T> List<T> rows(String file, List<String> columns, List<String> problems,
+                             Function<Map<String, String>, T> mapper) {
         Path path = folder.resolve(file);
         if (!Files.isRegularFile(path)) {
             problems.add(file + ": not found in " + folder + " (read as empty)");
@@ -190,7 +187,7 @@ public class CuratedCsvReader {
                 continue;   // a row of empty cells, e.g. ",,,"
             }
             try {
-                result.add(mapper.map(row));
+                result.add(mapper.apply(row));
             } catch (IllegalArgumentException e) {
                 problems.add(file + " line " + line.number() + ": " + e.getMessage() + " (row skipped)");
             }

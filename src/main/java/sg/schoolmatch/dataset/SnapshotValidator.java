@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 import sg.schoolmatch.entity.common.Coordinate;
 import sg.schoolmatch.entity.school.District;
+import sg.schoolmatch.entity.school.IndicativePsleScoreRange;
 import sg.schoolmatch.entity.school.School;
 
 /**
@@ -58,8 +59,8 @@ public class SnapshotValidator {
     /** A full (importer) snapshot must hold this many schools; the seed is exempt. */
     public static final int FULL_MIN_SCHOOLS = 140;
     public static final int FULL_MAX_SCHOOLS = 160;
-    public static final int MIN_SCORE = 4;
-    public static final int MAX_SCORE = 32;
+    public static final int MIN_SCORE = IndicativePsleScoreRange.MIN_SCORE;
+    public static final int MAX_SCORE = IndicativePsleScoreRange.MAX_SCORE;
 
     /** AL scores (PSLE 4–32) exist from the 2022 admission year (ck_indicative_psle_score_range_year). */
     public static final int MIN_ADMISSION_YEAR = 2022;

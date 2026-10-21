@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import sg.schoolmatch.entity.school.ValidationStatus;
@@ -37,10 +38,24 @@ public record SnapshotManifest(
     public static final String KIND_SEED = "seed";
     public static final String KIND_FULL = "full";
 
+    /** The keys of {@code counts}: the importer and the database write them, the loader checks them. */
+    public static final String COUNT_SCHOOLS = "schools";
+    public static final String COUNT_DISTRICTS = "districts";
+    public static final String COUNT_SCORE_RANGES = "scoreRanges";
+
     public SnapshotManifest {
         sources = sources == null ? List.of() : List.copyOf(sources);
         warnings = warnings == null ? List.of() : List.copyOf(warnings);
         counts = counts == null ? Map.of() : Map.copyOf(counts);
+    }
+
+    /** The {@code counts} map, in the order schools, districts, score ranges. */
+    public static Map<String, Integer> counts(int schools, int districts, int scoreRanges) {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        counts.put(COUNT_SCHOOLS, schools);
+        counts.put(COUNT_DISTRICTS, districts);
+        counts.put(COUNT_SCORE_RANGES, scoreRanges);
+        return counts;
     }
 
     /** {@code formatVersion}, or 1 when the file has none. */

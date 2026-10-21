@@ -5,20 +5,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.Cookie;
-import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.control.AuthController;
+import sg.schoolmatch.support.TestProperties;
 
 /**
  * Open-redirect guard for {@code next} (login) and {@code returnTo} (location forms): a link must never send
@@ -93,7 +90,7 @@ class AuthInterceptorTest {
 
     private final AuthController authController = mock(AuthController.class);
     private final AuthInterceptor interceptor = new AuthInterceptor(authController, new SessionCookie(
-            new Binder(new MapConfigurationPropertySource(Map.of())).bindOrCreate("app", AppProperties.class)));
+            TestProperties.defaults()));
 
     @Test
     @Tag("FR-SHORTLIST-01")

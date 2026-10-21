@@ -3,6 +3,8 @@ package sg.schoolmatch.boundary.ui;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -93,9 +95,9 @@ public class RecommendationUI {
                                       @RequestParam(required = false) String postingGroup,
                                       @RequestParam(required = false) String travelMode,
                                       @RequestParam(required = false) String maxCommuteMin,
-                                      @RequestParam(required = false) List<String> preferredCCAs,
-                                      @RequestParam(required = false) List<String> preferredProgrammes,
                                       HttpServletRequest request, Model model) {
+        List<String> preferredCCAs = listParam(request, "preferredCCAs");
+        List<String> preferredProgrammes = listParam(request, "preferredProgrammes");
         UserProfile profile = profileController.getProfile(sessionId);
         MatchCriteria criteria = profile.toMatchCriteria();
         referenceLocationStore.get(request).ifPresent(criteria::setStartLocation);
@@ -127,8 +129,6 @@ public class RecommendationUI {
                                  @RequestParam(required = false) String postingGroup,
                                  @RequestParam(required = false) String travelMode,
                                  @RequestParam(required = false) String maxCommuteMin,
-                                 @RequestParam(required = false) List<String> preferredCCAs,
-                                 @RequestParam(required = false) List<String> preferredProgrammes,
                                  HttpServletRequest request, Model model) {
         UserProfile profile = profileController.getProfile(sessionId);
         MatchCriteria criteria = new MatchCriteria();
@@ -136,8 +136,8 @@ public class RecommendationUI {
         criteria.setPostingGroup(wholeNumber(postingGroup));
         criteria.setTravelMode(travelMode(travelMode));
         criteria.setMaxCommuteMin(wholeNumber(maxCommuteMin));
-        criteria.setPreferredCCAs(preferredCCAs);
-        criteria.setPreferredProgrammes(preferredProgrammes);
+        criteria.setPreferredCCAs(listParam(request, "preferredCCAs"));
+        criteria.setPreferredProgrammes(listParam(request, "preferredProgrammes"));
         criteria.setPrimarySchool(profile.getPrimarySchool());
         criteria.setStartLocation(referenceLocationStore.get(request)
                 .orElse(profile.toMatchCriteria().getStartLocation()));
@@ -171,7 +171,7 @@ public class RecommendationUI {
         MatchCriteria criteria = stored.criteria();
         model.addAttribute("recommendations", stored.recommendations());
         model.addAttribute("criteria", criteria);
-        model.addAttribute("travelModeLabel", modeLabel(criteria.getTravelMode()));
+        model.addAttribute("travelModeLabel", DirectionsUI.label(criteria.getTravelMode()));
         model.addAttribute("weights", props.recommendation().weights());
         model.addAttribute("psleFit", props.recommendation().psleFit());   // app.recommendation.psle-fit.*
         model.addAttribute("reachNearMargin", props.recommendation().reachNearMargin());
@@ -195,32 +195,49 @@ public class RecommendationUI {
         model.addAttribute("startLocation", criteria.getStartLocation());
         model.addAttribute("startFromProfile", true);   // the picker labels the profile home and hides Clear
         model.addAttribute("travelModes", TravelMode.values());
-        model.addAttribute("durationOptions", TransportationFilter.DURATION_OPTIONS_MIN.stream().sorted().toList());
+        model.addAttribute("durationOptions", TransportationFilter.DURATION_OPTIONS_MIN);
         model.addAttribute("ccaOptions", filterController.getFilterOptions(AttributeCategory.CCA));
         model.addAttribute("programmeOptions", filterController.getFilterOptions(AttributeCategory.PROGRAMME));
         model.addAttribute("weights", props.recommendation().weights());
         model.addAttribute("returnTo", keepDraft ? draftUrl(criteria) : CRITERIA_PATH);
     }
 
-    /** GET /recommendations with the criteria as query parameters (the form's field names). */
+    /**
+     * GET /recommendations with the criteria as query parameters (the form's field names). Each value is a URI
+     * variable, so reserved characters such as '+' are percent-encoded and come back unchanged.
+     */
     static String draftUrl(MatchCriteria criteria) {
         UriComponentsBuilder url = UriComponentsBuilder.fromPath(CRITERIA_PATH);
-        if (criteria.getPsleScore() != null) {
-            url.queryParam("psleScore", criteria.getPsleScore());
+        Map<String, Object> values = new HashMap<>();
+        addParam(url, values, "psleScore", criteria.getPsleScore());
+        addParam(url, values, "postingGroup", criteria.getPostingGroup());
+        addParam(url, values, "travelMode", criteria.getTravelMode() == null ? null : criteria.getTravelMode().name());
+        addParam(url, values, "maxCommuteMin", criteria.getMaxCommuteMin());
+        criteria.getPreferredCCAs().forEach(cca -> addParam(url, values, "preferredCCAs", cca));
+        criteria.getPreferredProgrammes().forEach(p -> addParam(url, values, "preferredProgrammes", p));
+        String encoded = url.encode().buildAndExpand(values).toUriString();
+        // A little under the longest local path AuthInterceptor accepts as a return target.
+        return encoded.length() <= AuthInterceptor.MAX_LOCAL_PATH_LENGTH - 100 ? encoded : CRITERIA_PATH;
+    }
+
+    private static void addParam(UriComponentsBuilder url, Map<String, Object> values, String name, Object value) {
+        if (value != null) {
+            String variable = "v" + values.size();
+            url.queryParam(name, "{" + variable + "}");
+            values.put(variable, value);
         }
-        if (criteria.getPostingGroup() != null) {
-            url.queryParam("postingGroup", criteria.getPostingGroup());
+    }
+
+    /**
+     * The values of a repeatable form field in request order, stripped, blanks dropped; null when the field is
+     * absent. Read directly so that one value with a comma (e.g. "Science (Phy, Chem)") is not split in two.
+     */
+    private static List<String> listParam(HttpServletRequest request, String name) {
+        String[] values = request.getParameterValues(name);
+        if (values == null) {
+            return null;
         }
-        if (criteria.getTravelMode() != null) {
-            url.queryParam("travelMode", criteria.getTravelMode().name());
-        }
-        if (criteria.getMaxCommuteMin() != null) {
-            url.queryParam("maxCommuteMin", criteria.getMaxCommuteMin());
-        }
-        criteria.getPreferredCCAs().forEach(cca -> url.queryParam("preferredCCAs", cca));
-        criteria.getPreferredProgrammes().forEach(p -> url.queryParam("preferredProgrammes", p));
-        String encoded = url.encode().build().toUriString();
-        return encoded.length() <= 1900 ? encoded : CRITERIA_PATH;   // AuthInterceptor accepts up to 2000
+        return Arrays.stream(values).map(String::strip).filter(v -> !v.isEmpty()).toList();
     }
 
     /**
@@ -290,17 +307,5 @@ public class RecommendationUI {
         } catch (IllegalArgumentException e) {
             return null;
         }
-    }
-
-    /** "Public transport", "Walk", "Drive" (DC-01: TRANSIT is shown as public transport). */
-    static String modeLabel(TravelMode mode) {
-        if (mode == null) {
-            return null;
-        }
-        return switch (mode) {
-            case WALK -> "Walk";
-            case DRIVE -> "Drive";
-            case TRANSIT -> "Public transport";
-        };
     }
 }

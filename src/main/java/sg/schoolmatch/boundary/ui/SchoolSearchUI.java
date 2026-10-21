@@ -147,7 +147,7 @@ public class SchoolSearchUI {
         model.addAttribute("notAppliedChips", filtered.notAppliedChips(params));
         model.addAttribute("hasFilters", filtered.anyApplied());
         model.addAttribute("searchCount", results.getUnfilteredSchools().size());
-        model.addAttribute("clearAllUrl", onlyTerm(params).toUrl("/schools"));   // clearAllFilters (DC-15)
+        model.addAttribute("clearAllUrl", params.onlyTerm().toUrl("/schools"));   // clearAllFilters (DC-15)
         model.addAttribute("filterUrl", params.toUrl("/schools/filter"));
         model.addAttribute("mapUrl", params.toUrl("/schools/map"));
         model.addAttribute("activeFilters", results.getActiveFilters().stream().map(Filter::describe).toList());
@@ -205,19 +205,8 @@ public class SchoolSearchUI {
 
     private static SortOption sortOption(FilterParams params, CurrentResultSet results, SortOrder order,
                                          String label) {
-        String url = withSort(params, order == SortOrder.NAME_ASC ? null : order.name()).toUrl("/schools");
+        String url = params.withSort(order == SortOrder.NAME_ASC ? null : order.name()).toUrl("/schools");
         return new SortOption(order, label, url, results.getSortOrder() == order);
-    }
-
-    /** Only the search term: the target of "Clear all" (FR-FILTER-09). */
-    private static FilterParams onlyTerm(FilterParams params) {
-        return new FilterParams(params.q(), null, null, null, null, null, null, null, null, null, false, null);
-    }
-
-    /** The same parameters with another {@code sort} (null = default order). */
-    private static FilterParams withSort(FilterParams p, String sort) {
-        return new FilterParams(p.q(), p.types(), p.programmes(), p.ccas(), p.districts(), p.psle(), p.pg(),
-                p.radiusKm(), p.mode(), p.maxMin(), p.travel(), sort);
     }
 
     private static String sortNotAvailable(SortOrder wanted) {

@@ -34,7 +34,6 @@ import sg.schoolmatch.dataset.ValidationReport;
  * transaction (docs/database-design.md, section 6.2; DC-83, DC-86). Plain JDBC with the same SQL on H2 and
  * PostgreSQL: no MERGE and no ON CONFLICT.
  * <p>
- * <p>
  * The read path ({@link #readActive()}, {@link #activeState()}) gives the active dataset back as rows; {@link
  * SchoolDatasetMapper} turns them into the entities. Only {@code SchoolDataController} uses this class
  * (ArchitectureTest rule 9).

@@ -15,12 +15,9 @@ import java.io.UncheckedIOException;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,6 +31,7 @@ import sg.schoolmatch.boundary.external.OneMapInterface;
 import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.config.CacheConfig;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
+import sg.schoolmatch.support.TestProperties;
 
 /** Live OneMapClient against a MockRestServiceServer (DC-11, FR-FILTER-04, FR-ROUTE-02, NFR-MAIN-02). No network. */
 class OneMapClientTest {
@@ -183,7 +181,7 @@ class OneMapClientTest {
     }
 
     private static AppProperties props() {
-        return new Binder(new MapConfigurationPropertySource(Map.of())).bindOrCreate("app", AppProperties.class);
+        return TestProperties.defaults();
     }
 
     private static String resource(String path) {

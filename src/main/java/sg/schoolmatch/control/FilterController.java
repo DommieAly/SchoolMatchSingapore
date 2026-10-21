@@ -14,6 +14,7 @@ import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.entity.common.Coordinate;
 import sg.schoolmatch.entity.route.Route;
 import sg.schoolmatch.entity.route.TravelMode;
+import sg.schoolmatch.entity.school.IndicativePsleScoreRange;
 import sg.schoolmatch.entity.school.School;
 import sg.schoolmatch.entity.search.AttributeCategory;
 import sg.schoolmatch.entity.search.CurrentResultSet;
@@ -23,6 +24,7 @@ import sg.schoolmatch.entity.search.PsleScoreFilter;
 import sg.schoolmatch.entity.search.SchoolAttributeFilter;
 import sg.schoolmatch.entity.search.SortOrder;
 import sg.schoolmatch.entity.search.TransportationFilter;
+import sg.schoolmatch.error.InputMessages;
 import sg.schoolmatch.error.InvalidInputException;
 
 /**
@@ -39,15 +41,14 @@ import sg.schoolmatch.error.InvalidInputException;
 @Service
 public class FilterController {
 
-    // Same texts as boundary.ui.support.FilterParams (a control cannot use the UI package).
-    static final String PSLE_MESSAGE = "Enter a whole number from 4 to 32";
-    static final String PG_MESSAGE = "Choose posting group 1, 2 or 3";
-    static final String RADIUS_MESSAGE = "Choose 1, 3 or 5 km";
-    static final String DURATION_MESSAGE = "Choose 15, 30, 45 or 60 minutes";
-    static final String MODE_MESSAGE = "Choose walk, drive or public transport";
-    static final String LOCATION_MESSAGE = "Set a starting point to use distance or travel-time filters";
+    static final String PSLE_MESSAGE = InputMessages.PSLE;
+    static final String PG_MESSAGE = InputMessages.PG;
+    static final String RADIUS_MESSAGE = InputMessages.RADIUS;
+    static final String DURATION_MESSAGE = InputMessages.DURATION;
+    static final String MODE_MESSAGE = InputMessages.MODE;
+    static final String LOCATION_MESSAGE = InputMessages.LOCATION;
 
-    private final LocationController locationController;
+    private final LocationController locationController;   // design arrow (DC-14), not called
     private final DirectionsController directionsController;
     private final SchoolDataController schoolDataController;
     private final AppProperties props;
@@ -69,7 +70,7 @@ public class FilterController {
      *   <li>Attribute, PSLE and distance filters are applied (no outside call; NFR-PERF-02).</li>
      *   <li>Only when a TransportationFilter is present: the remaining schools that could be reached at the mode's
      *       top speed ({@code app.transport-filter.max-speed-kmh}; at most {@code app.transport-filter.max-routed-schools},
-     *       150, nearest first) are sent to
+     *       160, nearest first) are sent to
      *       {@code DirectionsController.getCommuteTimes}; the minutes go into the filter and the result set, and
      *       the travel-time filter is applied.</li>
      * </ol>
@@ -155,10 +156,12 @@ public class FilterController {
                 }
             }
             case PsleScoreFilter psle -> {
-                if (psle.getScore() < 4 || psle.getScore() > 32) {
+                if (psle.getScore() < IndicativePsleScoreRange.MIN_SCORE
+                        || psle.getScore() > IndicativePsleScoreRange.MAX_SCORE) {
                     problems.put("psle", PSLE_MESSAGE);
                 }
-                if (psle.getPostingGroup() < 1 || psle.getPostingGroup() > 3) {
+                if (psle.getPostingGroup() < IndicativePsleScoreRange.MIN_POSTING_GROUP
+                        || psle.getPostingGroup() > IndicativePsleScoreRange.MAX_POSTING_GROUP) {
                     problems.put("pg", PG_MESSAGE);
                 }
             }
@@ -181,7 +184,6 @@ public class FilterController {
                     problems.put("location", LOCATION_MESSAGE);
                 }
             }
-            default -> problems.put("filter", "This filter cannot be used: " + filter.describe());
         }
         return problems;
     }
@@ -198,9 +200,6 @@ public class FilterController {
 
     /** Request parameter name of a category on the search page. */
     private static String fieldName(AttributeCategory category) {
-        if (category == null) {
-            return "filter";
-        }
         return switch (category) {
             case SCHOOL_TYPE -> "type";
             case PROGRAMME -> "programme";
@@ -232,9 +231,9 @@ public class FilterController {
         List<Route> routes = directionsController.getCommuteTimes(
                 travel.getReferenceLocation(), candidates, travel.getTravelMode());
         Map<String, Integer> minutes = new HashMap<>();
-        for (int i = 0; i < candidates.size() && routes != null && i < routes.size(); i++) {
+        for (int i = 0; i < candidates.size(); i++) {   // one route per candidate, in the same order
             Route route = routes.get(i);
-            if (route != null && route.isAvailable() && route.getDurationSeconds() != null) {
+            if (route.isAvailable()) {   // an available route always has a duration
                 minutes.put(candidates.get(i).getSchoolCode(), (route.getDurationSeconds() + 59) / 60);
             }
         }

@@ -190,6 +190,26 @@ class UserProfileUITest {
 
     @Test
     @Tag("FR-PROFILE-01")
+    @DisplayName("TC-PROFILE-01-32: one CCA or programme whose name has a comma is saved as one value, not split")
+    void submitProfile_singleCommaValues() throws Exception {
+        when(filterController.getFilterOptions(AttributeCategory.CCA))
+                .thenReturn(new TreeSet<>(Set.of("BADMINTON", "ENGLISH LANGUAGE, DRAMA AND DEBATING")));
+        when(filterController.getFilterOptions(AttributeCategory.PROGRAMME))
+                .thenReturn(new TreeSet<>(Set.of("Science (Phy, Chem)")));
+
+        mvc.perform(post("/profile").cookie(LOGGED_IN)
+                        .param("preferredCCAs", "ENGLISH LANGUAGE, DRAMA AND DEBATING")
+                        .param("preferredProgrammes", "Science (Phy, Chem)"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/profile"));
+
+        UserProfile edited = savedArgument();
+        assertThat(edited.getPreferredCCAs()).containsExactly("ENGLISH LANGUAGE, DRAMA AND DEBATING");
+        assertThat(edited.getPreferredProgrammes()).containsExactly("Science (Phy, Chem)");
+    }
+
+    @Test
+    @Tag("FR-PROFILE-01")
     @Tag("NFR-USE-03")
     @DisplayName("TC-PROFILE-01-31: form errors and the control's rule errors are shown together in one answer (AF-2)")
     void submitProfile_allErrorsAtOnce() throws Exception {

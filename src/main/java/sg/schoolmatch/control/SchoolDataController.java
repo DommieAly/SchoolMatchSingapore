@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -23,6 +22,7 @@ import sg.schoolmatch.boundary.external.DataGovSgInterface;
 import sg.schoolmatch.boundary.external.DataGovSgRecord;
 import sg.schoolmatch.boundary.external.OneMapInterface;
 import sg.schoolmatch.config.AppProperties;
+import sg.schoolmatch.config.ClockConfig;
 import sg.schoolmatch.dataset.CuratedCsvReader;
 import sg.schoolmatch.dataset.CuratedCsvReader.CuratedData;
 import sg.schoolmatch.dataset.CuratedCsvReader.PsleRangeRow;
@@ -80,16 +80,10 @@ public class SchoolDataController {
     /** DC-74: why the PSLE filter, SAFE/MATCH/REACH and PSLE fit are not used when {@link #hasPsleData()} is false. */
     public static final String NO_PSLE_DATA_MESSAGE = "PSLE score ranges are not available in the current dataset";
 
-    // data.gov.sg datasets used by the importer (data/README.md)
-    static final String SCHOOLS_DATASET = "d_688b934f82c1059ed0a6993d2a829089";
-    static final String CCAS_DATASET = "d_9aba12b5527843afb0b2e8e4ed6ac6bd";
-    static final String SUBJECTS_DATASET = "d_f1d144e423570c9d84dbc5102c2e664d";
-    static final String PLANNING_AREAS_DATASET = "d_4765db0e87b9c86336792efe8a1f7a66";
     static final String ONEMAP_SOURCE_ID = "onemap-elastic-search";
     static final String CURATED_SOURCE_ID = "data/curated";
 
     private static final Logger log = LoggerFactory.getLogger(SchoolDataController.class);
-    private static final ZoneId SINGAPORE = ZoneId.of("Asia/Singapore");
 
     private final DataGovSgInterface dataGovSg;
     private final OneMapInterface oneMap;
@@ -227,16 +221,17 @@ public class SchoolDataController {
 
         List<SnapshotManifest.Source> sources = new ArrayList<>();
         List<DataGovSgRecord> schoolRows = dataGovSg.fetchSchools();
-        sources.add(new SnapshotManifest.Source("data.gov.sg General information of schools", SCHOOLS_DATASET,
-                clock.instant()));
+        sources.add(new SnapshotManifest.Source("data.gov.sg General information of schools",
+                DataGovSgInterface.SCHOOLS_DATASET, clock.instant()));
         List<DataGovSgRecord> ccaRows = dataGovSg.fetchSchoolCcas();
-        sources.add(new SnapshotManifest.Source("data.gov.sg Co-curricular activities (CCAs)", CCAS_DATASET,
-                clock.instant()));
+        sources.add(new SnapshotManifest.Source("data.gov.sg Co-curricular activities (CCAs)",
+                DataGovSgInterface.CCAS_DATASET, clock.instant()));
         List<DataGovSgRecord> subjectRows = dataGovSg.fetchSchoolSubjects();
-        sources.add(new SnapshotManifest.Source("data.gov.sg Subjects Offered", SUBJECTS_DATASET, clock.instant()));
+        sources.add(new SnapshotManifest.Source("data.gov.sg Subjects Offered", DataGovSgInterface.SUBJECTS_DATASET,
+                clock.instant()));
         List<District> fullDistricts = DistrictLocator.parseFeatureCollection(dataGovSg.fetchDistrictsGeoJson());
         sources.add(new SnapshotManifest.Source("data.gov.sg Master Plan 2019 Planning Area Boundary (No Sea)",
-                PLANNING_AREAS_DATASET, clock.instant()));
+                DataGovSgInterface.PLANNING_AREAS_DATASET, clock.instant()));
         importLog.info("data.gov.sg: " + schoolRows.size() + " secondary and mixed-level schools, " + ccaRows.size()
                 + " CCA rows, " + subjectRows.size() + " subject rows, " + fullDistricts.size() + " planning areas");
 
@@ -263,19 +258,12 @@ public class SchoolDataController {
         checkSimplifiedBoundaries(records, storedDistricts, importLog);
 
         // Validate exactly what will be written.
-        LocalDate today = LocalDate.ofInstant(clock.instant(), SINGAPORE);
+        LocalDate today = LocalDate.ofInstant(clock.instant(), ClockConfig.SINGAPORE);
         Path outputDir = Path.of(props.dataset().resolvedImportOutputDir());
         String version = snapshotWriter.nextVersion(outputDir, today);
-        Map<String, Integer> counts = new LinkedHashMap<>();
-        counts.put("schools", records.size());
-        counts.put("districts", storedDistricts.size());
-        counts.put("scoreRanges", records.stream().mapToInt(r -> r.scoreRanges().size()).sum());
-        String notes = counts.get("scoreRanges") == 0
-                ? "No PSLE ranges yet: data/curated/psle-ranges.csv has no checked rows, so every page shows the "
-                        + "ranges as Not available."
-                : "PSLE ranges come from data/curated/psle-ranges.csv (MOE SchoolFinder; each value read twice by "
-                        + "independent scripts and spot-checked by hand, see data/README.md). They are historical, "
-                        + "not a guarantee.";
+        int scoreRanges = records.stream().mapToInt(r -> r.scoreRanges().size()).sum();
+        Map<String, Integer> counts = SnapshotManifest.counts(records.size(), storedDistricts.size(), scoreRanges);
+        String notes = manifestNotes(scoreRanges);
         SnapshotManifest draft = new SnapshotManifest(SnapshotManifest.FORMAT_VERSION, SnapshotManifest.KIND_FULL,
                 version, today, clock.instant(), sources, null, List.of(), counts, notes);
         LoadedSnapshot candidate = new LoadedSnapshot(outputDir.resolve(version).toUri().toString(), draft, records,
@@ -308,6 +296,16 @@ public class SchoolDataController {
                 folder.toAbsolutePath(), report.getStatus(), records.size(), report.getErrors().size(),
                 report.getWarnings().size(), activate ? "updated" : "not changed");
         return report;
+    }
+
+    /** The manifest's {@code notes}: where the PSLE ranges come from, or that there are none yet. */
+    private static String manifestNotes(int scoreRanges) {
+        return scoreRanges == 0
+                ? "No PSLE ranges yet: data/curated/psle-ranges.csv has no checked rows, so every page shows the "
+                        + "ranges as Not available."
+                : "PSLE ranges come from data/curated/psle-ranges.csv (MOE SchoolFinder; each value read twice by "
+                        + "independent scripts and spot-checked by hand, see data/README.md). They are historical, "
+                        + "not a guarantee.";
     }
 
     /** One joined school → its schools.json record (code, coordinate, planning area, curated data). */
@@ -346,6 +344,7 @@ public class SchoolDataController {
                     + " by its coordinate, but its dgp_code says " + dgpCode);
         }
 
+        List<ScoreRangeRecord> ranges = lookups.rangesByCode().getOrDefault(code, List.of());
         return new SchoolRecord(code, name, clean(row.get("address")),
                 SchoolGeocoder.normalisePostalCode(row.get("postal_code")),
                 point == null ? null : round6(point.getLatitude()), point == null ? null : round6(point.getLongitude()),
@@ -358,8 +357,8 @@ public class SchoolDataController {
                 clean(row.get("session_code")),
                 clean(row.get("nature_code")), school.programmes(), school.ccas(),
                 lookups.affiliationsByCode().getOrDefault(code, List.of()),
-                IpRangeNotes.of(lookups.rangesByCode().getOrDefault(code, List.of())),   // DC-85: computed
-                lookups.rangesByCode().getOrDefault(code, List.of()));
+                IpRangeNotes.of(ranges),   // DC-85: computed
+                ranges);
     }
 
     /** The curated CSV rows indexed for {@link #buildRecord}; unusable rows become warnings. */

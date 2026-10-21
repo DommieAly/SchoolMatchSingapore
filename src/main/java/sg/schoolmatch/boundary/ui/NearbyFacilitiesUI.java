@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.util.UriComponentsBuilder;
+import sg.schoolmatch.boundary.ui.support.FacilityPages;
 import sg.schoolmatch.boundary.ui.support.PageMessages;
 import sg.schoolmatch.control.FacilityController;
 import sg.schoolmatch.control.SchoolController;
@@ -39,13 +40,6 @@ public class NearbyFacilitiesUI {
     static final String UNAVAILABLE_MESSAGE = "Nearby facility information is temporarily unavailable. "
             + "Please try again in a few minutes.";
 
-    /** Plural labels for the filter and the active-filter badges. (Not an EnumMap: SpEL cannot index one.) */
-    private static final Map<FacilityType, String> PLURAL = Map.of(
-            FacilityType.LIBRARY, "Libraries", FacilityType.TUITION_CENTRE, "Tuition centres");
-    /** Singular labels for one facility. */
-    private static final Map<FacilityType, String> SINGULAR = Map.of(
-            FacilityType.LIBRARY, "Library", FacilityType.TUITION_CENTRE, "Tuition centre");
-
     private static final Logger log = LoggerFactory.getLogger(NearbyFacilitiesUI.class);
 
     private final SchoolController schoolController;   // DC-37: loads the school from the URL
@@ -68,13 +62,13 @@ public class NearbyFacilitiesUI {
                                       Model model) {
         School school = schoolController.getSchoolDetails(code);
         Map<String, String> errors = new LinkedHashMap<>();
-        Set<FacilityType> types = parseTypes(typeParams, errors);
+        Set<FacilityType> types = FacilityPages.parseTypes(typeParams, TYPE_MESSAGE, errors);
         FacilityFilterCriteria criteria = new FacilityFilterCriteria(types, parseRadius(radiusParam));
 
         model.addAttribute("school", school);
         model.addAttribute("facilityTypes", FacilityType.values());
-        model.addAttribute("typeLabels", PLURAL);
-        model.addAttribute("typeNames", SINGULAR);
+        model.addAttribute("typeLabels", FacilityPages.PLURAL);
+        model.addAttribute("typeNames", FacilityPages.SINGULAR);
         model.addAttribute("radiusOptions", FacilityFilterCriteria.RADIUS_OPTIONS_KM);
         model.addAttribute("schoolHasLocation", school.hasValidCoordinate());
         try {
@@ -109,22 +103,6 @@ public class NearbyFacilitiesUI {
         return "nearby-facilities";
     }
 
-    /** Known types only; an unknown value is reported and ignored. Empty = all types. */
-    private static Set<FacilityType> parseTypes(List<String> values, Map<String, String> errors) {
-        Set<FacilityType> types = EnumSet.noneOf(FacilityType.class);
-        for (String value : values == null ? List.<String>of() : values) {
-            if (value == null || value.isBlank()) {
-                continue;
-            }
-            try {
-                types.add(FacilityType.valueOf(value.strip().toUpperCase(Locale.ROOT)));
-            } catch (IllegalArgumentException e) {
-                errors.put("type", TYPE_MESSAGE);
-            }
-        }
-        return types;
-    }
-
     /** The radius in km; a missing value is the default, a non-number becomes 0 (rejected by the control). */
     private static int parseRadius(String value) {
         if (value == null || value.isBlank()) {
@@ -156,7 +134,7 @@ public class NearbyFacilitiesUI {
             return "No libraries or tuition centres found near " + school.getName() + ".";
         }
         String what = allTypes ? "libraries or tuition centres"
-                : PLURAL.get(criteria.getSelectedTypes().iterator().next()).toLowerCase(Locale.ROOT);
+                : FacilityPages.PLURAL.get(criteria.getSelectedTypes().iterator().next()).toLowerCase(Locale.ROOT);
         return "No " + what + " found within " + criteria.getRadiusKm() + " km of " + school.getName()
                 + ". Try a larger distance or clear the filters.";
     }

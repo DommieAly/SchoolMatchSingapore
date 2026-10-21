@@ -3,7 +3,6 @@ package sg.schoolmatch.boundary.ui;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -152,25 +151,11 @@ public class SchoolMapUI {
                 .toList();
     }
 
+    /** Every parameter except {@code q} (the search box sends that one), raw, in the query-string order. */
     private static List<HiddenField> hiddenFields(FilterParams params) {
-        List<HiddenField> fields = new ArrayList<>();
-        params.types().forEach(v -> fields.add(new HiddenField(FilterParams.TYPE, v)));
-        params.programmes().forEach(v -> fields.add(new HiddenField(FilterParams.PROGRAMME, v)));
-        params.ccas().forEach(v -> fields.add(new HiddenField(FilterParams.CCA, v)));
-        params.districts().forEach(v -> fields.add(new HiddenField(FilterParams.DISTRICT, v)));
-        addIfSet(fields, FilterParams.PSLE, params.psle());
-        addIfSet(fields, FilterParams.PG, params.pg());
-        addIfSet(fields, FilterParams.RADIUS_KM, params.radiusKm());
-        addIfSet(fields, FilterParams.MODE, params.mode());
-        addIfSet(fields, FilterParams.MAX_MIN, params.maxMin());
-        addIfSet(fields, FilterParams.TRAVEL, params.travel() ? "1" : null);
-        addIfSet(fields, FilterParams.SORT, params.sort());
-        return fields;
-    }
-
-    private static void addIfSet(List<HiddenField> fields, String name, String value) {
-        if (value != null) {
-            fields.add(new HiddenField(name, value));
-        }
+        return params.pairs().stream()
+                .filter(pair -> !FilterParams.Q.equals(pair.getKey()))
+                .map(pair -> new HiddenField(pair.getKey(), pair.getValue()))
+                .toList();
     }
 }

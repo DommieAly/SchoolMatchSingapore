@@ -7,15 +7,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Controller;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,6 +21,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.error.NotAuthenticatedException;
+import sg.schoolmatch.support.TestProperties;
 
 /**
  * {@link ErrorPageAdvice} when a session ends in the middle of a request ({@code NotAuthenticatedException}
@@ -61,8 +59,7 @@ class ErrorPageAdviceTest {
 
     @BeforeEach
     void setUp() {
-        AppProperties props = new Binder(new MapConfigurationPropertySource(Map.of()))
-                .bindOrCreate("app", AppProperties.class);
+        AppProperties props = TestProperties.defaults();
         ErrorPageAdvice advice = new ErrorPageAdvice(mock(LayoutModelAdvice.class), new SessionCookie(props));
         mvc = MockMvcBuilders.standaloneSetup(new SessionEndedHandler()).setControllerAdvice(advice).build();
     }

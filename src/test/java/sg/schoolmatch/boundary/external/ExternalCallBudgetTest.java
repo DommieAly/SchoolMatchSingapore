@@ -16,7 +16,6 @@ import org.springframework.boot.context.properties.bind.BindException;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.env.YamlPropertySourceLoader;
 import org.springframework.boot.context.properties.source.ConfigurationPropertySources;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -26,6 +25,7 @@ import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.persistence.ExternalUsage;
 import sg.schoolmatch.persistence.ExternalUsageRepository;
 import sg.schoolmatch.support.FixedClock;
+import sg.schoolmatch.support.TestProperties;
 
 /**
  * {@link ExternalCallBudget}: the daily limit for live Google calls (NFR-MAIN-02). Real repository on the
@@ -239,8 +239,7 @@ class ExternalCallBudgetTest {
     }
 
     private ExternalCallBudget budget(Map<String, String> settings) {
-        AppProperties props = new Binder(new MapConfigurationPropertySource(settings))
-                .bindOrCreate("app", AppProperties.class);
+        AppProperties props = TestProperties.bind(settings);
         return new ExternalCallBudget(usageRepository, props, clock);
     }
 }

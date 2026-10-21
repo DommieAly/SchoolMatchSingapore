@@ -30,8 +30,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.entity.account.Account;
@@ -42,6 +40,7 @@ import sg.schoolmatch.error.NotAuthenticatedException;
 import sg.schoolmatch.persistence.AccountRepository;
 import sg.schoolmatch.persistence.AuthenticatedSessionRepository;
 import sg.schoolmatch.support.FixedClock;
+import sg.schoolmatch.support.TestProperties;
 
 /**
  * Unit test of the control class AuthController (use cases Log In, Log Out; FR-LOGIN-01..05, FR-LOGOUT-02, DC-13).
@@ -70,8 +69,7 @@ class AuthControllerTest {
     @BeforeEach
     void setUp() {
         bob.setStatus(AccountStatus.INACTIVE);
-        AppProperties props = new Binder(new MapConfigurationPropertySource(Map.of()))
-                .bindOrCreate("app", AppProperties.class);   // defaults: idle timeout 30m
+        AppProperties props = TestProperties.defaults();   // defaults: idle timeout 30m
         authController = new AuthController(accountRepository, sessionRepository, clock, props);
 
         List<Account> accounts = List.of(alice, bob);

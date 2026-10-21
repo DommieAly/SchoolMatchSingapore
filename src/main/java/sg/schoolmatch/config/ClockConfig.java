@@ -12,8 +12,11 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class ClockConfig {
 
+    /** The app's time zone: dates and the per-day counters are Singapore days. */
+    public static final ZoneId SINGAPORE = ZoneId.of("Asia/Singapore");
+
     @Bean
     public Clock clock() {
-        return Clock.system(ZoneId.of("Asia/Singapore"));
+        return Clock.system(SINGAPORE);
     }
 }

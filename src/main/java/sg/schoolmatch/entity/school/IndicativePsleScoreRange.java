@@ -1,5 +1,7 @@
 package sg.schoolmatch.entity.school;
 
+import java.util.Comparator;
+
 /**
  * Design class «entity» IndicativePsleScoreRange — one historical PSLE AL score range of a school
  * for one admission year, posting group and affiliation (NFR-DATA-03: historical, not guaranteed).
@@ -14,6 +16,22 @@ package sg.schoolmatch.entity.school;
  * unknown (seed data, older snapshots). The numbers are what the app uses; the text keeps what the numbers drop.
  */
 public class IndicativePsleScoreRange {
+
+    /** The PSLE AL score scale and the posting groups (DC-36 helper). */
+    public static final int MIN_SCORE = 4;
+    public static final int MAX_SCORE = 32;
+    public static final int MIN_POSTING_GROUP = 1;
+    public static final int MAX_POSTING_GROUP = 3;
+
+    /**
+     * Newest year first, then PG3 to PG1, ordinary ranges before IP ones, non-affiliated before affiliated: the
+     * details table and the stored order (DC-36 helper).
+     */
+    public static final Comparator<IndicativePsleScoreRange> NEWEST_FIRST = Comparator
+            .comparingInt(IndicativePsleScoreRange::getAdmissionYear).reversed()
+            .thenComparing(Comparator.comparingInt(IndicativePsleScoreRange::getPostingGroup).reversed())
+            .thenComparing(IndicativePsleScoreRange::isIntegratedProgramme)
+            .thenComparing(IndicativePsleScoreRange::isAffiliated);
 
     private final int admissionYear;
     private final int postingGroup;

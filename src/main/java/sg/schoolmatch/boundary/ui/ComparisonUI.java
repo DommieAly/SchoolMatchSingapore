@@ -66,7 +66,7 @@ public class ComparisonUI {
         try {
             schools = shortlistController.compareSchools(sessionId, chosen);
         } catch (InvalidInputException e) {
-            redirect.addFlashAttribute(PageMessages.FLASH_ERROR, String.join(" ", e.getFieldErrors().values()));
+            redirect.addFlashAttribute(PageMessages.FLASH_ERROR, e.joinedMessages());
             return "redirect:/shortlist";
         }
         model.addAttribute("schools", schools);

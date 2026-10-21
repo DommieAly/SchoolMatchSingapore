@@ -12,9 +12,11 @@ import sg.schoolmatch.entity.account.Account;
 import sg.schoolmatch.entity.account.UserProfile;
 import sg.schoolmatch.entity.common.Coordinate;
 import sg.schoolmatch.entity.location.ReferenceLocation;
+import sg.schoolmatch.entity.school.IndicativePsleScoreRange;
 import sg.schoolmatch.entity.search.TransportationFilter;
 import sg.schoolmatch.error.ExternalFailureLog;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
+import sg.schoolmatch.error.InputMessages;
 import sg.schoolmatch.error.InvalidInputException;
 import sg.schoolmatch.persistence.UserProfileRepository;
 
@@ -29,16 +31,16 @@ import sg.schoolmatch.persistence.UserProfileRepository;
 public class ProfileController {
 
     public static final String DISPLAY_NAME_MESSAGE = "Use at most 50 characters";
-    public static final String PSLE_MESSAGE = "Enter a whole number from 4 to 32";
-    public static final String POSTING_GROUP_MESSAGE = "Choose posting group 1, 2 or 3";
+    public static final String PSLE_MESSAGE = InputMessages.PSLE;
+    public static final String POSTING_GROUP_MESSAGE = InputMessages.PG;
     public static final String PRIMARY_SCHOOL_MESSAGE = "Use at most 100 characters";
     public static final String HOME_ADDRESS_LENGTH_MESSAGE = "Use at most 200 characters";
     public static final String ADDRESS_NOT_FOUND_MESSAGE = "Address not found in Singapore";
     public static final String CHOOSE_ADDRESS_MESSAGE = "Several addresses match. Choose yours from the list.";
     public static final String ADDRESS_UNAVAILABLE_MESSAGE =
             "Address search is temporarily unavailable. Try again later, or leave the address blank.";
-    public static final String COMMUTE_MESSAGE = "Choose 15, 30, 45 or 60 minutes";
-    public static final String TRAVEL_MODE_MESSAGE = "Choose walk, drive or public transport";
+    public static final String COMMUTE_MESSAGE = InputMessages.DURATION;
+    public static final String TRAVEL_MODE_MESSAGE = InputMessages.MODE;
 
     private static final Logger log = LoggerFactory.getLogger(ProfileController.class);
 
@@ -178,10 +180,12 @@ public class ProfileController {
         if (tooLong(p.getDisplayName(), DISPLAY_NAME_MAX)) {
             errors.put("displayName", DISPLAY_NAME_MESSAGE);
         }
-        if (p.getPsleScore() != null && (p.getPsleScore() < 4 || p.getPsleScore() > 32)) {
+        if (p.getPsleScore() != null && (p.getPsleScore() < IndicativePsleScoreRange.MIN_SCORE
+                || p.getPsleScore() > IndicativePsleScoreRange.MAX_SCORE)) {
             errors.put("psleScore", PSLE_MESSAGE);
         }
-        if (p.getPostingGroup() != null && (p.getPostingGroup() < 1 || p.getPostingGroup() > 3)) {
+        if (p.getPostingGroup() != null && (p.getPostingGroup() < IndicativePsleScoreRange.MIN_POSTING_GROUP
+                || p.getPostingGroup() > IndicativePsleScoreRange.MAX_POSTING_GROUP)) {
             errors.put("postingGroup", POSTING_GROUP_MESSAGE);
         }
         if (tooLong(p.getPrimarySchool(), PRIMARY_SCHOOL_MAX)) {

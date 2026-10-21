@@ -14,7 +14,6 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,8 +27,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import sg.schoolmatch.boundary.external.GoogleMapsPlatformInterface;
 import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.entity.common.Coordinate;
@@ -41,6 +38,7 @@ import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
 import sg.schoolmatch.error.NotFoundException;
 import sg.schoolmatch.support.FixedClock;
+import sg.schoolmatch.support.TestProperties;
 import sg.schoolmatch.support.TestSchools;
 
 /**
@@ -74,8 +72,7 @@ class FacilityControllerTest {
 
     @BeforeEach
     void setUp() {
-        AppProperties props = new Binder(new MapConfigurationPropertySource(Map.of()))
-                .bindOrCreate("app", AppProperties.class);   // cache-ttl 24h
+        AppProperties props = TestProperties.defaults();   // cache-ttl 24h
         facilityController = new FacilityController(googleMaps, props, clock);
         when(googleMaps.searchPlaces(FacilityType.LIBRARY, school.getCoordinate()))
                 .thenReturn(List.of(l3, farLibrary, l1, l2));

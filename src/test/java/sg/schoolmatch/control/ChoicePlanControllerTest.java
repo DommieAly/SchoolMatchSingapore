@@ -120,7 +120,7 @@ class ChoicePlanControllerTest {
     @Tag("FR-PLAN-01")
     @DisplayName("TC-ChoicePlanController-02: without a profile (or a score) the plan has no score, so no labels")
     void getPlan_noProfile_planWithoutScore() {
-        when(profileController.getProfile(SESSION)).thenReturn(null);
+        when(profileController.getProfile(SESSION)).thenReturn(new UserProfile(alice));   // no score yet
 
         ChoicePlan plan = choicePlanController.getPlan(SESSION);
 

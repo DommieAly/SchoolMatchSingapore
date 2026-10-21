@@ -373,6 +373,48 @@ class RecommendationUITest {
                 .andExpect(content().string(containsString("Not available")));
     }
 
+    @Test
+    @Tag("FR-REC-01")
+    @DisplayName("TC-RecommendationUI-16: one CCA whose name has a comma is sent as one preference, not split")
+    void singleCommaCcaIsNotSplit() throws Exception {
+        when(profileController.getProfile(SESSION)).thenReturn(completeProfile());
+        when(recommendationController.recommend(any())).thenReturn(List.of(recommendation(1, catholic, 25)));
+
+        mvc.perform(post("/recommendations").cookie(member())
+                        .param("psleScore", "20").param("postingGroup", "3").param("travelMode", "TRANSIT")
+                        .param("maxCommuteMin", "60").param("preferredCCAs", "ENGLISH LANGUAGE, DRAMA AND DEBATING"))
+                .andExpect(status().is3xxRedirection());
+
+        ArgumentCaptor<MatchCriteria> sent = ArgumentCaptor.forClass(MatchCriteria.class);
+        verify(recommendationController).recommend(sent.capture());
+        assertThat(sent.getValue().getPreferredCCAs()).containsExactly("ENGLISH LANGUAGE, DRAMA AND DEBATING");
+    }
+
+    @Test
+    @Tag("FR-REC-01")
+    @DisplayName("TC-RecommendationUI-17: a draft with one programme whose name has a comma keeps it whole")
+    void draftCommaProgrammeIsNotSplit() throws Exception {
+        when(profileController.getProfile(SESSION)).thenReturn(completeProfile());
+
+        MvcResult result = mvc.perform(get("/recommendations").cookie(member())
+                        .param("preferredProgrammes", "Science (Phy, Chem)"))
+                .andExpect(status().isOk())
+                .andReturn();
+        MatchCriteria criteria = (MatchCriteria) result.getModelAndView().getModel().get("criteria");
+        assertThat(criteria.getPreferredProgrammes()).containsExactly("Science (Phy, Chem)");
+    }
+
+    @Test
+    @Tag("FR-REC-01")
+    @DisplayName("TC-RecommendationUI-18: the draft URL percent-encodes '+' so the picker returns the same programme")
+    void draftUrlEncodesPlus() {
+        MatchCriteria criteria = new MatchCriteria();
+        criteria.setPreferredProgrammes(List.of("Integrated Mathematics+"));
+
+        assertThat(RecommendationUI.draftUrl(criteria))
+                .isEqualTo("/recommendations?preferredProgrammes=Integrated%20Mathematics%2B");
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private static Cookie member() {

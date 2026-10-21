@@ -17,6 +17,7 @@ import java.util.TreeSet;
 import java.util.regex.Pattern;
 import sg.schoolmatch.entity.location.ReferenceLocation;
 import sg.schoolmatch.entity.route.TravelMode;
+import sg.schoolmatch.entity.school.IndicativePsleScoreRange;
 import sg.schoolmatch.entity.search.AttributeCategory;
 import sg.schoolmatch.entity.search.Filter;
 import sg.schoolmatch.entity.search.ProximityFilter;
@@ -24,6 +25,8 @@ import sg.schoolmatch.entity.search.PsleScoreFilter;
 import sg.schoolmatch.entity.search.SchoolAttributeFilter;
 import sg.schoolmatch.entity.search.SortOrder;
 import sg.schoolmatch.entity.search.TransportationFilter;
+import sg.schoolmatch.entity.shortlist.ChoicePlan;
+import sg.schoolmatch.error.InputMessages;
 
 /**
  * The search and filter parameters of {@code /schools}, {@code /schools/filter} and {@code /schools/map}
@@ -60,15 +63,15 @@ public record FilterParams(String q, Set<String> types, Set<String> programmes, 
     public static final String LOCATION = "location";
 
     // Messages (NFR-USE-03).
-    public static final String PSLE_MESSAGE = "Enter a whole number from 4 to 32";
-    public static final String PG_MESSAGE = "Choose posting group 1, 2 or 3";
-    public static final String RADIUS_MESSAGE = "Choose 1, 3 or 5 km";
-    public static final String DURATION_MESSAGE = "Choose 15, 30, 45 or 60 minutes";
-    public static final String MODE_MESSAGE = "Choose walk, drive or public transport";
-    public static final String LOCATION_MESSAGE = "Set a starting point to use distance or travel-time filters";
+    public static final String PSLE_MESSAGE = InputMessages.PSLE;
+    public static final String PG_MESSAGE = InputMessages.PG;
+    public static final String RADIUS_MESSAGE = InputMessages.RADIUS;
+    public static final String DURATION_MESSAGE = InputMessages.DURATION;
+    public static final String MODE_MESSAGE = InputMessages.MODE;
+    public static final String LOCATION_MESSAGE = InputMessages.LOCATION;
 
     /** Posting group used when a PSLE score is given without one. */
-    public static final int DEFAULT_POSTING_GROUP = 3;
+    public static final int DEFAULT_POSTING_GROUP = ChoicePlan.DEFAULT_POSTING_GROUP;
     /** Hint shown next to the PSLE filter when {@link #usesDefaultPostingGroup()} is true. */
     public static final String DEFAULT_PG_HINT = "No posting group chosen, so posting group 3 is used.";
 
@@ -92,6 +95,37 @@ public record FilterParams(String q, Set<String> types, Set<String> programmes, 
     /** No term and no filters. */
     public static FilterParams empty() {
         return new FilterParams(null, null, null, null, null, null, null, null, null, null, false, null);
+    }
+
+    /** Only the search term: the target of "Clear all" (FR-FILTER-09). */
+    public FilterParams onlyTerm() {
+        return new FilterParams(q, null, null, null, null, null, null, null, null, null, false, null);
+    }
+
+    /** The same parameters with another {@code sort} (null = default order). */
+    public FilterParams withSort(String newSort) {
+        return new FilterParams(q, types, programmes, ccas, districts, psle, pg, radiusKm, mode, maxMin, travel,
+                newSort);
+    }
+
+    /** The request parameter of an attribute category: type, programme, cca or district. */
+    public static String param(AttributeCategory category) {
+        return switch (category) {
+            case SCHOOL_TYPE -> TYPE;
+            case PROGRAMME -> PROGRAMME;
+            case CCA -> CCA;
+            case DISTRICT -> DISTRICT;
+        };
+    }
+
+    /** The selected values of an attribute category. */
+    public Set<String> selected(AttributeCategory category) {
+        return switch (category) {
+            case SCHOOL_TYPE -> types;
+            case PROGRAMME -> programmes;
+            case CCA -> ccas;
+            case DISTRICT -> districts;
+        };
     }
 
     /** Reads the parameters of {@code request} as raw text. Never throws; {@code travel} is true for "1" or "true". */
@@ -180,19 +214,34 @@ public record FilterParams(String q, Set<String> types, Set<String> programmes, 
      */
     public String toQueryString() {
         StringBuilder query = new StringBuilder();
-        append(query, Q, q);
-        types.forEach(v -> append(query, TYPE, v));
-        programmes.forEach(v -> append(query, PROGRAMME, v));
-        ccas.forEach(v -> append(query, CCA, v));
-        districts.forEach(v -> append(query, DISTRICT, v));
-        append(query, PSLE, psle);
-        append(query, PG, pg);
-        append(query, RADIUS_KM, radiusKm);
-        append(query, MODE, mode);
-        append(query, MAX_MIN, maxMin);
-        append(query, TRAVEL, travel ? "1" : null);
-        append(query, SORT, sort);
+        for (Map.Entry<String, String> pair : pairs()) {
+            if (!query.isEmpty()) {
+                query.append('&');
+            }
+            query.append(pair.getKey()).append('=').append(encode(pair.getValue()));
+        }
         return query.toString();
+    }
+
+    /**
+     * The set parameters as raw (not encoded) name/value pairs in {@link #toQueryString()} order; {@code travel}
+     * is {@code "1"} and only present when true.
+     */
+    public List<Map.Entry<String, String>> pairs() {
+        List<Map.Entry<String, String>> pairs = new ArrayList<>();
+        add(pairs, Q, q);
+        types.forEach(v -> add(pairs, TYPE, v));
+        programmes.forEach(v -> add(pairs, PROGRAMME, v));
+        ccas.forEach(v -> add(pairs, CCA, v));
+        districts.forEach(v -> add(pairs, DISTRICT, v));
+        add(pairs, PSLE, psle);
+        add(pairs, PG, pg);
+        add(pairs, RADIUS_KM, radiusKm);
+        add(pairs, MODE, mode);
+        add(pairs, MAX_MIN, maxMin);
+        add(pairs, TRAVEL, travel ? "1" : null);
+        add(pairs, SORT, sort);
+        return pairs;
     }
 
     /** {@link #toQueryString()} without one value: see {@link #without(String, String)}. */
@@ -263,11 +312,14 @@ public record FilterParams(String q, Set<String> types, Set<String> programmes, 
         addAttributeFilter(filters, AttributeCategory.CCA, ccas);
         addAttributeFilter(filters, AttributeCategory.DISTRICT, districts);
 
-        Integer score = psle == null ? null : wholeNumberIn(psle, 4, 32);
+        Integer score = psle == null ? null
+                : wholeNumberIn(psle, IndicativePsleScoreRange.MIN_SCORE, IndicativePsleScoreRange.MAX_SCORE);
         if (psle != null && score == null) {
             errors.put(PSLE, PSLE_MESSAGE);
         }
-        Integer group = pg == null ? Integer.valueOf(DEFAULT_POSTING_GROUP) : wholeNumberIn(pg, 1, 3);
+        Integer group = pg == null ? Integer.valueOf(DEFAULT_POSTING_GROUP)
+                : wholeNumberIn(pg, IndicativePsleScoreRange.MIN_POSTING_GROUP,
+                        IndicativePsleScoreRange.MAX_POSTING_GROUP);
         if (group == null) {
             errors.put(PG, PG_MESSAGE);
         }
@@ -406,14 +458,10 @@ public record FilterParams(String q, Set<String> types, Set<String> programmes, 
         }
     }
 
-    private static void append(StringBuilder query, String name, String value) {
-        if (value == null) {
-            return;
+    private static void add(List<Map.Entry<String, String>> pairs, String name, String value) {
+        if (value != null) {
+            pairs.add(Map.entry(name, value));
         }
-        if (!query.isEmpty()) {
-            query.append('&');
-        }
-        query.append(name).append('=').append(encode(value));
     }
 
     /** Percent-encodes everything except letters, digits and {@code . - _ *}; space becomes %20 (not '+'). */

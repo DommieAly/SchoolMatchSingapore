@@ -14,12 +14,15 @@ import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.propertyeditors.CustomCollectionEditor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
@@ -82,6 +85,22 @@ public class UserProfileUI {
         this.authController = authController;
         this.filterController = filterController;
         this.sessionCookie = sessionCookie;
+    }
+
+    /**
+     * One selected CCA or programme stays one value even when its name has a comma ("Science (Phy, Chem)"):
+     * Spring would split a single value at the commas. Several selected values arrive as an array and are kept.
+     */
+    @InitBinder("form")
+    void keepCommasInChoices(WebDataBinder binder) {
+        for (String field : List.of("preferredCCAs", "preferredProgrammes")) {
+            binder.registerCustomEditor(Set.class, field, new CustomCollectionEditor(LinkedHashSet.class, true) {
+                @Override
+                public void setAsText(String text) {
+                    setValue(text == null || text.isBlank() ? null : text.strip());
+                }
+            });
+        }
     }
 
     /** GET /profile — the saved profile, or an empty form before the first save. */
@@ -198,7 +217,7 @@ public class UserProfileUI {
         model.addAttribute("profileComplete", saved.complete());
         model.addAttribute("homeLocationSaved", saved.homeLocationSaved());
         model.addAttribute("travelModes", travelModeLabels());
-        model.addAttribute("commuteOptions", TransportationFilter.DURATION_OPTIONS_MIN.stream().sorted().toList());
+        model.addAttribute("commuteOptions", TransportationFilter.DURATION_OPTIONS_MIN);
         model.addAttribute("ccaOptions", filterController.getFilterOptions(AttributeCategory.CCA));
         model.addAttribute("programmeOptions", filterController.getFilterOptions(AttributeCategory.PROGRAMME));
         return "profile";

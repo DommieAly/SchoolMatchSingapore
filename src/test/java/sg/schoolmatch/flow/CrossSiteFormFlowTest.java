@@ -24,6 +24,7 @@ import sg.schoolmatch.boundary.ui.support.ReferenceLocationStore;
 import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.control.AccountController;
 import sg.schoolmatch.control.AuthController;
+import sg.schoolmatch.entity.account.Account;
 import sg.schoolmatch.entity.common.Coordinate;
 import sg.schoolmatch.entity.location.LocationSource;
 import sg.schoolmatch.entity.location.ReferenceLocation;
@@ -85,7 +86,7 @@ class CrossSiteFormFlowTest {
                         .param("password", TestMembers.PASSWORD).param("confirm", TestMembers.PASSWORD))
                 .andExpect(status().isForbidden());
 
-        assertThat(accountRepository.findByUsernameIgnoreCase(other)).isEmpty();
+        assertThat(accountRepository.findByUsernameKey(Account.usernameKey(other))).isEmpty();
     }
 
     @Test

@@ -10,6 +10,7 @@ import sg.schoolmatch.entity.location.ReferenceLocation;
 import sg.schoolmatch.entity.route.Route;
 import sg.schoolmatch.entity.route.RouteStep;
 import sg.schoolmatch.entity.route.TravelMode;
+import sg.schoolmatch.error.InputMessages;
 import sg.schoolmatch.error.InvalidInputException;
 
 /**
@@ -28,7 +29,7 @@ public class DirectionsController {
     static final String DESTINATION_FIELD = "destination";
     static final String DESTINATION_MESSAGE = "This place has no map location, so directions are not available";
     static final String MODE_FIELD = "mode";
-    static final String MODE_MESSAGE = "Choose walk, drive or public transport";
+    static final String MODE_MESSAGE = InputMessages.MODE;
 
     private final GoogleMapsPlatformInterface googleMaps;
 

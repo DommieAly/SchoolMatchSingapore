@@ -117,7 +117,7 @@ public class ShortlistController {
      */
     public List<School> compareSchools(String sessionId, Set<String> schoolCodes) {
         Shortlist shortlist = getShortlist(sessionId);
-        Set<String> codes = schoolCodes == null ? Set.of() : new LinkedHashSet<>(schoolCodes);
+        Set<String> codes = new LinkedHashSet<>(schoolCodes);
         if (codes.size() < MIN_COMPARE || codes.size() > MAX_COMPARE) {
             throw new InvalidInputException("codes", COMPARE_COUNT_MESSAGE);
         }

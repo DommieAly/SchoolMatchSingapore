@@ -1,6 +1,6 @@
 package sg.schoolmatch.entity.search;
 
-import java.util.Set;
+import java.util.List;
 import sg.schoolmatch.entity.location.LocationSource;
 import sg.schoolmatch.entity.location.ReferenceLocation;
 import sg.schoolmatch.entity.school.School;
@@ -10,9 +10,9 @@ import sg.schoolmatch.entity.school.School;
  * reference location (FR-FILTER-04, FR-FILTER-05). Valid: resolved location and radius 1, 3 or 5 km.
  * Only schools with a valid coordinate can match (NFR-DATA-02).
  */
-public class ProximityFilter extends Filter {
+public final class ProximityFilter extends Filter {
 
-    public static final Set<Integer> RADIUS_OPTIONS_KM = Set.of(1, 3, 5);   // DC-36 helper
+    public static final List<Integer> RADIUS_OPTIONS_KM = List.of(1, 3, 5);   // DC-36 helper (display order)
 
     /** 1 mm, so rounding in the distance formula cannot drop a school that lies exactly on the radius. */
     private static final double TOLERANCE_KM = 1e-6;

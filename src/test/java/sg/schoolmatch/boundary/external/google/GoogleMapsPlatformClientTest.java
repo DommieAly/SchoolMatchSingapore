@@ -10,7 +10,6 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,8 +18,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,6 +33,7 @@ import sg.schoolmatch.entity.common.Coordinate;
 import sg.schoolmatch.entity.facility.FacilityType;
 import sg.schoolmatch.entity.route.Route;
 import sg.schoolmatch.entity.route.TravelMode;
+import sg.schoolmatch.support.TestProperties;
 
 /**
  * The live {@link GoogleMapsPlatformClient} wired with Spring's caching (the app's {@link CacheConfig}), the two
@@ -118,7 +116,7 @@ class GoogleMapsPlatformClientTest {
 
     @Test
     @Tag("FR-FILTER-06")
-    @DisplayName("TC-GoogleClient-03: matrix destinations are rounded to 5 decimals; no destinations or no origin → no request")
+    @DisplayName("TC-GoogleClient-03: matrix destinations are rounded to 5 decimals; no destinations → no request")
     void matrixRoundingAndEmptyCases() {
         routesServer.expect(requestTo(ROUTES + "/distanceMatrix/v2:computeRouteMatrix"))
                 .andExpect(jsonPath("$.destinations[0].waypoint.location.latLng.latitude").value(1.36))
@@ -131,8 +129,6 @@ class GoogleMapsPlatformClientTest {
         assertThat(routes).extracting(Route::getDurationSeconds).containsExactly(60);
 
         assertThat(client.computeRouteMatrix(new Coordinate(1.351, 103.848), List.of(), TravelMode.WALK)).isEmpty();
-        assertThat(client.computeRouteMatrix(null, Arrays.asList(new Coordinate(1.36, 103.85), null), TravelMode.WALK))
-                .hasSize(2).noneMatch(Route::isAvailable);
         routesServer.verify();
     }
 
@@ -140,8 +136,7 @@ class GoogleMapsPlatformClientTest {
     @Tag("FR-ROUTE-05")
     @DisplayName("TC-GoogleClient-04: live mode without a server key stops start-up with a clear message")
     void noServerKey_failsFast() {
-        AppProperties noKey = new Binder(new MapConfigurationPropertySource(Map.of()))
-                .bindOrCreate("app", AppProperties.class);
+        AppProperties noKey = TestProperties.defaults();
 
         assertThatThrownBy(() -> new GoogleMapsPlatformClient(noKey, null, null))
                 .isInstanceOf(IllegalStateException.class)
@@ -165,11 +160,10 @@ class GoogleMapsPlatformClientTest {
 
         @Bean
         AppProperties appProperties() {
-            return new Binder(new MapConfigurationPropertySource(Map.of(
+            return TestProperties.bind(Map.of(
                     "app.google.server-key", "test-key",
                     "app.google.routes-base-url", ROUTES,
-                    "app.google.places-base-url", PLACES)))
-                    .bindOrCreate("app", AppProperties.class);
+                    "app.google.places-base-url", PLACES));
         }
 
         @Bean

@@ -26,4 +26,9 @@ public class InvalidInputException extends RuntimeException {
     public Map<String, String> getFieldErrors() {
         return fieldErrors;
     }
+
+    /** All messages in insertion order, joined with a space (for a page that shows one banner line). */
+    public String joinedMessages() {
+        return String.join(" ", fieldErrors.values());
+    }
 }

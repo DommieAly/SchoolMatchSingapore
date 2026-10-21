@@ -4,7 +4,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
@@ -13,9 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sg.schoolmatch.control.FilterController;
 import sg.schoolmatch.control.ProfileController;
-import sg.schoolmatch.entity.account.UserProfile;
 import sg.schoolmatch.entity.location.ReferenceLocation;
-import sg.schoolmatch.entity.search.AttributeCategory;
 import sg.schoolmatch.entity.search.CurrentResultSet;
 import sg.schoolmatch.entity.search.Filter;
 import sg.schoolmatch.entity.search.ProximityFilter;
@@ -57,11 +54,6 @@ public final class SearchFilterPipeline {
             applied = List.copyOf(applied);
         }
 
-        /** An outcome with PSLE data available (the usual case). */
-        public Outcome(CurrentResultSet results, List<Filter> applied, boolean travelUnavailable) {
-            this(results, applied, travelUnavailable, false);
-        }
-
         /** True when at least one filter was applied. */
         public boolean anyApplied() {
             return !applied.isEmpty();
@@ -80,8 +72,7 @@ public final class SearchFilterPipeline {
         }
 
         private Set<String> appliedParams() {
-            return applied.stream().map(SearchFilterPipeline::chipParam).filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
+            return applied.stream().map(SearchFilterPipeline::chipParam).collect(Collectors.toSet());
         }
     }
 
@@ -91,11 +82,6 @@ public final class SearchFilterPipeline {
     private final ProfileController profileController;   // primary school for the affiliated PSLE range (DC-22)
     private final SessionCookie sessionCookie;
     private final BooleanSupplier psleDataAvailable;     // DC-74: SchoolDataController.hasPsleData, via PsleAvailability
-
-    public SearchFilterPipeline(FilterController filterController, ProfileController profileController,
-                                SessionCookie sessionCookie) {
-        this(filterController, profileController, sessionCookie, () -> true);
-    }
 
     /** @param psleDataAvailable asked once per {@link #apply}: false when the dataset has no PSLE ranges (DC-74) */
     public SearchFilterPipeline(FilterController filterController, ProfileController profileController,
@@ -146,14 +132,13 @@ public final class SearchFilterPipeline {
     }
 
     /** The logged-in user's primary school (affiliated PSLE range, DC-22), or null for a guest or an ended login. */
-    public String primarySchool(HttpServletRequest request) {
+    private String primarySchool(HttpServletRequest request) {
         Optional<String> sessionId = sessionCookie.read(request);
         if (sessionId.isEmpty()) {
             return null;
         }
         try {
-            UserProfile profile = profileController.getProfile(sessionId.get());
-            return profile == null ? null : profile.getPrimarySchool();
+            return profileController.getProfile(sessionId.get()).getPrimarySchool();
         } catch (NotAuthenticatedException e) {
             return null;   // these pages are public: an expired login just means "guest"
         }
@@ -162,32 +147,21 @@ public final class SearchFilterPipeline {
     /** The request fields a filter is built from (the keys FilterController uses for its messages). */
     static Set<String> fieldsOf(Filter filter) {
         return switch (filter) {
-            case SchoolAttributeFilter a when a.getCategory() != null -> Set.of(param(a.getCategory()));
+            case SchoolAttributeFilter a -> Set.of(FilterParams.param(a.getCategory()));
             case PsleScoreFilter p -> Set.of(FilterParams.PSLE, FilterParams.PG);
             case ProximityFilter p -> Set.of(FilterParams.RADIUS_KM, FilterParams.LOCATION);
             case TransportationFilter t -> Set.of(FilterParams.TRAVEL, FilterParams.MODE, FilterParams.MAX_MIN,
                     FilterParams.LOCATION);
-            default -> Set.of();
         };
     }
 
-    /** The parameter of the chip that shows {@code filter} ({@link FilterParams#chips()}), or null. */
+    /** The parameter of the chip that shows {@code filter} ({@link FilterParams#chips()}). */
     static String chipParam(Filter filter) {
         return switch (filter) {
-            case SchoolAttributeFilter a when a.getCategory() != null -> param(a.getCategory());
+            case SchoolAttributeFilter a -> FilterParams.param(a.getCategory());
             case PsleScoreFilter p -> FilterParams.PSLE;
             case ProximityFilter p -> FilterParams.RADIUS_KM;
             case TransportationFilter t -> FilterParams.TRAVEL;
-            default -> null;
-        };
-    }
-
-    private static String param(AttributeCategory category) {
-        return switch (category) {
-            case SCHOOL_TYPE -> FilterParams.TYPE;
-            case PROGRAMME -> FilterParams.PROGRAMME;
-            case CCA -> FilterParams.CCA;
-            case DISTRICT -> FilterParams.DISTRICT;
         };
     }
 }

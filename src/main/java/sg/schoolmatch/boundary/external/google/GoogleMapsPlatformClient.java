@@ -1,7 +1,6 @@
 package sg.schoolmatch.boundary.external.google;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -46,9 +45,6 @@ public class GoogleMapsPlatformClient implements GoogleMapsPlatformInterface {
 
     @Override
     public Route computeRoute(Coordinate origin, Coordinate destination, TravelMode mode) {
-        if (origin == null || destination == null) {
-            return Route.unavailable(mode);
-        }
         return routesApi.computeRoute(round(origin, ORIGIN_DECIMALS), round(destination, DESTINATION_DECIMALS), mode);
     }
 
@@ -57,30 +53,21 @@ public class GoogleMapsPlatformClient implements GoogleMapsPlatformInterface {
         if (destinations.isEmpty()) {
             return List.of();
         }
-        if (origin == null) {
-            return Collections.nCopies(destinations.size(), Route.unavailable(mode));
-        }
         List<Coordinate> rounded = new ArrayList<>(destinations.size());
         for (Coordinate destination : destinations) {
-            rounded.add(destination == null ? null : round(destination, DESTINATION_DECIMALS));
+            rounded.add(round(destination, DESTINATION_DECIMALS));
         }
         return routesApi.computeRouteMatrix(round(origin, ORIGIN_DECIMALS), rounded, mode);
     }
 
     @Override
     public List<Facility> searchPlaces(FacilityType type, Coordinate centre) {
-        if (type == null || centre == null) {
-            return List.of();
-        }
         return placesApi.searchPlaces(type, round(centre, SEARCH_CENTRE_DECIMALS));
     }
 
     @Override
     public Optional<Facility> getPlaceDetails(String placeId) {
-        if (placeId == null || placeId.isBlank()) {
-            return Optional.empty();
-        }
-        return placesApi.getPlaceDetails(placeId.strip());
+        return placesApi.getPlaceDetails(placeId);
     }
 
     /** The coordinate rounded to {@code decimals} decimal places. */

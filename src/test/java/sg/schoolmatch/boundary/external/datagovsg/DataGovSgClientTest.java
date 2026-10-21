@@ -22,8 +22,6 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -31,6 +29,7 @@ import org.springframework.web.client.RestClient;
 import sg.schoolmatch.boundary.external.DataGovSgRecord;
 import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
+import sg.schoolmatch.support.TestProperties;
 
 /**
  * Live DataGovSgClient against a MockRestServiceServer (no network; fixtures are real datastore_search responses).
@@ -172,7 +171,7 @@ class DataGovSgClientTest {
     }
 
     private DataGovSgClient client(Map<String, String> settings, int pageSize) {
-        AppProperties props = new Binder(new MapConfigurationPropertySource(settings)).bindOrCreate("app", AppProperties.class);
+        AppProperties props = TestProperties.bind(settings);
         return new DataGovSgClient(builder, props, pageSize, 0, 0);
     }
 

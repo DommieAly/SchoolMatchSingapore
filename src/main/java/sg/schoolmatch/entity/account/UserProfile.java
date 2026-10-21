@@ -24,8 +24,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import sg.schoolmatch.entity.common.Coordinate;
+import sg.schoolmatch.entity.location.LocationSource;
+import sg.schoolmatch.entity.location.ReferenceLocation;
 import sg.schoolmatch.entity.recommend.MatchCriteria;
 import sg.schoolmatch.entity.route.TravelMode;
+import sg.schoolmatch.entity.school.IndicativePsleScoreRange;
 
 /**
  * Design class «entity» UserProfile — a member's PSLE score, home location and preferences
@@ -45,12 +48,12 @@ public class UserProfile {
 
     private String displayName;
 
-    @Min(4)
-    @Max(32)
+    @Min(IndicativePsleScoreRange.MIN_SCORE)
+    @Max(IndicativePsleScoreRange.MAX_SCORE)
     private Integer psleScore;
 
-    @Min(1)
-    @Max(3)
+    @Min(IndicativePsleScoreRange.MIN_POSTING_GROUP)
+    @Max(IndicativePsleScoreRange.MAX_POSTING_GROUP)
     private Integer postingGroup;
 
     private String primarySchool;
@@ -98,7 +101,7 @@ public class UserProfile {
     }
 
     /**
-     * Builds the recommendation criteria prefilled from this profile (DC-07, FR-REC-01). Owner B writes this method.
+     * Builds the recommendation criteria prefilled from this profile (DC-07, FR-REC-01).
      * The home location becomes the start location (labelled with the home address, else "Home"); missing values
      * stay null, so an incomplete profile still prefills what it has. Weights stay empty: they come from
      * {@code app.recommendation.weights}, which an entity cannot read (DC-20).
@@ -114,8 +117,7 @@ public class UserProfile {
         criteria.setPreferredProgrammes(preferredProgrammes);
         if (homeLocation != null) {
             String label = homeAddress == null || homeAddress.isBlank() ? "Home" : homeAddress.trim();
-            criteria.setStartLocation(new sg.schoolmatch.entity.location.ReferenceLocation(homeLocation,
-                    sg.schoolmatch.entity.location.LocationSource.MANUAL_ENTRY, label));
+            criteria.setStartLocation(new ReferenceLocation(homeLocation, LocationSource.MANUAL_ENTRY, label));
         }
         return criteria;
     }

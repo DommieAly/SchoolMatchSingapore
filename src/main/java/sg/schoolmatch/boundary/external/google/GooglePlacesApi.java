@@ -52,7 +52,7 @@ public class GooglePlacesApi {
     static final String LIBRARY_TYPE = "library";
     static final String TUITION_QUERY = "tuition centre";
     static final int MAX_RESULTS = 20;
-    /** Search radius in metres: the largest facility radius (DC-24). */
+    /** Search radius in metres: the DC-24 nearby radius ({@link FacilityFilterCriteria#DEFAULT_RADIUS_KM}, 3 km). */
     static final double RADIUS_METRES = FacilityFilterCriteria.DEFAULT_RADIUS_KM * 1000.0;
 
     private static final Logger log = LoggerFactory.getLogger(GooglePlacesApi.class);

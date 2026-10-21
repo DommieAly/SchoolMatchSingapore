@@ -14,7 +14,7 @@ import sg.schoolmatch.entity.school.School;
  * Values are compared ignoring case. Whether a value exists in the active dataset is checked by
  * {@code FilterController.validateFilter} (an entity cannot read the dataset).
  */
-public class SchoolAttributeFilter extends Filter {
+public final class SchoolAttributeFilter extends Filter {
 
     private final AttributeCategory category;
     private final Set<String> selectedValues;

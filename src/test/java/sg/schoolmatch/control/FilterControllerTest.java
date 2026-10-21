@@ -15,7 +15,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -24,8 +23,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.entity.common.Place;
 import sg.schoolmatch.entity.location.LocationSource;
@@ -44,6 +41,7 @@ import sg.schoolmatch.entity.search.SortOrder;
 import sg.schoolmatch.entity.search.TransportationFilter;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
+import sg.schoolmatch.support.TestProperties;
 import sg.schoolmatch.support.TestSchools;
 
 /**
@@ -62,9 +60,8 @@ class FilterControllerTest {
     @Mock
     private SchoolDataController schoolDataController;
 
-    /** The default settings (app.transport-filter.*: WALK 6 / TRANSIT 45 / DRIVE 80 km/h, at most 150 schools). */
-    private static final AppProperties PROPS =
-            new Binder(new MapConfigurationPropertySource(Map.of())).bindOrCreate("app", AppProperties.class);
+    /** The default settings (app.transport-filter.*: WALK 6 / TRANSIT 45 / DRIVE 80 km/h, at most 160 schools). */
+    private static final AppProperties PROPS = TestProperties.defaults();
 
     private FilterController filterController;
 

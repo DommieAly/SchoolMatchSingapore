@@ -21,8 +21,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.core.io.DefaultResourceLoader;
 import sg.schoolmatch.boundary.external.DataGovSgInterface;
 import sg.schoolmatch.boundary.external.DataGovSgRecord;
@@ -43,6 +41,7 @@ import sg.schoolmatch.entity.school.ValidationStatus;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.persistence.dataset.SchoolDatasetStore;
 import sg.schoolmatch.support.FixedClock;
+import sg.schoolmatch.support.TestProperties;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -391,7 +390,7 @@ class SchoolDataControllerImportTest {
     }
 
     private static AppProperties props(Map<String, String> values) {
-        return new Binder(new MapConfigurationPropertySource(values)).bindOrCreate("app", AppProperties.class);
+        return TestProperties.bind(values);
     }
 
     private void writeCurated(String file, String content) throws IOException {

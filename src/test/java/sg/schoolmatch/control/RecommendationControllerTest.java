@@ -24,8 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvFileSource;
 import org.mockito.ArgumentCaptor;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.entity.common.Place;
 import sg.schoolmatch.entity.location.LocationSource;
@@ -41,6 +39,7 @@ import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
 import sg.schoolmatch.support.ExternalFailures;
 import sg.schoolmatch.support.LogCapture;
+import sg.schoolmatch.support.TestProperties;
 import sg.schoolmatch.support.TestSchools;
 
 /**
@@ -55,8 +54,7 @@ class RecommendationControllerTest {
     private final SchoolDataController schoolData = mock(SchoolDataController.class);
     private final DirectionsController directions = mock(DirectionsController.class);
     private final LocationController location = mock(LocationController.class);
-    private final AppProperties props =
-            new Binder(new MapConfigurationPropertySource(Map.of())).bindOrCreate("app", AppProperties.class);
+    private final AppProperties props = TestProperties.defaults();
     private final RecommendationController controller =
             new RecommendationController(location, directions, schoolData, props);
 

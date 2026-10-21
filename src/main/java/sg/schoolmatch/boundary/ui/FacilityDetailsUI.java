@@ -2,6 +2,7 @@ package sg.schoolmatch.boundary.ui;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
@@ -9,8 +10,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.util.UriComponentsBuilder;
 import sg.schoolmatch.boundary.ui.support.AuthInterceptor;
+import sg.schoolmatch.boundary.ui.support.FacilityPages;
 import sg.schoolmatch.boundary.ui.support.PageMessages;
 import sg.schoolmatch.control.FacilityController;
 import sg.schoolmatch.control.SchoolController;
@@ -62,12 +63,11 @@ public class FacilityDetailsUI {
             model.addAttribute("openingHours", openingHourLines(facility.getOpeningHours()));
             model.addAttribute("websiteLink", isWebLink(facility.getWebsite()));
             model.addAttribute("coordinateText", facility.getCoordinate() == null ? null
-                    : String.format("%.5f, %.5f", facility.getCoordinate().getLatitude(),
+                    : String.format(Locale.ROOT, "%.5f, %.5f", facility.getCoordinate().getLatitude(),
                             facility.getCoordinate().getLongitude()));
             if (school != null && school.hasValidCoordinate() && facility.hasValidCoordinate()) {
-                model.addAttribute("distanceText",
-                        String.format("%.1f km from %s (straight line)", facility.distanceTo(school.getCoordinate()),
-                                school.getName()));
+                model.addAttribute("distanceText", String.format(Locale.ROOT, "%.1f km from %s (straight line)",
+                        facility.distanceTo(school.getCoordinate()), school.getName()));
             }
         } catch (ExternalServiceUnavailableException e) {
             ExternalFailureLog.warn(log, "Facility details", e);
@@ -90,18 +90,11 @@ public class FacilityDetailsUI {
 
     /** This page's path, for the directions page's Cancel button (FR-ROUTE-01, T-55). */
     private static String thisPage(String placeId, School school) {
-        UriComponentsBuilder url = UriComponentsBuilder.fromPath("/facilities/{placeId}");
-        if (school != null) {
-            url.queryParam("from", school.getSchoolCode());
-        }
-        return url.buildAndExpand(placeId).encode().toUriString();
+        return FacilityPages.detailsUrl(placeId, school == null ? null : school.getSchoolCode());
     }
 
     private static String typeName(FacilityType type) {
-        if (type == null) {
-            return null;
-        }
-        return type == FacilityType.LIBRARY ? "Library" : "Tuition centre";
+        return type == null ? null : FacilityPages.SINGULAR.get(type);
     }
 
     /** Google's "Monday: 10:00 AM – 9:00 PM; Tuesday: …" as one line per day. */
