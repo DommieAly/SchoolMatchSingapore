@@ -1,163 +1,212 @@
 <!DOCTYPE html>
 <!--/* DM 09 SchoolDetails — SchoolDetailsUI.selectSchool (FR-SCHOOL-01..03, NFR-DATA-03).
        Model: school, scoreRanges (newest first); seedData from LayoutModelAdvice. Every missing value goes
-       through the value fragment, which shows "Not available" (displayUnavailable, FR-SCHOOL-03). */-->
+       through the value fragment, which shows "Not available" (displayUnavailable, FR-SCHOOL-03).
+       Layout: on a phone the PSLE ranges come first, then the details, then the long programme and CCA lists;
+       on wide screens the details sit left of the PSLE ranges (order-lg-*). */-->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head(${school.name})}"></head>
 <body>
 <nav th:replace="~{layout :: navbar}"></nav>
 
 <main class="container py-4" th:fragment="displaySchoolDetails">
-    <p class="mb-2"><a th:href="@{/schools}">&larr; Search schools</a></p>
-    <div th:replace="~{fragments/messages :: messages}"></div>
+    <header class="page-header">
+        <a class="back-link" th:href="@{/schools}"><svg
+                th:replace="~{fragments/icon :: icon('arrow-left')}"></svg>Search schools</a>
+        <div th:replace="~{fragments/messages :: messages}"></div>
+        <h1 class="page-title" th:text="${school.name}">CATHOLIC HIGH SCHOOL</h1>
+        <p class="page-subtitle d-flex flex-wrap align-items-center gap-2">
+            <span th:if="${school.planningArea != null}" class="d-inline-flex align-items-center gap-1 caps"><svg
+                    th:replace="~{fragments/icon :: icon('pin')}"></svg><span th:text="${school.planningArea}">BISHAN</span></span>
+            <span th:if="${school.schoolType != null}" class="tag" th:text="${school.schoolType}">GOVERNMENT-AIDED SCH</span>
+            <span th:if="${school.schoolNature != null}" class="tag" th:text="${school.schoolNature}">BOYS' SCHOOL</span>
+        </p>
 
-    <h1 class="h2 mb-1" th:text="${school.name}">CATHOLIC HIGH SCHOOL</h1>
-    <p class="text-muted" th:text="${school.planningArea}">BISHAN</p>
-
-    <!--/* Design inputs: selectAddToShortlist (login, ShortlistUI), selectViewNearbyFacilities, selectGetDirections, View on map */-->
-    <div class="d-flex flex-wrap gap-2 mb-4">
-        <form th:action="@{/schools/{code}/shortlist(code=${school.schoolCode})}" method="post">
-            <button type="submit" class="btn btn-primary">Add to shortlist</button>
-        </form>
-        <a class="btn btn-outline-secondary"
-           th:href="@{/schools/{code}/facilities(code=${school.schoolCode})}">View nearby facilities</a>
-        <a class="btn btn-outline-secondary" th:href="@{/directions(to=${'school:' + school.schoolCode})}">Get directions</a>
-        <a class="btn btn-outline-secondary" th:href="@{/schools/map(q=${school.name})}">View on map</a>
-    </div>
+        <!--/* Design inputs: selectAddToShortlist (login, ShortlistUI), selectViewNearbyFacilities, selectGetDirections, View on map */-->
+        <div class="page-actions">
+            <form th:action="@{/schools/{code}/shortlist(code=${school.schoolCode})}" method="post">
+                <button type="submit" class="btn btn-primary"><svg
+                        th:replace="~{fragments/icon :: icon('bookmark')}"></svg>Add to shortlist</button>
+            </form>
+            <a class="btn btn-outline-secondary"
+               th:href="@{/schools/{code}/facilities(code=${school.schoolCode})}"><svg
+                    th:replace="~{fragments/icon :: icon('book')}"></svg>View nearby facilities</a>
+            <a class="btn btn-outline-secondary" th:href="@{/directions(to=${'school:' + school.schoolCode})}"><svg
+                    th:replace="~{fragments/icon :: icon('route')}"></svg>Get directions</a>
+            <a class="btn btn-outline-secondary" th:href="@{/schools/map(q=${school.name})}"><svg
+                    th:replace="~{fragments/icon :: icon('map')}"></svg>View on map</a>
+        </div>
+    </header>
 
     <div class="row g-4">
-        <!--/* School Details fields (FR-SCHOOL-02) */-->
-        <section class="col-12 col-lg-7">
-            <h2 class="h5">School details</h2>
-            <dl class="row mb-0">
-                <dt class="col-sm-4">Address</dt>
-                <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${school.address})}"></span></dd>
-
-                <dt class="col-sm-4">Telephone</dt>
-                <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${school.telephone})}"></span></dd>
-
-                <!--/* Links only for http(s) URLs, so data can never inject a javascript: link. A value starting with
-                       "www." (NUS High in the 3 Oct 2026 data) gets https:// in front; without it the browser would
-                       treat it as a page of this site. */-->
-                <dt class="col-sm-4">Website</dt>
-                <dd class="col-sm-8" th:with="websiteHref=${school.website == null ? null
-                        : (school.website.startsWith('http') ? school.website
-                        : (school.website.startsWith('www.') ? 'https://' + school.website : null))}">
-                    <a th:if="${websiteHref != null}" th:href="${websiteHref}" th:text="${school.website}"
-                       target="_blank" rel="noopener">website</a>
-                    <th:block th:if="${websiteHref == null}">
-                        <span th:replace="~{fragments/value :: value(${school.website})}"></span>
-                    </th:block>
-                </dd>
-
-                <dt class="col-sm-4">Email</dt>
-                <dd class="col-sm-8">
-                    <a th:if="${school.email != null}" th:href="|mailto:${school.email}|" th:text="${school.email}">email</a>
-                    <th:block th:if="${school.email == null}">
-                        <span th:replace="~{fragments/value :: value(null)}"></span>
-                    </th:block>
-                </dd>
-
-                <dt class="col-sm-4">Nearest MRT</dt>
-                <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${school.nearestMrt})}"></span></dd>
-
-                <dt class="col-sm-4">Bus services</dt>
-                <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${school.busInfo})}"></span></dd>
-
-                <dt class="col-sm-4">School type</dt>
-                <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${school.schoolType})}"></span></dd>
-
-                <dt class="col-sm-4">School nature</dt>
-                <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${school.schoolNature})}"></span></dd>
-
-                <dt class="col-sm-4">Session</dt>
-                <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${school.sessionType})}"></span></dd>
-
-                <dt class="col-sm-4">District (planning area)</dt>
-                <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${school.planningArea})}"></span></dd>
-
-                <dt class="col-sm-4">Programmes</dt>
-                <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${#strings.setJoin(school.programmes, ', ')})}"></span></dd>
-
-                <dt class="col-sm-4">CCAs</dt>
-                <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${#strings.setJoin(school.ccas, ', ')})}"></span></dd>
-
-                <dt class="col-sm-4">Affiliated primary schools</dt>
-                <!--/* With curated affiliations (MOE SchoolFinder) an empty list means the school has none. */-->
-                <dd class="col-sm-8" th:if="${affiliationsCurated == true and school.affiliatedPrimarySchools.isEmpty()}">None</dd>
-                <dd class="col-sm-8" th:unless="${affiliationsCurated == true and school.affiliatedPrimarySchools.isEmpty()}"><span th:replace="~{fragments/value :: value(${#strings.setJoin(school.affiliatedPrimarySchools, ', ')})}"></span></dd>
-
-                <dt class="col-sm-4">Location</dt>
-                <dd class="col-sm-8"><span th:replace="~{fragments/value :: value(${school.coordinate != null ? school.coordinate.latitude + ', ' + school.coordinate.longitude : null})}"></span></dd>
-            </dl>
-        </section>
-
         <!--/* Indicative PSLE score ranges, all years (NFR-DATA-03: historical, not guaranteed).
                The seed snapshot's ranges are made up, so the page must never present them as real (DC-34). */-->
-        <section id="psle-ranges" class="col-12 col-lg-5">
-            <h2 class="h5">Indicative PSLE score ranges</h2>
-            <!--/* DC-74: a dataset without any PSLE range says so once */-->
-            <p th:if="${psleDataAvailable == false}" class="text-body-secondary" data-psle-unavailable="true">
-                PSLE score ranges: not available yet</p>
-            <th:block th:unless="${psleDataAvailable == false}">
-            <div th:if="${seedData}" class="alert alert-warning small py-2" role="note">
-                <strong>TEST VALUES – not MOE data.</strong> The seed dataset uses made-up PSLE ranges, and leaves
-                some fields (such as one school's email) blank on purpose to test missing values.
-                Do not use them to choose a school.
-            </div>
-            <p th:unless="${seedData}" class="small text-muted">
-                These ranges are historical: the PSLE AL scores of students posted to this school in past years
-                (a lower score is better). They are not a guarantee of a place this year.
-            </p>
-            <div class="table-responsive" th:if="${!scoreRanges.isEmpty()}">
-                <table class="table table-sm table-striped align-middle">
-                    <thead>
-                    <tr>
-                        <th scope="col">Year</th>
-                        <th scope="col">Posting group</th>
-                        <th scope="col">Affiliation</th>
-                        <th scope="col">AL range</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="range : ${scoreRanges}">
-                        <td th:text="${range.admissionYear}">2025</td>
-                        <td th:text="|PG${range.postingGroup}|">PG3</td>
-                        <td th:text="${range.integratedProgramme}
-                                     ? (${range.affiliated} ? 'Integrated Programme (affiliated)' : 'Integrated Programme')
-                                     : (${range.affiliated} ? 'Affiliated' : 'Non-affiliated')">Non-affiliated</td>
-                        <td>
-                            <span th:text="${range.rangeText + (range.hadPlacesLeft() ? '*' : '')}">8–12</span>
-                            <!--/* DC-82: MOE's own text when it holds more than the numbers (Higher Chinese grades). */-->
-                            <span th:if="${range.hasHigherChineseGrades()}" class="small text-body-secondary d-block"
-                                  th:text="|MOE: ${range.moeText}|">MOE: 6(D) - 8(M)</span>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
-            <p th:if="${higherChineseNote}" class="small text-body-secondary mb-1">
-                (D) and (M) in MOE's text are the Higher Chinese Language grades (Distinction, Merit) of the first and
-                last student posted. Special Assistance Plan schools use them to order students with the same score.
-            </p>
-            <p th:if="${placesLeftNote}" class="small text-body-secondary mb-1">
-                * The school still had places after posting: the last student posted had a better score than 30,
-                and MOE shows 30 because places were left.
-            </p>
-            <p th:if="${scoreRanges.isEmpty()}"><span th:replace="~{fragments/value :: value(null)}"></span></p>
-            <p th:unless="${seedData or scoreRanges.isEmpty()}" class="small text-body-secondary">
-                Source: <a href="https://www.moe.gov.sg/schoolfinder" rel="noopener" target="_blank">MOE SchoolFinder</a>
-                (moe.gov.sg), read on 3 Oct 2026.
-            </p>
-            </th:block>
-            <!--/* DC-18: MOE's own text of the IP range (it keeps grades such as "4(D) - 8(M)").
-                   DC-77: the IP range is also a table row; it is used for PG3 only when there is no other PG3 range. */-->
-            <p class="small" th:if="${school.ipRangeNote != null}">
-                <strong>Integrated Programme:</strong> <span th:text="${school.ipRangeNote}">note</span>.
-                MOE lists Integrated Programme ranges under Posting Group 3. When a school has no other PG3 range,
-                the IP range is the one used for PG3 in search, the choice plan and recommendations.
-            </p>
-        </section>
+        <div class="col-12 col-lg-5 order-lg-2">
+            <section id="psle-ranges" class="card h-100" aria-labelledby="psle-ranges-title">
+                <div class="card-body">
+                <h2 class="section-title" id="psle-ranges-title">Indicative PSLE score ranges</h2>
+                <!--/* DC-74: a dataset without any PSLE range says so once */-->
+                <p th:if="${psleDataAvailable == false}" class="text-body-secondary mb-0" data-psle-unavailable="true">
+                    PSLE score ranges: not available yet</p>
+                <th:block th:unless="${psleDataAvailable == false}">
+                <div th:if="${seedData}" class="notice-test mb-3" role="note">
+                    <strong>TEST VALUES – not MOE data.</strong> The seed dataset uses made-up PSLE ranges, and leaves
+                    some fields (such as one school's email) blank on purpose to test missing values.
+                    Do not use them to choose a school.
+                </div>
+                <p th:unless="${seedData}" class="small text-body-secondary">
+                    PSLE AL scores of students posted to this school in past years (lower is better). They are
+                    historical, not a guarantee of a place this year.
+                </p>
+                <div class="table-responsive" th:if="${!scoreRanges.isEmpty()}">
+                    <table class="table table-sm align-middle mb-3">
+                        <thead>
+                        <tr>
+                            <th scope="col">Year</th>
+                            <th scope="col">Posting group</th>
+                            <th scope="col">Affiliation</th>
+                            <th scope="col">AL range</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="range : ${scoreRanges}">
+                            <td th:text="${range.admissionYear}">2025</td>
+                            <td class="fw-semibold" th:text="|PG${range.postingGroup}|">PG3</td>
+                            <td th:text="${range.integratedProgramme}
+                                         ? (${range.affiliated} ? 'Integrated Programme (affiliated)' : 'Integrated Programme')
+                                         : (${range.affiliated} ? 'Affiliated' : 'Non-affiliated')">Non-affiliated</td>
+                            <td>
+                                <span class="fw-bold text-primary" th:text="${range.rangeText + (range.hadPlacesLeft() ? '*' : '')}">8–12</span>
+                                <!--/* DC-82: MOE's own text when it holds more than the numbers (Higher Chinese grades). */-->
+                                <span th:if="${range.hasHigherChineseGrades()}" class="small text-body-secondary d-block"
+                                      th:text="|MOE: ${range.moeText}|">MOE: 6(D) - 8(M)</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p th:if="${higherChineseNote}" class="small text-body-secondary mb-1">
+                    (D) and (M) in MOE's text are the Higher Chinese Language grades (Distinction, Merit) of the first and
+                    last student posted. Special Assistance Plan schools use them to order students with the same score.
+                </p>
+                <p th:if="${placesLeftNote}" class="small text-body-secondary mb-1">
+                    * The school still had places after posting: the last student posted had a better score than 30,
+                    and MOE shows 30 because places were left.
+                </p>
+                <p th:if="${scoreRanges.isEmpty()}"><span th:replace="~{fragments/value :: value(null)}"></span></p>
+                <p th:unless="${seedData or scoreRanges.isEmpty()}" class="small text-body-secondary">
+                    Source: <a href="https://www.moe.gov.sg/schoolfinder" rel="noopener" target="_blank">MOE SchoolFinder</a>
+                    (moe.gov.sg), read on 3 Oct 2026.
+                </p>
+                </th:block>
+                <!--/* DC-18: MOE's own text of the IP range (it keeps grades such as "4(D) - 8(M)").
+                       DC-77: the IP range is also a table row; it is used for PG3 only when there is no other PG3 range. */-->
+                <p class="small mb-0" th:if="${school.ipRangeNote != null}">
+                    <strong>Integrated Programme:</strong> <span th:text="${school.ipRangeNote}">note</span>.
+                    MOE lists Integrated Programme ranges under Posting Group 3. When a school has no other PG3 range,
+                    the IP range is the one used for PG3 in search, the choice plan and recommendations.
+                </p>
+                </div>
+            </section>
+        </div>
+
+        <!--/* School Details fields (FR-SCHOOL-02) */-->
+        <div class="col-12 col-lg-7 order-lg-1">
+            <section class="card h-100" aria-labelledby="details-title">
+                <div class="card-body">
+                    <h2 class="section-title" id="details-title">School details</h2>
+                    <dl class="data-list data-list-lg">
+                        <dt>Address</dt>
+                        <dd class="caps"><span th:replace="~{fragments/value :: value(${school.address})}"></span></dd>
+
+                        <dt>Telephone</dt>
+                        <dd><span th:replace="~{fragments/value :: value(${school.telephone})}"></span></dd>
+
+                        <!--/* Links only for http(s) URLs, so data can never inject a javascript: link. A value starting with
+                               "www." (NUS High in the 3 Oct 2026 data) gets https:// in front; without it the browser would
+                               treat it as a page of this site. */-->
+                        <dt>Website</dt>
+                        <dd th:with="websiteHref=${school.website == null ? null
+                                : (school.website.startsWith('http') ? school.website
+                                : (school.website.startsWith('www.') ? 'https://' + school.website : null))}">
+                            <a th:if="${websiteHref != null}" th:href="${websiteHref}" th:text="${school.website}"
+                               target="_blank" rel="noopener">website</a>
+                            <th:block th:if="${websiteHref == null}">
+                                <span th:replace="~{fragments/value :: value(${school.website})}"></span>
+                            </th:block>
+                        </dd>
+
+                        <dt>Email</dt>
+                        <dd>
+                            <a th:if="${school.email != null}" th:href="|mailto:${school.email}|" th:text="${school.email}">email</a>
+                            <th:block th:if="${school.email == null}">
+                                <span th:replace="~{fragments/value :: value(null)}"></span>
+                            </th:block>
+                        </dd>
+
+                        <dt>Nearest MRT</dt>
+                        <dd class="caps"><span th:replace="~{fragments/value :: value(${school.nearestMrt})}"></span></dd>
+
+                        <dt>Bus services</dt>
+                        <dd><span th:replace="~{fragments/value :: value(${school.busInfo})}"></span></dd>
+
+                        <dt>School type</dt>
+                        <dd class="caps"><span th:replace="~{fragments/value :: value(${school.schoolType})}"></span></dd>
+
+                        <dt>School nature</dt>
+                        <dd class="caps"><span th:replace="~{fragments/value :: value(${school.schoolNature})}"></span></dd>
+
+                        <dt>Session</dt>
+                        <dd class="caps"><span th:replace="~{fragments/value :: value(${school.sessionType})}"></span></dd>
+
+                        <dt>District (planning area)</dt>
+                        <dd class="caps"><span th:replace="~{fragments/value :: value(${school.planningArea})}"></span></dd>
+
+                        <dt>Affiliated primary schools</dt>
+                        <!--/* With curated affiliations (MOE SchoolFinder) an empty list means the school has none. */-->
+                        <dd class="caps" th:if="${affiliationsCurated == true and school.affiliatedPrimarySchools.isEmpty()}">None</dd>
+                        <dd class="caps" th:unless="${affiliationsCurated == true and school.affiliatedPrimarySchools.isEmpty()}"><span th:replace="~{fragments/value :: value(${#strings.setJoin(school.affiliatedPrimarySchools, ', ')})}"></span></dd>
+
+                        <dt>Location</dt>
+                        <dd><span th:replace="~{fragments/value :: value(${school.coordinate != null ? school.coordinate.latitude + ', ' + school.coordinate.longitude : null})}"></span></dd>
+                    </dl>
+                </div>
+            </section>
+        </div>
+
+        <!--/* Programmes and CCAs (FR-SCHOOL-02): one tag per value; "Not available" when the dataset has none */-->
+        <div class="col-12 order-lg-3">
+            <section class="card" aria-labelledby="offer-title">
+                <div class="card-body">
+                    <h2 class="visually-hidden" id="offer-title">Programmes and CCAs</h2>
+                    <div class="row g-4">
+                        <div class="col-12 col-lg-6">
+                            <h3 class="section-title">Programmes
+                                <span th:unless="${school.programmes == null or school.programmes.isEmpty()}"
+                                      class="tag" th:text="${school.programmes.size()}">51</span></h3>
+                            <ul th:unless="${school.programmes == null or school.programmes.isEmpty()}"
+                                class="list-unstyled d-flex flex-wrap gap-1 mb-0">
+                                <li th:each="programme : ${school.programmes}" class="chip chip-neutral fw-normal"
+                                    th:text="${programme}">Additional Mathematics</li>
+                            </ul>
+                            <p th:if="${school.programmes == null or school.programmes.isEmpty()}" class="mb-0"><span
+                                    th:replace="~{fragments/value :: value(null)}"></span></p>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <h3 class="section-title">CCAs
+                                <span th:unless="${school.ccas == null or school.ccas.isEmpty()}"
+                                      class="tag" th:text="${school.ccas.size()}">36</span></h3>
+                            <ul th:unless="${school.ccas == null or school.ccas.isEmpty()}"
+                                class="list-unstyled d-flex flex-wrap gap-1 mb-0">
+                                <li th:each="cca : ${school.ccas}" class="chip chip-neutral fw-normal" th:text="${cca}">BASKETBALL</li>
+                            </ul>
+                            <p th:if="${school.ccas == null or school.ccas.isEmpty()}" class="mb-0"><span
+                                    th:replace="~{fragments/value :: value(null)}"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
     </div>
 </main>
 

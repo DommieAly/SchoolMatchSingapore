@@ -10,111 +10,130 @@
 <nav th:replace="~{layout :: navbar}"></nav>
 
 <main class="container py-4">
-    <h1 class="h3 mb-1">About the school data</h1>
-    <p class="text-body-secondary">The app reads one checked snapshot of the school data. This page shows which one,
-        and where its data came from.</p>
+    <header class="page-header">
+        <h1 class="page-title">About the school data</h1>
+        <p class="page-subtitle">The app reads one checked snapshot of the school data. This page shows which one and
+            where its data came from.</p>
+    </header>
     <div th:replace="~{fragments/messages :: messages}"></div>
 
-    <div th:if="${seedData}" class="alert alert-warning" role="note">
+    <div th:if="${seedData}" class="notice-test mb-4" role="note">
         <strong>TEST VALUES – not MOE data.</strong> This is the small seed snapshot: its PSLE ranges are made up for
         testing.
     </div>
 
     <div class="row g-4">
-        <section class="col-12 col-lg-6">
-            <h2 class="h5">Active snapshot</h2>
-            <dl class="row mb-0">
-                <dt class="col-sm-5">Version</dt>
-                <dd class="col-sm-7 font-monospace" th:text="${manifest.version}">2026-10-02.1</dd>
+        <div class="col-12 col-lg-5 d-flex flex-column gap-4">
+            <section class="card">
+                <div class="card-body">
+                    <h2 class="section-title">Active snapshot</h2>
+                    <dl class="data-list data-list-lg mb-4">
+                        <dt>Version</dt>
+                        <dd class="font-monospace" th:text="${manifest.version}">2026-10-02.1</dd>
 
-                <dt class="col-sm-5">Kind</dt>
-                <dd class="col-sm-7" th:text="${fullSnapshot} ? 'Full import' : 'Seed (small test snapshot)'">Full import</dd>
+                        <dt>Kind</dt>
+                        <dd th:text="${fullSnapshot} ? 'Full import' : 'Seed (small test snapshot)'">Full import</dd>
 
-                <dt class="col-sm-5">Effective date</dt>
-                <dd class="col-sm-7"><span th:replace="~{fragments/value :: value(${effectiveDate})}"></span></dd>
+                        <dt>Effective date</dt>
+                        <dd><span th:replace="~{fragments/value :: value(${effectiveDate})}"></span></dd>
 
-                <dt class="col-sm-5">Imported</dt>
-                <dd class="col-sm-7"><span th:replace="~{fragments/value :: value(${importedAt})}"></span></dd>
+                        <dt>Imported</dt>
+                        <dd><span th:replace="~{fragments/value :: value(${importedAt})}"></span></dd>
 
-                <dt class="col-sm-5">Validation status</dt>
-                <dd class="col-sm-7">
-                    <span class="badge"
-                          th:classappend="${dataset != null and dataset.validationStatus != null
-                                           and dataset.validationStatus.name() == 'PASSED'} ? 'text-bg-success' : 'text-bg-warning'"
-                          th:text="${dataset != null and dataset.validationStatus != null ? dataset.validationStatus
-                                    : manifest.validationStatus}">PASSED_WITH_WARNINGS</span>
-                </dd>
-            </dl>
+                        <dt>Validation</dt>
+                        <dd>
+                            <span class="badge font-monospace"
+                                  th:classappend="${dataset != null and dataset.validationStatus != null
+                                                   and dataset.validationStatus.name() == 'PASSED'} ? 'text-bg-success' : 'text-bg-warning'"
+                                  th:text="${dataset != null and dataset.validationStatus != null ? dataset.validationStatus
+                                            : manifest.validationStatus}">PASSED_WITH_WARNINGS</span>
+                        </dd>
+                    </dl>
 
-            <h2 class="h5 mt-4">Counts</h2>
-            <table class="table table-sm w-auto">
-                <tbody>
-                <tr th:each="count : ${counts}">
-                    <th scope="row" class="fw-normal" th:text="${count.key}">schools</th>
-                    <td class="text-end" th:text="${count.value}">147</td>
-                </tr>
-                </tbody>
-            </table>
+                    <div class="stat-grid">
+                        <div class="stat" th:each="count : ${counts}">
+                            <span class="stat-value" th:text="${count.value}">147</span>
+                            <span class="stat-label" th:switch="${count.key}">
+                                <th:block th:case="'schools'">Schools</th:block>
+                                <th:block th:case="'districts'">Districts</th:block>
+                                <th:block th:case="'scoreRanges'">PSLE score ranges</th:block>
+                                <th:block th:case="*" th:text="${count.key}">other</th:block>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-            <h2 class="h5 mt-4">PSLE ranges</h2>
-            <p class="small mb-1" th:text="${manifest.notes}">No PSLE ranges yet.</p>
-            <p class="small text-body-secondary">PSLE ranges are historical (the scores of students posted in past
-                years), not a guarantee of a place.</p>
-        </section>
+            <section class="card">
+                <div class="card-body">
+                    <h2 class="section-title">PSLE ranges</h2>
+                    <p class="mb-2">PSLE ranges are the scores of students posted in past years: historical, not a
+                        guarantee of a place.</p>
+                    <p class="note mb-0"><svg th:replace="~{fragments/icon :: icon('info')}"></svg><span>Snapshot note:
+                        <th:block th:text="${manifest.notes}">No PSLE ranges yet.</th:block></span></p>
+                </div>
+            </section>
+        </div>
 
-        <section class="col-12 col-lg-6">
-            <h2 class="h5">Sources</h2>
-            <div class="table-responsive">
-            <table class="table table-sm">
-                <thead>
-                <tr><th scope="col">Source</th><th scope="col">Dataset id</th><th scope="col">Downloaded</th></tr>
-                </thead>
-                <tbody>
-                <tr th:each="source : ${sources}">
-                    <td th:text="${source.name}">General information of schools</td>
-                    <td class="font-monospace small text-break" th:text="${source.datasetId}">d_688b…</td>
-                    <td class="small"><span th:replace="~{fragments/value :: value(${source.downloadedAt})}"></span></td>
-                </tr>
-                </tbody>
-            </table>
-            </div>
+        <div class="col-12 col-lg-7 d-flex flex-column gap-4">
+            <section class="card">
+                <div class="card-body">
+                    <h2 class="section-title">Sources</h2>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item px-0" th:each="source : ${sources}">
+                            <div class="fw-semibold" th:text="${source.name}">General information of schools</div>
+                            <div class="small text-body-secondary d-flex flex-wrap column-gap-3">
+                                <span>Dataset id <code class="text-break" th:text="${source.datasetId}">d_688b…</code></span>
+                                <span>Downloaded <span th:replace="~{fragments/value :: value(${source.downloadedAt})}"></span></span>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </section>
 
-            <h2 class="h5 mt-4">Licences and credits</h2>
-            <ul class="small">
-                <li th:each="source : ${sources}" th:if="${source.licensed}">
-                    <span th:text="|Contains information from ${source.name} accessed on ${source.downloadedOn != null
-                                   ? source.downloadedOn : 'an unknown date'} from data.gov.sg which is made available under the terms of the|">Contains
-                        information from General information of schools accessed on 2 Oct 2026 from data.gov.sg which
-                        is made available under the terms of the</span>
-                    <a href="https://data.gov.sg/open-data-licence" rel="noopener" target="_blank">Singapore Open Data Licence version 1.0</a>
-                    (https://data.gov.sg/open-data-licence).
-                </li>
-                <li th:if="${oneMapAccessedOn != null}">
-                    <span th:text="|Contains information from OneMap search accessed on ${oneMapAccessedOn} from OneMap (onemap.gov.sg, Singapore Land Authority) which is made available under the terms of the|">Contains
-                        information from OneMap search accessed on 3 Oct 2026 from OneMap (onemap.gov.sg, Singapore
-                        Land Authority) which is made available under the terms of the</span>
-                    <a href="https://www.onemap.gov.sg/legal/opendatalicence.html" rel="noopener" target="_blank">Singapore Open Data Licence version 1.0</a>
-                    (https://www.onemap.gov.sg/legal/opendatalicence.html).
-                </li>
-                <li>School coordinates and address search: OneMap, Singapore Land Authority.</li>
-                <!--/* DC-78: the curated PSLE ranges and affiliations come from MOE SchoolFinder. */-->
-                <li th:if="${!seedData and counts['scoreRanges'] != null and counts['scoreRanges'] > 0}">PSLE score
-                    ranges and affiliated primary schools:
-                    <a href="https://www.moe.gov.sg/schoolfinder" rel="noopener" target="_blank">MOE SchoolFinder</a>
-                    (moe.gov.sg, Ministry of Education), read on 3 Oct 2026 (2025 S1 posting).</li>
-                <li>School codes in page addresses (e.g. <span class="font-monospace">catholic-high-school</span>) are
-                    SchoolMatch's own ids, made from the school names. They are not MOE codes.</li>
-                <li>Maps, routes and nearby places: Google Maps Platform (not stored in this snapshot).</li>
-            </ul>
-        </section>
+            <section class="card">
+                <div class="card-body">
+                    <h2 class="section-title">Licences and credits</h2>
+                    <ul class="small text-body-secondary text-break ps-3 mb-0">
+                        <li class="mb-2" th:each="source : ${sources}" th:if="${source.licensed}">
+                            <span th:text="|Contains information from ${source.name} accessed on ${source.downloadedOn != null
+                                           ? source.downloadedOn : 'an unknown date'} from data.gov.sg which is made available under the terms of the|">Contains
+                                information from General information of schools accessed on 2 Oct 2026 from data.gov.sg which
+                                is made available under the terms of the</span>
+                            <a href="https://data.gov.sg/open-data-licence" rel="noopener" target="_blank">Singapore Open Data Licence version 1.0</a>
+                            (https://data.gov.sg/open-data-licence).
+                        </li>
+                        <li class="mb-2" th:if="${oneMapAccessedOn != null}">
+                            <span th:text="|Contains information from OneMap search accessed on ${oneMapAccessedOn} from OneMap (onemap.gov.sg, Singapore Land Authority) which is made available under the terms of the|">Contains
+                                information from OneMap search accessed on 3 Oct 2026 from OneMap (onemap.gov.sg, Singapore
+                                Land Authority) which is made available under the terms of the</span>
+                            <a href="https://www.onemap.gov.sg/legal/opendatalicence.html" rel="noopener" target="_blank">Singapore Open Data Licence version 1.0</a>
+                            (https://www.onemap.gov.sg/legal/opendatalicence.html).
+                        </li>
+                        <li class="mb-2">School coordinates and address search: OneMap, Singapore Land Authority.</li>
+                        <!--/* DC-78: the curated PSLE ranges and affiliations come from MOE SchoolFinder. */-->
+                        <li class="mb-2" th:if="${!seedData and counts['scoreRanges'] != null and counts['scoreRanges'] > 0}">PSLE score
+                            ranges and affiliated primary schools:
+                            <a href="https://www.moe.gov.sg/schoolfinder" rel="noopener" target="_blank">MOE SchoolFinder</a>
+                            (moe.gov.sg, Ministry of Education), read on 3 Oct 2026 (2025 S1 posting).</li>
+                        <li class="mb-2">School codes in page addresses (e.g. <span class="font-monospace">catholic-high-school</span>) are
+                            SchoolMatch's own ids, made from the school names. They are not MOE codes.</li>
+                        <li>Maps, routes and nearby places: Google Maps Platform (not stored in this snapshot).</li>
+                    </ul>
+                </div>
+            </section>
+        </div>
     </div>
 
-    <section class="mt-4" th:if="${!#lists.isEmpty(manifest.warnings)}">
-        <h2 class="h5">Warnings from the import</h2>
-        <p class="small text-body-secondary">Warnings do not stop the app; they list data the team still has to check.</p>
-        <ul class="small">
-            <li th:each="warning : ${manifest.warnings}" th:text="${warning}">school-code-slug: 147 warnings</li>
-        </ul>
+    <section class="card mt-4" th:if="${!#lists.isEmpty(manifest.warnings)}">
+        <div class="card-body">
+            <h2 class="section-title"><svg th:replace="~{fragments/icon :: icon('alert')}"></svg>Warnings from the import</h2>
+            <p class="small text-body-secondary mb-2">Warnings do not stop the app. They list data the team still has
+                to check.</p>
+            <ul class="small text-break ps-3 mb-0 d-grid gap-1">
+                <li th:each="warning : ${manifest.warnings}" th:text="${warning}">school-code-slug: 147 warnings</li>
+            </ul>
+        </div>
     </section>
 </main>
 

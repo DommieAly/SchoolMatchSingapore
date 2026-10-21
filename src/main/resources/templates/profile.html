@@ -2,36 +2,35 @@
 <!--/* DM 05 UserProfile — UserProfileUI.displayUserProfile / submitProfile (FR-PROFILE-01, DC-27).
        Model: form (UserProfileUI.ProfileForm), account, profileComplete, homeLocationSaved, travelModes (mode → label),
        commuteOptions, ccaOptions, programmeOptions, fieldErrors, optional homeCandidates (several address matches),
-       flashMessage / flashError. One form saves everything; Cancel reloads the saved profile (AF-1). */-->
+       flashMessage / flashError. One form saves everything; Cancel reloads the saved profile (AF-1).
+       The side card lists what recommendations need; on phones it comes first while the profile is incomplete. */-->
 <!-- DM-05 UserProfile · UserProfileUI -->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Your profile')}"></head>
 <body>
 <nav th:replace="~{layout :: navbar}"></nav>
 
-<main class="container py-4">
-    <h1 class="h3 mb-1">Your profile</h1>
-    <p class="text-body-secondary small mb-3" th:if="${account != null}">
-        Logged in as <span th:text="${account.username}">alice_01</span>
-        (<span th:text="${account.email}">alice@example.com</span>)
-    </p>
+<main class="container py-4"
+      th:with="psleNeeded=${psleDataAvailable != false},
+               saved=${(fieldErrors == null or #maps.isEmpty(fieldErrors)) and homeCandidates == null and flashError == null},
+               ready=${profileComplete or (psleDataAvailable == false and homeLocationSaved and saved and form.travelMode != null)}">
+    <header class="page-header">
+        <h1 class="page-title">Your profile</h1>
+        <p class="page-subtitle" th:if="${account != null}">
+            Logged in as <strong th:text="${account.username}">alice_01</strong>
+            (<span th:text="${account.email}">alice@example.com</span>)
+        </p>
+    </header>
     <div th:replace="~{fragments/messages :: messages}"></div>
-    <div th:unless="${profileComplete or (psleDataAvailable == false and homeLocationSaved and form.travelMode != null)}"
-         class="alert alert-info small" role="status">
-        <th:block th:if="${psleDataAvailable != false}">To get school recommendations, fill in your PSLE score,
-            posting group, home address and usual travel mode.</th:block>
-        <!--/* DC-74: the PSLE fields are not used while the dataset has no PSLE ranges */-->
-        <th:block th:if="${psleDataAvailable == false}">To get school recommendations, fill in your home address and
-            usual travel mode.</th:block>
-    </div>
 
     <div class="row g-4">
         <div class="col-12 col-lg-8">
             <form method="post" th:action="@{/profile}" th:object="${form}" novalidate>
 
-                <section class="card shadow-sm mb-4">
+                <section class="card mb-4" aria-labelledby="profile-student">
                     <div class="card-body p-4 row g-3">
-                        <h2 class="h5 mb-0">About the student</h2>
+                        <h2 id="profile-student" class="section-title mt-3 mb-0">
+                            <svg th:replace="~{fragments/icon :: icon('user')}"></svg>About the student</h2>
                         <div class="col-12">
                             <label for="displayName" class="form-label">Display name</label>
                             <input th:field="*{displayName}" type="text" class="form-control" maxlength="50"
@@ -72,15 +71,16 @@
                                    th:classappend="${fieldErrors?.get('primarySchool') != null} ? 'is-invalid'">
                             <div class="invalid-feedback" th:text="${fieldErrors?.get('primarySchool')}">Error</div>
                             <div id="primary-help" class="form-text">
-                                Used to pick the affiliated PSLE range where a secondary school has one.
+                                Used for the affiliated PSLE range where a secondary school has one.
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <section class="card shadow-sm mb-4">
+                <section class="card mb-4" aria-labelledby="profile-home">
                     <div class="card-body p-4 row g-3">
-                        <h2 class="h5 mb-0">Home</h2>
+                        <h2 id="profile-home" class="section-title mt-3 mb-0">
+                            <svg th:replace="~{fragments/icon :: icon('pin')}"></svg>Home</h2>
                         <div class="col-12">
                             <label for="homeAddress" class="form-label">Home address or postal code</label>
                             <input th:field="*{homeAddress}" type="text" class="form-control" maxlength="200"
@@ -90,49 +90,32 @@
                             <div id="home-help" class="form-text">
                                 The starting point for commute times. Looked up with OneMap; only the matching
                                 location is kept.
-                                <span th:if="${homeLocationSaved}" class="text-success">Location found.</span>
+                                <span th:if="${homeLocationSaved}" class="text-success fw-semibold"><svg
+                                        th:replace="~{fragments/icon :: icon('check')}"></svg> Location found.</span>
                             </div>
                         </div>
-                        <fieldset class="col-12" th:if="${homeCandidates != null}">
-                            <legend class="form-label fs-6">Which address is yours?</legend>
-                            <div class="list-group">
-                                <label class="list-group-item d-flex gap-2"
-                                       th:each="candidate, it : ${homeCandidates}">
-                                    <input type="radio" name="homeChoice" th:value="${it.index}"
-                                           class="form-check-input flex-shrink-0">
-                                    <span th:text="${candidate.inputText}">9 BISHAN STREET 22 SINGAPORE 579767</span>
-                                </label>
-                            </div>
-                            <div class="form-text">Choose one, then press Save profile. Your other changes are kept.</div>
-                        </fieldset>
+                        <div class="col-12" th:if="${homeCandidates != null}">
+                            <fieldset class="location-candidates mb-0">
+                                <legend class="form-label fs-6">Which address is yours?</legend>
+                                <div class="list-group">
+                                    <label class="list-group-item d-flex gap-2"
+                                           th:each="candidate, it : ${homeCandidates}">
+                                        <input type="radio" name="homeChoice" th:value="${it.index}"
+                                               class="form-check-input flex-shrink-0">
+                                        <span th:text="${candidate.inputText}">9 BISHAN STREET 22 SINGAPORE 579767</span>
+                                    </label>
+                                </div>
+                                <div class="form-text mt-2">Choose one, then press Save profile. Your other changes
+                                    are kept.</div>
+                            </fieldset>
+                        </div>
                     </div>
                 </section>
 
-                <section class="card shadow-sm mb-4">
+                <section class="card mb-4" aria-labelledby="profile-preferences">
                     <div class="card-body p-4 row g-3">
-                        <h2 class="h5 mb-0">Preferences</h2>
-                        <div class="col-md-6">
-                            <label for="preferredCCAs" class="form-label">CCAs</label>
-                            <select th:field="*{preferredCCAs}" class="form-select" multiple size="8"
-                                    aria-describedby="multi-help"
-                                    th:classappend="${fieldErrors?.get('preferredCCAs') != null} ? 'is-invalid'">
-                                <option th:each="cca : ${ccaOptions}" th:value="${cca}" th:text="${cca}">BADMINTON</option>
-                            </select>
-                            <div class="invalid-feedback" th:text="${fieldErrors?.get('preferredCCAs')}">Error</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="preferredProgrammes" class="form-label">Programmes</label>
-                            <select th:field="*{preferredProgrammes}" class="form-select" multiple size="8"
-                                    aria-describedby="multi-help"
-                                    th:classappend="${fieldErrors?.get('preferredProgrammes') != null} ? 'is-invalid'">
-                                <option th:each="programme : ${programmeOptions}" th:value="${programme}"
-                                        th:text="${programme}">Applied Learning Programme</option>
-                            </select>
-                            <div class="invalid-feedback" th:text="${fieldErrors?.get('preferredProgrammes')}">Error</div>
-                        </div>
-                        <p id="multi-help" class="col-12 form-text mt-1">
-                            Hold Ctrl (Windows) or Cmd (Mac) to choose more than one, or to unselect one.
-                        </p>
+                        <h2 id="profile-preferences" class="section-title mt-3 mb-0">
+                            <svg th:replace="~{fragments/icon :: icon('sparkle')}"></svg>Preferences</h2>
                         <div class="col-sm-6">
                             <label for="travelMode" class="form-label">Usual travel mode</label>
                             <select th:field="*{travelMode}" class="form-select"
@@ -153,26 +136,114 @@
                             </select>
                             <div class="invalid-feedback" th:text="${fieldErrors?.get('maxCommuteMin')}">Error</div>
                         </div>
+                        <div class="col-md-6">
+                            <label for="preferredCCAs" class="form-label">CCAs</label>
+                            <select th:field="*{preferredCCAs}" class="form-select" multiple size="8"
+                                    aria-describedby="multi-help"
+                                    th:classappend="${fieldErrors?.get('preferredCCAs') != null} ? 'is-invalid'">
+                                <option th:each="cca : ${ccaOptions}" th:value="${cca}" th:text="${cca}">BADMINTON</option>
+                            </select>
+                            <div class="invalid-feedback" th:text="${fieldErrors?.get('preferredCCAs')}">Error</div>
+                            <!--/* the saved choices at a glance (the list is long, so they can be out of view) */-->
+                            <p th:if="${saved and !#sets.isEmpty(form.preferredCCAs)}"
+                               class="d-flex flex-wrap align-items-center gap-1 small mt-2 mb-0">
+                                <span class="text-body-secondary me-1">Saved:</span>
+                                <span class="chip chip-neutral" th:each="cca : ${form.preferredCCAs}"
+                                      th:text="${cca}">BADMINTON</span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="preferredProgrammes" class="form-label">Programmes</label>
+                            <select th:field="*{preferredProgrammes}" class="form-select" multiple size="8"
+                                    aria-describedby="multi-help"
+                                    th:classappend="${fieldErrors?.get('preferredProgrammes') != null} ? 'is-invalid'">
+                                <option th:each="programme : ${programmeOptions}" th:value="${programme}"
+                                        th:text="${programme}">Applied Learning Programme</option>
+                            </select>
+                            <div class="invalid-feedback" th:text="${fieldErrors?.get('preferredProgrammes')}">Error</div>
+                            <p th:if="${saved and !#sets.isEmpty(form.preferredProgrammes)}"
+                               class="d-flex flex-wrap align-items-center gap-1 small mt-2 mb-0">
+                                <span class="text-body-secondary me-1">Saved:</span>
+                                <span class="chip chip-neutral" th:each="programme : ${form.preferredProgrammes}"
+                                      th:text="${programme}">Art</span>
+                            </p>
+                        </div>
+                        <p id="multi-help" class="col-12 form-text mt-1 mb-0">
+                            Hold Ctrl (Windows) or Cmd (Mac) to choose more than one, or to unselect one.
+                        </p>
                     </div>
                 </section>
 
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">Save profile</button>
-                    <a class="btn btn-outline-secondary" th:href="@{/profile}">Cancel</a>
+                <!--/* Save stays in view at the bottom of the screen while the form is on screen */-->
+                <div class="card sticky-bottom mb-0">
+                    <div class="card-body d-flex flex-wrap align-items-center gap-2 py-3">
+                        <button type="submit" class="btn btn-primary">Save profile</button>
+                        <a class="btn btn-outline-secondary" th:href="@{/profile}">Cancel</a>
+                    </div>
                 </div>
             </form>
         </div>
 
-        <div class="col-12 col-lg-4">
-            <nav class="card shadow-sm" aria-label="Your pages">
+        <aside class="col-12 col-lg-4" th:classappend="${!ready} ? 'order-first order-lg-last'">
+            <!--/* What recommendations need (FR-REC-01, AF-1); DC-74: PSLE score and posting group are optional
+                   while the dataset has no PSLE ranges */-->
+            <section class="card mb-4" aria-labelledby="profile-ready">
+                <div class="card-body">
+                    <h2 id="profile-ready" class="section-title"
+                        th:text="${ready} ? 'Ready for recommendations' : 'Needed for recommendations'">Needed for
+                        recommendations</h2>
+                    <!--/* Only the saved profile counts. After a failed save the form holds the typed values, not
+                           the saved ones, so a row is "Done" only when it is known to be saved: the whole profile is
+                           complete, or the page shows the saved values. Otherwise the status is left out. */-->
+                    <p th:unless="${saved or profileComplete}" class="small text-body-secondary mb-2">
+                        Your changes are not saved yet.</p>
+                    <ul class="list-unstyled d-grid gap-2 mb-3">
+                        <li th:if="${psleNeeded}" class="d-flex align-items-center gap-2"
+                            th:with="done=${profileComplete or (saved and form.psleScore != null)}"
+                            th:classappend="${done} ? 'text-success' : 'text-body-secondary'">
+                            <svg th:replace="~{fragments/icon :: icon(${done ? 'check' : 'info'})}"></svg>
+                            <span class="text-body">PSLE score</span>
+                            <span th:if="${saved or profileComplete}" class="ms-auto small fw-semibold"
+                                  th:text="${done} ? 'Done' : 'Missing'">Done</span>
+                        </li>
+                        <li th:if="${psleNeeded}" class="d-flex align-items-center gap-2"
+                            th:with="done=${profileComplete or (saved and form.postingGroup != null)}"
+                            th:classappend="${done} ? 'text-success' : 'text-body-secondary'">
+                            <svg th:replace="~{fragments/icon :: icon(${done ? 'check' : 'info'})}"></svg>
+                            <span class="text-body">Posting group</span>
+                            <span th:if="${saved or profileComplete}" class="ms-auto small fw-semibold"
+                                  th:text="${done} ? 'Done' : 'Missing'">Done</span>
+                        </li>
+                        <li class="d-flex align-items-center gap-2"
+                            th:classappend="${homeLocationSaved} ? 'text-success' : 'text-body-secondary'">
+                            <svg th:replace="~{fragments/icon :: icon(${homeLocationSaved ? 'check' : 'info'})}"></svg>
+                            <span class="text-body">Home address</span>
+                            <span class="ms-auto small fw-semibold"
+                                  th:text="${homeLocationSaved} ? 'Done' : 'Missing'">Done</span>
+                        </li>
+                        <li class="d-flex align-items-center gap-2"
+                            th:with="done=${profileComplete or (saved and form.travelMode != null)}"
+                            th:classappend="${done} ? 'text-success' : 'text-body-secondary'">
+                            <svg th:replace="~{fragments/icon :: icon(${done ? 'check' : 'info'})}"></svg>
+                            <span class="text-body">Usual travel mode</span>
+                            <span th:if="${saved or profileComplete}" class="ms-auto small fw-semibold"
+                                  th:text="${done} ? 'Done' : 'Missing'">Done</span>
+                        </li>
+                    </ul>
+                    <a class="btn btn-outline-primary w-100" th:href="@{/recommendations}"><svg
+                            th:replace="~{fragments/icon :: icon('sparkle')}"></svg>Get recommendations</a>
+                </div>
+            </section>
+
+            <nav class="card" aria-label="Your pages">
                 <div class="list-group list-group-flush">
-                    <a class="list-group-item list-group-item-action" th:href="@{/shortlist}">My shortlist</a>
-                    <a class="list-group-item list-group-item-action" th:href="@{/plan}">Plan my 6 choices</a>
-                    <a class="list-group-item list-group-item-action" th:href="@{/recommendations}">Get recommendations</a>
-                    <a class="list-group-item list-group-item-action" th:href="@{/logout}">Log out</a>
+                    <a class="list-group-item list-group-item-action d-flex align-items-center gap-2"
+                       th:href="@{/shortlist}"><svg th:replace="~{fragments/icon :: icon('bookmark')}"></svg>My shortlist</a>
+                    <a class="list-group-item list-group-item-action d-flex align-items-center gap-2"
+                       th:href="@{/plan}"><svg th:replace="~{fragments/icon :: icon('plan')}"></svg>Plan my 6 choices</a>
                 </div>
             </nav>
-        </div>
+        </aside>
     </div>
 </main>
 

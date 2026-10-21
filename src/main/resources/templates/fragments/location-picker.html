@@ -20,27 +20,30 @@
      th:with="current=${location != null ? location : session['sm.referenceLocation']},
               candidates=${session['sm.locationCandidates']},
               fromProfile=${startFromProfile == true and location != null and session['sm.referenceLocation'] == null}">
-    <div th:if="${current != null}" class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <span class="small text-body-secondary">Starting point:</span>
-        <strong class="small" th:text="${current.inputText != null ? current.inputText : 'Your current location'}">
-            200 BISHAN ROAD</strong>
-        <!--/* the profile's home address: Clear could not remove it, so it is labelled instead (change it on Profile) */-->
-        <span th:if="${fromProfile}" class="small text-body-secondary">(home address from your profile)</span>
-        <form th:unless="${fromProfile}" method="post" th:action="@{/location/clear}" class="ms-auto">
+    <div th:if="${current != null}" class="location-current">
+        <span class="location-current-icon"><svg th:replace="~{fragments/icon :: icon('pin')}"></svg></span>
+        <div class="location-current-text">
+            <span class="location-current-label">Starting point:</span>
+            <strong th:text="${current.inputText != null ? current.inputText : 'Your current location'}">
+                200 BISHAN ROAD</strong>
+            <!--/* the profile's home address: Clear could not remove it, so it is labelled instead (change it on Profile) */-->
+            <span th:if="${fromProfile}" class="location-current-note">(home address from your profile)</span>
+        </div>
+        <form th:unless="${fromProfile}" method="post" th:action="@{/location/clear}">
             <input type="hidden" name="returnTo" th:value="${returnTo}">
-            <button type="submit" class="btn btn-link btn-sm p-0">Clear</button>
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Clear</button>
         </form>
     </div>
-    <p th:if="${current == null}" class="small text-body-secondary mb-3">
+    <p th:if="${current == null}" class="location-empty">
         No starting point yet. Enter an address or postal code, or use your current location.
     </p>
 
     <!--/* DC-11: several matches — the user picks one (selectLocationCandidate) */-->
-    <div th:if="${candidates != null and !#lists.isEmpty(candidates)}" class="border rounded p-3 mb-3 bg-body">
+    <div th:if="${candidates != null and !#lists.isEmpty(candidates)}" class="location-candidates">
         <form method="post" th:action="@{/location/choose}">
             <input type="hidden" name="returnTo" th:value="${returnTo}">
             <fieldset>
-                <legend class="small fw-semibold mb-2">Several places match. Choose one:</legend>
+                <legend>Several places match. Choose one:</legend>
                 <div class="form-check" th:each="candidate, stat : ${candidates}">
                     <input class="form-check-input" type="radio" name="index" th:value="${stat.index}"
                            th:id="|location-candidate-${stat.index}|" th:checked="${stat.first}">
@@ -48,32 +51,35 @@
                            th:text="${candidate.inputText}">9 BISHAN STREET 22</label>
                 </div>
             </fieldset>
-            <button type="submit" class="btn btn-primary btn-sm mt-2">Use this place</button>
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                <button type="submit" class="btn btn-primary btn-sm">Use this place</button>
+            </div>
         </form>
-        <form method="post" th:action="@{/location/clear}" class="mt-2">
+        <form method="post" th:action="@{/location/clear}" class="mt-1">
             <input type="hidden" name="returnTo" th:value="${returnTo}">
             <input type="hidden" name="candidatesOnly" value="true">
-            <button type="submit" class="btn btn-link btn-sm p-0">None of these</button>
+            <button type="submit" class="btn btn-link btn-sm px-0">None of these</button>
         </form>
     </div>
 
     <form method="post" th:action="@{/location}" class="mb-2" data-loading="Looking up the address…">
         <input type="hidden" name="returnTo" th:value="${returnTo}">
-        <label for="location-address" class="form-label small">Address or postal code</label>
+        <label for="location-address" class="form-label">Address or postal code</label>
         <div class="input-group">
             <input id="location-address" name="address" type="text" class="form-control" maxlength="200" required
-                   autocomplete="street-address" placeholder="e.g. 579767 or Bishan Street 22"
+                   autocomplete="street-address" placeholder="e.g. 579767" aria-describedby="location-address-help"
                    th:value="${locationAddress}">
             <button type="submit" class="btn btn-outline-primary">Use address</button>
         </div>
-        <p class="form-text mb-0">Addresses are looked up with OneMap (Singapore Land Authority).</p>
+        <p id="location-address-help" class="form-text mb-0">Looked up with OneMap (Singapore Land Authority).</p>
     </form>
 
     <form method="post" th:action="@{/location/device}">
         <input type="hidden" name="returnTo" th:value="${returnTo}">
         <input type="hidden" name="latitude">
         <input type="hidden" name="longitude">
-        <button type="button" class="btn btn-link btn-sm px-0" data-device-location>Use my current location</button>
+        <button type="button" class="btn btn-link btn-sm px-0" data-device-location><svg
+                th:replace="~{fragments/icon :: icon('locate')}"></svg>Use my current location</button>
         <p class="form-text mt-0 mb-0" data-device-status>Your browser asks for permission first.</p>
     </form>
     <script defer th:src="@{/js/DeviceLocationInterface.js}"></script>

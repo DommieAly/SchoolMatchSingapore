@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<!--/*
+  icon(name): a small inline SVG icon in the current text colour, hidden from screen readers (decoration only:
+  always put a visible word next to it).
+    <svg th:replace="~{fragments/icon :: icon('search')}"></svg>
+  Names: search, filter, map, pin, locate, bookmark, compare, plan, sparkle, user, arrow-left, info, alert, route,
+  clock, book, school, check, external. CSS: .icon in static/css/app.css (1.15em square).
+*/-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<svg th:fragment="icon(name)" class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+     focusable="false" th:switch="${name}">
+    <th:block th:case="'search'"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 16 16"/></th:block>
+    <th:block th:case="'filter'"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></th:block>
+    <th:block th:case="'map'"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/></th:block>
+    <th:block th:case="'pin'"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></th:block>
+    <th:block th:case="'locate'"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/></th:block>
+    <th:block th:case="'bookmark'"><path d="M6.5 3.5h11v17L12 16.5l-5.5 4z"/></th:block>
+    <th:block th:case="'compare'"><rect x="3.5" y="4" width="7" height="16" rx="1.5"/><rect x="13.5" y="4" width="7" height="16" rx="1.5"/></th:block>
+    <th:block th:case="'plan'"><path d="M10 6h10M10 12h10M10 18h10"/><path d="M4 5.5 5.5 4.5V8M4 11h2.5L4 14h2.5M4 17h2.5l-1 1.3a1.2 1.2 0 1 1-1.5 1.4"/></th:block>
+    <th:block th:case="'sparkle'"><path d="M12 3.5 13.9 9l5.6 1.9-5.6 1.9L12 18.5l-1.9-5.7-5.6-1.9L10.1 9z"/><path d="M19 3.5v3M17.5 5h3"/></th:block>
+    <th:block th:case="'user'"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></th:block>
+    <th:block th:case="'arrow-left'"><path d="M19 12H5M11 18l-6-6 6-6"/></th:block>
+    <th:block th:case="'info'"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.5h.01"/></th:block>
+    <th:block th:case="'alert'"><path d="M12 3.5 21.5 20h-19z"/><path d="M12 10v4.5M12 17.2h.01"/></th:block>
+    <th:block th:case="'route'"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8.2 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.8"/></th:block>
+    <th:block th:case="'clock'"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></th:block>
+    <th:block th:case="'book'"><path d="M4.5 5.5A2 2 0 0 1 6.5 3.5h13v15h-13a2 2 0 0 0-2 2z"/><path d="M4.5 20.5v-15M8.5 8h7"/></th:block>
+    <th:block th:case="'school'"><path d="M2 9.5 12 4.5l10 5-10 5z"/><path d="M6 11.5v4.5c0 1.6 2.7 3 6 3s6-1.4 6-3v-4.5M22 9.5V15"/></th:block>
+    <th:block th:case="'check'"><path d="M4.5 12.5 9.5 17.5 19.5 6.5"/></th:block>
+    <th:block th:case="'external'"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></th:block>
+</svg>
+</body>
+</html>

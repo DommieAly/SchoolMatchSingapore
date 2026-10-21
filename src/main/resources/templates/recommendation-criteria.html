@@ -3,30 +3,38 @@
        / submitCriteria (FR-REC-01, DC-07, DC-20, DC-23). Model: criteria (MatchCriteria), travelModes, durationOptions,
        ccaOptions, programmeOptions, startLocation, returnTo, weights, fieldErrors (always present, maybe empty;
        NFR-USE-03), flashError (EX-1), missingProfileFields (only when the profile is incomplete, AF-1).
-       The form has data-loading, so loading.js shows the overlay while the POST runs (DM 23, NFR-PERF-03). */-->
+       The form has data-loading, so loading.js shows the overlay while the POST runs (DM 23, NFR-PERF-03).
+       Layout: on phones the starting point comes first (the form needs it), then the form with its button, then the
+       weights; on wide screens the starting point sits on the right. */-->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Get recommendations')}"></head>
 <body>
 <nav th:replace="~{layout :: navbar}"></nav>
 
 <main class="container py-4">
-    <h1 class="h3 mb-1">Get school recommendations</h1>
-    <p class="text-body-secondary">We rank schools by PSLE fit, commute time, CCAs and programmes, and explain each
-        score.</p>
+    <header class="page-header">
+        <h1 class="page-title">Get school recommendations</h1>
+        <p class="page-subtitle">We rank schools by PSLE fit, commute time, CCAs and programmes, and explain each
+            score.</p>
+    </header>
     <div th:replace="~{fragments/messages :: messages}"></div>
 
-    <div th:if="${missingProfileFields != null}" class="alert alert-info" role="status">
-        <p class="fw-semibold mb-1">Complete your profile to get recommendations faster.</p>
-        <p class="mb-2">Your profile has no <span th:text="${#strings.listJoin(missingProfileFields, ', ')}">PSLE
-            score</span> yet. You can fill them in below for this search, or save them in your profile.</p>
+    <div th:if="${missingProfileFields != null}" class="alert alert-info d-flex flex-wrap align-items-center gap-3"
+         role="status">
+        <div class="flex-grow-1">
+            <p class="fw-semibold mb-1">Complete your profile to get recommendations faster.</p>
+            <p class="mb-0">Your profile has no <span th:text="${#strings.listJoin(missingProfileFields, ', ')}">PSLE
+                score</span> yet. You can fill them in below for this search, or save them in your profile.</p>
+        </div>
         <a class="btn btn-sm btn-outline-primary" th:href="@{/profile}">Go to my profile</a>
     </div>
 
     <div class="row g-4">
         <div class="col-12 col-lg-8">
-            <form method="post" th:action="@{/recommendations}" th:object="${criteria}" data-draft-return="/recommendations" class="card shadow-sm"
+            <form method="post" th:action="@{/recommendations}" th:object="${criteria}" data-draft-return="/recommendations" class="card"
                   data-loading="Ranking schools and checking commute times…" novalidate>
                 <div class="card-body p-4 row g-3">
+                    <h2 class="section-title col-12 mt-3 mb-0"><svg th:replace="~{fragments/icon :: icon('school')}"></svg>Score</h2>
                     <div class="col-sm-6">
                         <label for="psleScore" class="form-label">PSLE score (AL, 4–32)</label>
                         <input th:field="*{psleScore}" type="number" class="form-control" min="4" max="32"
@@ -51,6 +59,8 @@
                         <div class="invalid-feedback" th:if="${fieldErrors.containsKey('postingGroup')}"
                              th:text="${fieldErrors['postingGroup']}">Choose posting group 1, 2 or 3</div>
                     </div>
+
+                    <h2 class="section-title col-12 mt-4 mb-0"><svg th:replace="~{fragments/icon :: icon('route')}"></svg>Travel</h2>
                     <div class="col-sm-6">
                         <label for="travelMode" class="form-label">Travel by</label>
                         <select th:field="*{travelMode}" class="form-select"
@@ -74,67 +84,77 @@
                         <div class="invalid-feedback" th:if="${fieldErrors.containsKey('maxCommuteMin')}"
                              th:text="${fieldErrors['maxCommuteMin']}">Choose 15, 30, 45 or 60 minutes</div>
                     </div>
+                    <!--/* The starting point itself is shown once, in the picker */-->
+                    <p th:if="${startLocation == null}" class="col-12 small mb-0"
+                       th:classappend="${fieldErrors.containsKey('startLocation')} ? 'text-danger fw-semibold' : 'text-body-secondary'">
+                        Commute times need a starting point: set one under Starting point.</p>
+
+                    <h2 class="section-title col-12 mt-4 mb-0"><svg th:replace="~{fragments/icon :: icon('sparkle')}"></svg>Interests
+                        <span class="fw-normal text-body-secondary small">(optional)</span></h2>
                     <div class="col-md-6">
-                        <label for="preferredCCAs" class="form-label">CCAs you like (optional)</label>
-                        <select th:field="*{preferredCCAs}" class="form-select" multiple size="6">
+                        <label for="preferredCCAs" class="form-label">CCAs you like</label>
+                        <select th:field="*{preferredCCAs}" class="form-select" multiple size="6"
+                                aria-describedby="rec-multi-help">
                             <option th:each="cca : ${ccaOptions}" th:value="${cca}" th:text="${cca}">BADMINTON</option>
                         </select>
                     </div>
                     <div class="col-md-6">
-                        <label for="preferredProgrammes" class="form-label">Programmes you like (optional)</label>
-                        <select th:field="*{preferredProgrammes}" class="form-select" multiple size="6">
+                        <label for="preferredProgrammes" class="form-label">Programmes you like</label>
+                        <select th:field="*{preferredProgrammes}" class="form-select" multiple size="6"
+                                aria-describedby="rec-multi-help">
                             <option th:each="programme : ${programmeOptions}" th:value="${programme}"
                                     th:text="${programme}">Art</option>
                         </select>
                     </div>
-                    <p class="col-12 form-text mt-1">Hold Ctrl (Windows) or Cmd (Mac) to choose more than one.
-                        With no CCA or programme chosen, that factor is left out of the score.</p>
-                    <p class="col-12 small mb-0"
-                       th:classappend="${fieldErrors.containsKey('startLocation')} ? 'text-danger fw-semibold'">
-                        <th:block th:if="${startLocation != null}">Commute times are measured from
-                            <strong th:text="${startLocation.inputText != null ? startLocation.inputText : 'your location'}">home</strong>.
-                        </th:block>
-                        <th:block th:if="${startLocation == null}">Set a starting point (on the right) first.</th:block>
-                    </p>
+                    <p id="rec-multi-help" class="col-12 form-text mt-1 mb-0">Hold Ctrl (Windows) or Cmd (Mac) to choose
+                        more than one. With no CCA or programme chosen, that factor is left out of the score.</p>
                 </div>
-                <div class="card-footer bg-body d-flex justify-content-end p-3">
-                    <button type="submit" class="btn btn-primary">Get recommendations</button>
+                <div class="card-footer d-grid d-sm-flex justify-content-sm-end p-3">
+                    <button type="submit" class="btn btn-primary btn-lg"><svg
+                            th:replace="~{fragments/icon :: icon('sparkle')}"></svg>Get recommendations</button>
                 </div>
             </form>
-        </div>
-        <div class="col-12 col-lg-4">
-            <section class="card shadow-sm mb-4">
+
+            <section class="card mt-4" aria-labelledby="rec-weights">
                 <div class="card-body">
-                    <h2 class="h6 mb-2">Starting point</h2>
-                    <p class="small text-body-secondary">Commute times are measured from here. The home address in
-                        your profile is used unless you choose another place.</p>
+                    <h2 id="rec-weights" class="section-title">How schools are scored</h2>
+                    <p class="small text-body-secondary mb-3" th:if="${psleDataAvailable != false}">Only schools with PSLE
+                        range data for your posting group can be recommended. PSLE ranges are
+                        historical, not a guarantee.</p>
+                    <!--/* DC-74 */-->
+                    <p class="small text-body-secondary mb-3" th:if="${psleDataAvailable == false}"
+                       data-psle-unavailable="true">
+                        PSLE score ranges: not available yet, so PSLE fit is not used (weight 0, the other weights are
+                        rescaled) and every school can be recommended.</p>
+                    <ul class="list-unstyled d-flex flex-wrap gap-2 mb-0" aria-label="Weights">
+                        <li th:each="weight : ${weights}" class="chip chip-neutral">
+                            <th:block th:switch="${weight.key.name()}">
+                                <span th:case="'PSLE_FIT'">PSLE fit</span>
+                                <span th:case="'COMMUTE'">Commute</span>
+                                <span th:case="'CCA'">CCAs</span>
+                                <span th:case="'PROGRAMME'">Programmes</span>
+                                <span th:case="*" th:text="${#strings.replace(weight.key, '_', ' ')}">PSLE FIT</span>
+                            </th:block>
+                            <!--/* DC-74: PSLE fit has weight 0 without PSLE ranges */-->
+                            <strong class="ms-1" th:if="${psleDataAvailable == false and weight.key.name() == 'PSLE_FIT'}">not used</strong>
+                            <strong class="ms-1" th:unless="${psleDataAvailable == false and weight.key.name() == 'PSLE_FIT'}"
+                                    th:text="${#numbers.formatPercent(weight.value, 1, 0)}">40%</strong>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+
+        <aside class="col-12 col-lg-4 order-first order-lg-last">
+            <section class="card" aria-labelledby="rec-start">
+                <div class="card-body">
+                    <h2 id="rec-start" class="section-title"><svg th:replace="~{fragments/icon :: icon('pin')}"></svg>Starting point</h2>
+                    <p class="small text-body-secondary">Commute times are measured from here. Your home address is used
+                        unless you choose another place.</p>
                     <div th:replace="~{fragments/location-picker :: locationPicker(${returnTo}, ${startLocation})}"></div>
                 </div>
             </section>
-            <section class="small">
-                <h2 class="h6">How schools are scored</h2>
-                <p class="text-body-secondary mb-2" th:if="${psleDataAvailable != false}">Only schools with PSLE
-                    range data for your posting group can be recommended. PSLE ranges are historical, not a guarantee.</p>
-                <!--/* DC-74 */-->
-                <p class="text-body-secondary mb-2" th:if="${psleDataAvailable == false}" data-psle-unavailable="true">
-                    PSLE score ranges: not available yet, so PSLE fit is not used (weight 0, the other weights are
-                    rescaled) and every school can be recommended.</p>
-                <table class="table table-sm w-auto">
-                    <thead>
-                    <tr><th scope="col">Factor</th><th scope="col" class="text-end">Weight</th></tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="weight : ${weights}">
-                        <td th:text="${#strings.replace(weight.key, '_', ' ')}">PSLE FIT</td>
-                        <!--/* DC-74: PSLE fit has weight 0 without PSLE ranges */-->
-                        <td class="text-end" th:if="${psleDataAvailable == false and weight.key.name() == 'PSLE_FIT'}">not used</td>
-                        <td class="text-end" th:unless="${psleDataAvailable == false and weight.key.name() == 'PSLE_FIT'}"
-                            th:text="${#numbers.formatPercent(weight.value, 1, 0)}">40%</td>
-                    </tr>
-                    </tbody>
-                </table>
-            </section>
-        </div>
+        </aside>
     </div>
     <div th:replace="~{fragments/loading :: loading('Ranking schools…')}"></div>
 </main>
