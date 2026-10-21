@@ -2,7 +2,9 @@ package sg.schoolmatch.boundary.ui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -10,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import java.util.Locale;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -96,6 +99,27 @@ class FacilityDetailsUITest {
                         "href=\"/directions?to=facility:lib-1&amp;from=/facilities/lib-1?from%3Dcatholic-high-school\"")))
                 .andExpect(content().string(not(containsString("Not available"))))
                 .andExpect(content().string(not(containsString("Not built yet"))));
+    }
+
+    @Test
+    @Tag("FR-FACDETAIL-02")
+    @DisplayName("TC-FacilityDetailsUI-07: distance and coordinate use a decimal point whatever the server's locale")
+    void decimalPoint_underGermanLocale() throws Exception {
+        Facility library = new Facility("lib-1", "Bishan Public Library", FacilityType.LIBRARY);
+        library.setCoordinate(new Coordinate(TestSchools.BISHAN.getLatitude() + 1.2 / 111.195,
+                TestSchools.BISHAN.getLongitude()));
+        when(facilityController.getFacilityDetails("lib-1")).thenReturn(library);
+        when(schoolController.getSchoolDetails(CODE)).thenReturn(school);
+        Locale saved = Locale.getDefault();
+        Locale.setDefault(Locale.GERMANY);
+        try {
+            mvc.perform(get("/facilities/lib-1").param("from", CODE))
+                    .andExpect(status().isOk())
+                    .andExpect(model().attribute("coordinateText", matchesPattern("\\d+\\.\\d{5}, \\d+\\.\\d{5}")))
+                    .andExpect(model().attribute("distanceText", startsWith("1.2 km from CATHOLIC HIGH SCHOOL")));
+        } finally {
+            Locale.setDefault(saved);
+        }
     }
 
     @Test

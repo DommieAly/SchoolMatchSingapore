@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -76,9 +77,9 @@ public class SchoolFilterUI {
         }
         List<FilterGroup> groups = new ArrayList<>();
         for (AttributeCategory category : AttributeCategory.values()) {
-            String param = param(category);
+            String param = FilterParams.param(category);
             Set<String> options = filterController.getFilterOptions(category);
-            Set<String> selected = selected(params, category);
+            Set<String> selected = params.selected(category);
             String error = unknownValuesMessage(category, options, selected);
             if (error != null) {
                 errors.put(param, error);
@@ -89,18 +90,14 @@ public class SchoolFilterUI {
         model.addAttribute("params", params);
         model.addAttribute("q", params.q() == null ? "" : params.q());
         model.addAttribute("groups", groups);
-        model.addAttribute("radiusOptions",
-                ProximityFilter.RADIUS_OPTIONS_KM.stream().sorted().map(String::valueOf).toList());
+        model.addAttribute("radiusOptions", ProximityFilter.RADIUS_OPTIONS_KM.stream().map(String::valueOf).toList());
         model.addAttribute("durationOptions",
-                TransportationFilter.DURATION_OPTIONS_MIN.stream().sorted().map(String::valueOf).toList());
-        model.addAttribute("travelModes", List.of(
-                new ModeOption(TravelMode.TRANSIT.name(), "Public transport"),
-                new ModeOption(TravelMode.WALK.name(), "Walk"),
-                new ModeOption(TravelMode.DRIVE.name(), "Drive")));
+                TransportationFilter.DURATION_OPTIONS_MIN.stream().map(String::valueOf).toList());
+        model.addAttribute("travelModes", Stream.of(TravelMode.TRANSIT, TravelMode.WALK, TravelMode.DRIVE)
+                .map(mode -> new ModeOption(mode.name(), DirectionsUI.label(mode))).toList());
         model.addAttribute("startLocation", start.orElse(null));
         model.addAttribute("returnTo", params.toUrl("/schools/filter"));
-        model.addAttribute("clearAllUrl", new FilterParams(params.q(), null, null, null, null, null, null, null,
-                null, null, false, null).toUrl("/schools"));
+        model.addAttribute("clearAllUrl", params.onlyTerm().toUrl("/schools"));
         if (params.usesDefaultPostingGroup() && psleAvailable) {
             model.addAttribute("pgHint", FilterParams.DEFAULT_PG_HINT);
         }
@@ -126,31 +123,12 @@ public class SchoolFilterUI {
         return "Unknown " + name + ": " + String.join(", ", unknown);
     }
 
-    private static Set<String> selected(FilterParams params, AttributeCategory category) {
-        return switch (category) {
-            case SCHOOL_TYPE -> params.types();
-            case PROGRAMME -> params.programmes();
-            case CCA -> params.ccas();
-            case DISTRICT -> params.districts();
-        };
-    }
-
     private static String label(AttributeCategory category) {
         return switch (category) {
             case SCHOOL_TYPE -> "School type";
             case PROGRAMME -> "Programmes";
             case CCA -> "CCAs";
             case DISTRICT -> "District (planning area)";
-        };
-    }
-
-    /** Request param names used by GET /schools (see docs/routes.md and FilterParams). */
-    private static String param(AttributeCategory category) {
-        return switch (category) {
-            case SCHOOL_TYPE -> FilterParams.TYPE;
-            case PROGRAMME -> FilterParams.PROGRAMME;
-            case CCA -> FilterParams.CCA;
-            case DISTRICT -> FilterParams.DISTRICT;
         };
     }
 }

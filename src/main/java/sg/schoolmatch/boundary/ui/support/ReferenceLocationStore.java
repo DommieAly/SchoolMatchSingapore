@@ -40,10 +40,6 @@ public class ReferenceLocationStore {   // DC-42
 
     /** Stores the starting point and drops any candidate list (the choice is made). */
     public void set(HttpSession session, ReferenceLocation location) {
-        if (location == null) {
-            clear(session);
-            return;
-        }
         session.setAttribute(CURRENT, location);
         session.removeAttribute(CANDIDATES);
     }
@@ -75,12 +71,8 @@ public class ReferenceLocationStore {   // DC-42
         return getCandidates(request.getSession(false));
     }
 
-    /** Stores the address matches for the picker; an empty or null list clears them. */
+    /** Stores the address matches for the picker (two or more). */
     public void setCandidates(HttpSession session, List<ReferenceLocation> candidates) {
-        if (candidates == null || candidates.isEmpty()) {
-            clearCandidates(session);
-            return;
-        }
         session.setAttribute(CANDIDATES, new ArrayList<>(candidates));   // ArrayList: Serializable
     }
 

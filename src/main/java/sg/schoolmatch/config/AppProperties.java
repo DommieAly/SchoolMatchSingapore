@@ -15,7 +15,10 @@ import sg.schoolmatch.entity.route.TravelMode;
  * All {@code app.*} settings (see application.yml). Every value has a default, so a missing
  * property never breaks start-up. Keys come from environment variables / {@code .env}, never from git.
  * <p>
- * Read it by injecting {@code AppProperties}, e.g. {@code props.google().hasBrowserKey()}.
+ * Read it by injecting {@code AppProperties}, e.g. {@code props.google().hasBrowserKey()}. Two settings are read
+ * directly instead: {@code app.dataset.curated-dir} (CuratedCsvReader, {@code @Value}) and
+ * {@code app.session.cleanup-interval} (AuthController's {@code @Scheduled}); {@code session.cleanupInterval} only
+ * binds and documents that value.
  */
 @ConfigurationProperties("app")
 public record AppProperties(

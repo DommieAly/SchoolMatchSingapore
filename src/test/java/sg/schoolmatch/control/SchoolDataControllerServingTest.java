@@ -15,8 +15,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.boot.jdbc.test.autoconfigure.JdbcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -39,6 +37,7 @@ import sg.schoolmatch.entity.school.SchoolDataCache;
 import sg.schoolmatch.error.NotFoundException;
 import sg.schoolmatch.persistence.dataset.SchoolDatasetStore;
 import sg.schoolmatch.support.FixedClock;
+import sg.schoolmatch.support.TestProperties;
 
 /**
  * SchoolDataController serves the school data from the database (docs/database-design.md, sections 6.2 and 6.3;
@@ -250,7 +249,7 @@ class SchoolDataControllerServingTest {
     }
 
     private static AppProperties props(Map<String, String> values) {
-        return new Binder(new MapConfigurationPropertySource(values)).bindOrCreate("app", AppProperties.class);
+        return TestProperties.bind(values);
     }
 
     /** snapshot-mini as a later version without Westwood Secondary (manifest counts follow). */

@@ -46,9 +46,6 @@ public class StubGoogleMapsPlatform implements GoogleMapsPlatformInterface {
     @Override
     public Route computeRoute(Coordinate origin, Coordinate destination, TravelMode mode) {
         Objects.requireNonNull(mode, "mode");
-        if (origin == null || destination == null) {
-            return Route.unavailable(mode);
-        }
         double km = origin.distanceTo(destination) * ROAD_FACTOR;
         int metres = (int) Math.round(km * 1000);
         int seconds = (int) Math.round(km / speedKmh(mode) * 3600);
@@ -62,9 +59,6 @@ public class StubGoogleMapsPlatform implements GoogleMapsPlatformInterface {
 
     @Override
     public List<Facility> searchPlaces(FacilityType type, Coordinate centre) {
-        if (type == null || centre == null) {
-            return List.of();
-        }
         long lat = Math.round(centre.getLatitude() * MICRO);
         long lng = Math.round(centre.getLongitude() * MICRO);
         List<Facility> result = new ArrayList<>();
@@ -76,16 +70,17 @@ public class StubGoogleMapsPlatform implements GoogleMapsPlatformInterface {
 
     @Override
     public Optional<Facility> getPlaceDetails(String placeId) {
-        if (placeId == null) {
-            return Optional.empty();
-        }
         Matcher m = PLACE_ID.matcher(placeId);
         if (!m.matches()) {
             return Optional.empty();
         }
         FacilityType type = FacilityType.valueOf(m.group(1).replace('-', '_').toUpperCase(Locale.ROOT));
-        return Optional.of(fake(type, Integer.parseInt(m.group(2)), Long.parseLong(m.group(3)),
-                Long.parseLong(m.group(4))));
+        try {
+            return Optional.of(fake(type, Integer.parseInt(m.group(2)), Long.parseLong(m.group(3)),
+                    Long.parseLong(m.group(4))));
+        } catch (IllegalArgumentException e) {   // a number too long, or not a coordinate on Earth: unknown (DC-62)
+            return Optional.empty();
+        }
     }
 
     /**

@@ -91,6 +91,16 @@ class FacilityFlowTest {
     }
 
     @Test
+    @Tag("FR-FACDETAIL-01")
+    @DisplayName("TC-FacilityFlow-04: a stub id with an impossible coordinate or an overlong number is a 404 page (DC-62)")
+    void malformedStubId_notFound() throws Exception {
+        mvc.perform(get("/facilities/stub-library-1-999999999-103844901"))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/facilities/stub-library-1-99999999999999999999-1"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     @Tag("FR-ROUTE-05")
     @Tag("FR-ROUTE-07")
     @DisplayName("TC-FacilityFlow-03: directions to a school with the stub: 3 steps, a polyline, origin and destination set")

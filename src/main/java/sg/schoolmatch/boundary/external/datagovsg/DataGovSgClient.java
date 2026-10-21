@@ -40,11 +40,6 @@ import tools.jackson.databind.json.JsonMapper;
 @ConditionalOnProperty(name = "app.external.datagovsg.mode", havingValue = "live")
 public class DataGovSgClient implements DataGovSgInterface {
 
-    public static final String SCHOOLS_DATASET = "d_688b934f82c1059ed0a6993d2a829089";
-    public static final String CCAS_DATASET = "d_9aba12b5527843afb0b2e8e4ed6ac6bd";
-    public static final String SUBJECTS_DATASET = "d_f1d144e423570c9d84dbc5102c2e664d";
-    public static final String PLANNING_AREAS_DATASET = "d_4765db0e87b9c86336792efe8a1f7a66";
-
     static final String SERVICE = "data.gov.sg";
     static final String API_KEY_HEADER = "x-api-key";
     static final int PAGE_SIZE = 1000;

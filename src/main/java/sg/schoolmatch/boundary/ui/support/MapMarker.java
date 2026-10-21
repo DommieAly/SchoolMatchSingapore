@@ -42,13 +42,9 @@ public record MapMarker(String id, String kind, String name, String address, dou
      * back to that school's facilities (DC-08). {@code fromSchoolCode} may be null.
      */
     public static MapMarker of(Facility facility, String fromSchoolCode) {   // DC-61
-        UriComponentsBuilder href = UriComponentsBuilder.fromPath("/facilities/{placeId}");
-        if (fromSchoolCode != null) {
-            href.queryParam("from", "{from}");
-        }
         return new MapMarker(facility.getPlaceId(), kind(facility.getFacilityType()), facility.getName(),
                 facility.getAddress(), facility.getCoordinate().getLatitude(), facility.getCoordinate().getLongitude(),
-                href.encode().buildAndExpand(facility.getPlaceId(), fromSchoolCode).toUriString());
+                FacilityPages.detailsUrl(facility.getPlaceId(), fromSchoolCode));
     }
 
     /** The starting point of a route (FR-ROUTE-07); it has no details page. */

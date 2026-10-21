@@ -22,10 +22,12 @@ import sg.schoolmatch.entity.route.Route;
 import sg.schoolmatch.entity.route.TravelMode;
 import sg.schoolmatch.entity.school.IndicativePsleScoreRange;
 import sg.schoolmatch.entity.school.School;
+import sg.schoolmatch.entity.school.SchoolDataCache;
 import sg.schoolmatch.entity.search.TransportationFilter;
 import sg.schoolmatch.entity.shortlist.SchoolChoice;
 import sg.schoolmatch.error.ExternalFailureLog;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
+import sg.schoolmatch.error.InputMessages;
 import sg.schoolmatch.error.InvalidInputException;
 
 /**
@@ -50,10 +52,10 @@ import sg.schoolmatch.error.InvalidInputException;
 @Service
 public class RecommendationController {
 
-    static final String PSLE_MESSAGE = "Enter a whole number from 4 to 32";
-    static final String PG_MESSAGE = "Choose posting group 1, 2 or 3";
-    static final String MODE_MESSAGE = "Choose walk, drive or public transport";
-    static final String DURATION_MESSAGE = "Choose 15, 30, 45 or 60 minutes";
+    static final String PSLE_MESSAGE = InputMessages.PSLE;
+    static final String PG_MESSAGE = InputMessages.PG;
+    static final String MODE_MESSAGE = InputMessages.MODE;
+    static final String DURATION_MESSAGE = InputMessages.DURATION;
     static final String START_MESSAGE = "Set a starting point so commute times can be measured";
     static final String WEIGHTS_MESSAGE = "Weights must be 0 or more";
     /** DC-74: the PSLE_FIT reason of every result when the dataset has no PSLE ranges. */
@@ -112,7 +114,7 @@ public class RecommendationController {
         scored.sort(Comparator.comparingDouble((Recommendation r) -> -rounded(r.getTotalScore()))
                 .thenComparingDouble(r -> r.getSchool().hasValidCoordinate()
                         ? r.getSchool().distanceTo(start) : Double.MAX_VALUE)
-                .thenComparing(r -> r.getSchool(), BY_NAME));
+                .thenComparing(Recommendation::getSchool, SchoolDataCache.BY_NAME_THEN_CODE));
         List<Recommendation> shortlist =
                 new ArrayList<>(scored.subList(0, Math.min(scored.size(), props.recommendation().commuteCandidates())));
         addCommuteTimes(shortlist, criteria, psleData);
@@ -127,11 +129,13 @@ public class RecommendationController {
     private static Map<String, String> validate(MatchCriteria criteria, boolean psleData) {
         Map<String, String> errors = new LinkedHashMap<>();
         Integer score = criteria.getPsleScore();
-        if (score == null ? psleData : score < 4 || score > 32) {
+        if (score == null ? psleData
+                : score < IndicativePsleScoreRange.MIN_SCORE || score > IndicativePsleScoreRange.MAX_SCORE) {
             errors.put("psleScore", PSLE_MESSAGE);
         }
         Integer pg = criteria.getPostingGroup();
-        if (pg == null ? psleData : pg < 1 || pg > 3) {
+        if (pg == null ? psleData
+                : pg < IndicativePsleScoreRange.MIN_POSTING_GROUP || pg > IndicativePsleScoreRange.MAX_POSTING_GROUP) {
             errors.put("postingGroup", PG_MESSAGE);
         }
         if (criteria.getTravelMode() == null) {
@@ -153,8 +157,9 @@ public class RecommendationController {
     /** PSLE_FIT, CCA and PROGRAMME for one school; null when the school is not a candidate. */
     private Recommendation scoreSchool(School school, MatchCriteria criteria) {
         int score = criteria.getPsleScore();
-        Optional<IndicativePsleScoreRange> range =
-                school.getScoreRange(criteria.getPostingGroup(), isAffiliated(school, criteria.getPrimarySchool()));
+        // DC-22: the affiliated range when the student's primary school is affiliated with this school
+        boolean affiliated = school.hasAffiliatedPrimarySchool(criteria.getPrimarySchool());
+        Optional<IndicativePsleScoreRange> range = school.getScoreRange(criteria.getPostingGroup(), affiliated);
         if (range.isEmpty()) {
             return null;
         }
@@ -164,13 +169,7 @@ public class RecommendationController {
         }
         List<ScoreComponent> components = new ArrayList<>();
         components.add(fit);
-        if (!criteria.getPreferredCCAs().isEmpty()) {
-            components.add(share(MatchFactor.CCA, criteria.getPreferredCCAs(), school.getCcas(), "CCAs"));
-        }
-        if (!criteria.getPreferredProgrammes().isEmpty()) {
-            components.add(share(MatchFactor.PROGRAMME, criteria.getPreferredProgrammes(), school.getProgrammes(),
-                    "programmes"));
-        }
+        addPreferenceComponents(components, school, criteria);
         return new Recommendation(school, total(components, weights(criteria), false, true), components);
     }
 
@@ -181,6 +180,13 @@ public class RecommendationController {
     private Recommendation scoreWithoutPsleFit(School school, MatchCriteria criteria) {
         List<ScoreComponent> components = new ArrayList<>();
         components.add(new ScoreComponent(MatchFactor.PSLE_FIT, 0, PSLE_FIT_NOT_USED));
+        addPreferenceComponents(components, school, criteria);
+        return new Recommendation(school, total(components, weights(criteria), false, false), components);
+    }
+
+    /** CCA and PROGRAMME, each only when the criteria name a preference for it (otherwise the factor drops out). */
+    private static void addPreferenceComponents(List<ScoreComponent> components, School school,
+                                                MatchCriteria criteria) {
         if (!criteria.getPreferredCCAs().isEmpty()) {
             components.add(share(MatchFactor.CCA, criteria.getPreferredCCAs(), school.getCcas(), "CCAs"));
         }
@@ -188,7 +194,6 @@ public class RecommendationController {
             components.add(share(MatchFactor.PROGRAMME, criteria.getPreferredProgrammes(), school.getProgrammes(),
                     "programmes"));
         }
-        return new Recommendation(school, total(components, weights(criteria), false, false), components);
     }
 
     /**
@@ -203,10 +208,6 @@ public class RecommendationController {
         List<Route> routes;
         try {
             routes = directionsController.getCommuteTimes(criteria.getStartLocation(), schools, mode);
-            if (routes == null || routes.size() != schools.size()) {
-                log.warn("Commute times: expected {} routes, got {}", schools.size(), routes == null ? null : routes.size());
-                routes = null;
-            }
         } catch (ExternalServiceUnavailableException e) {
             ExternalFailureLog.warn(log, "Commute times for recommendations", e);
             routes = null;
@@ -217,16 +218,15 @@ public class RecommendationController {
         for (int i = 0; i < recs.size(); i++) {
             Recommendation rec = recs.get(i);
             List<ScoreComponent> components = new ArrayList<>(rec.getComponents());
-            Route route = routes == null ? null : routes.get(i);
             Integer minutes = null;
             if (routes == null) {
                 components.add(new ScoreComponent(MatchFactor.COMMUTE, 0, "Commute: Not available (the route service "
                         + "did not answer); its weight is shared by the other factors"));
-            } else if (route == null || !route.isAvailable() || route.getDurationSeconds() == null) {
+            } else if (!routes.get(i).isAvailable()) {
                 components.add(new ScoreComponent(MatchFactor.COMMUTE, 0, "Commute: Not available (No route found "
                         + modeLabel(mode) + "); its weight is shared by the other factors"));
             } else {
-                long seconds = route.getDurationSeconds();
+                long seconds = routes.get(i).getDurationSeconds();   // an available route always has one
                 if (seconds > max * 60L) {
                     continue;   // over the student's limit (t > maxCommuteMin, decided on seconds): excluded
                 }
@@ -249,7 +249,7 @@ public class RecommendationController {
     private void rank(List<Recommendation> recs) {
         recs.sort(Comparator.comparingDouble((Recommendation r) -> -rounded(r.getTotalScore()))
                 .thenComparing(Recommendation::getCommuteMin, Comparator.nullsLast(Comparator.naturalOrder()))
-                .thenComparing(Recommendation::getSchool, BY_NAME));
+                .thenComparing(Recommendation::getSchool, SchoolDataCache.BY_NAME_THEN_CODE));
         int topN = props.recommendation().topN();
         if (recs.size() > topN) {
             recs.subList(topN, recs.size()).clear();
@@ -261,34 +261,31 @@ public class RecommendationController {
 
     // ------------------------------------------------------------------ helpers
 
-    private static final Comparator<School> BY_NAME = Comparator
-            .comparing(School::getName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
-            .thenComparing(School::getSchoolCode, Comparator.nullsLast(Comparator.naturalOrder()));
-
     /**
-     * DC-20 labels with U = upperScore and m = SchoolChoice.SAFE_MARGIN: SAFE if score ≤ U − m, MATCH if
-     * U − m &lt; score ≤ U, REACH if U &lt; score ≤ U + {@code app.recommendation.reach-near-margin} (2; still a
-     * candidate), otherwise null (excluded). The scores come from {@code app.recommendation.psle-fit}.
+     * DC-20 labels from {@link SchoolChoice#chance} (U = upperScore, m = SchoolChoice.SAFE_MARGIN): SAFE if
+     * score ≤ U − m, MATCH if U − m &lt; score ≤ U, REACH if U &lt; score ≤ U +
+     * {@code app.recommendation.reach-near-margin} (2; still a candidate), otherwise null (excluded). The scores come
+     * from {@code app.recommendation.psle-fit}.
      */
     private ScoreComponent psleFit(int score, IndicativePsleScoreRange range) {
         AppProperties.PsleFitSettings fit = props.recommendation().psleFit();   // DC-53
         int upper = range.getUpperScore();
         String rangeText = range.getAdmissionYear() + " PG" + range.getPostingGroup()
                 + (range.isAffiliated() ? " affiliated" : "") + " range " + range.getRangeText();   // "IP 4–8" for IP (DC-77)
-        if (score <= upper - SchoolChoice.SAFE_MARGIN) {
-            return new ScoreComponent(MatchFactor.PSLE_FIT, fit.safe(), "PSLE " + score + " is "
+        return switch (SchoolChoice.chance(score, upper)) {
+            case SAFE -> new ScoreComponent(MatchFactor.PSLE_FIT, fit.safe(), "PSLE " + score + " is "
                     + SchoolChoice.SAFE_MARGIN + " or more points below the cut-off of the " + rangeText + " → SAFE");
-        }
-        if (score <= upper) {
-            return new ScoreComponent(MatchFactor.PSLE_FIT, fit.match(),
+            case MATCH -> new ScoreComponent(MatchFactor.PSLE_FIT, fit.match(),
                     "PSLE " + score + " is within the " + rangeText + " → MATCH");
-        }
-        if (score <= upper + props.recommendation().reachNearMargin()) {
-            int over = score - upper;
-            return new ScoreComponent(MatchFactor.PSLE_FIT, fit.reachNear(), "PSLE " + score + " is " + over
-                    + (over == 1 ? " point" : " points") + " above the cut-off of the " + rangeText + " → REACH");
-        }
-        return null;
+            case REACH -> {
+                if (score > upper + props.recommendation().reachNearMargin()) {
+                    yield null;
+                }
+                int over = score - upper;
+                yield new ScoreComponent(MatchFactor.PSLE_FIT, fit.reachNear(), "PSLE " + score + " is " + over
+                        + (over == 1 ? " point" : " points") + " above the cut-off of the " + rangeText + " → REACH");
+            }
+        };
     }
 
     /** Share of {@code preferred} that {@code offered} contains (case-insensitive), with the matches in the reason. */
@@ -326,14 +323,6 @@ public class RecommendationController {
     /** The criteria's weights, or {@code app.recommendation.weights} when it has none. */
     private Map<MatchFactor, Double> weights(MatchCriteria criteria) {
         return criteria.getWeights().isEmpty() ? props.recommendation().weights() : criteria.getWeights();
-    }
-
-    /**
-     * DC-22: affiliated when the student's primary school is one of the school's affiliated primary schools (name rule:
-     * {@link School#hasAffiliatedPrimarySchool}, shared with search and the choice plan).
-     */
-    private static boolean isAffiliated(School school, String primarySchool) {
-        return school.hasAffiliatedPrimarySchool(primarySchool);
     }
 
     private static String upper(String value) {

@@ -24,8 +24,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -37,6 +35,7 @@ import sg.schoolmatch.entity.common.Coordinate;
 import sg.schoolmatch.entity.facility.Facility;
 import sg.schoolmatch.entity.facility.FacilityType;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
+import sg.schoolmatch.support.TestProperties;
 
 /**
  * {@link GooglePlacesApi} against a {@link MockRestServiceServer}: the two searches, place details, errors and
@@ -199,9 +198,8 @@ class GooglePlacesApiTest {
     }
 
     private static AppProperties props() {
-        return new Binder(new MapConfigurationPropertySource(Map.of(
+        return TestProperties.bind(Map.of(
                 "app.google.server-key", "test-key",
-                "app.google.places-base-url", BASE)))
-                .bindOrCreate("app", AppProperties.class);
+                "app.google.places-base-url", BASE));
     }
 }

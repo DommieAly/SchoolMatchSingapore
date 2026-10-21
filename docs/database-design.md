@@ -443,7 +443,7 @@ The JSON may keep `planningAreaName` and `ipRangeNote` as copies for reviewers. 
   - Schools: `BY_NAME_THEN_CODE`.
   - CCAs, programmes, affiliations: natural order (the snapshot's order today).
   - Bus and MRT: by `list_position`.
-  - Ranges: the order of `SchoolDetailsUI.NEWEST_FIRST` (newest year, then PG3 to PG1). The mapper keeps its own copy, `RANGE_ORDER`, because `persistence` may not depend on `boundary.ui`.
+  - Ranges: the order of `IndicativePsleScoreRange.NEWEST_FIRST` (newest year, then PG3 to PG1), the same order as the details table. The mapper's `RANGE_ORDER` is that comparator.
   - Planning areas: by name, then code. The table keeps no position, so `/api/districts` lists the 55 areas in name order instead of data.gov.sg's order; no page shows that order.
 
 ### 6.4 School lifecycle
@@ -806,7 +806,7 @@ Each difference is also marked in the code with a comment. None changes what a u
 | Loader values | written from what `SnapshotReader` builds (trimmed, blank as null); postal code, area code and the lists from `SchoolRecord` | the database then holds what the pages show |
 | Known limit | `district.planning_area_name` is unique, so a new area code that reuses a withdrawn area's name fails the load (and rolls it back) | names are a candidate key (section 5.1); has not happened in URA data |
 | Read path | `readActive()` returns `SnapshotRows` (public) at REPEATABLE READ; `formatVersion` is not stored, the mapper sets 2; the manifest counts always have `schools`, `districts`, `scoreRanges` | only format-2 snapshots can be loaded |
-| Order | planning areas by name, then code (`/api/districts` order changed); the mapper's own `RANGE_ORDER` copy of `SchoolDetailsUI.NEWEST_FIRST` | the tables keep no position; `persistence` may not use `boundary.ui` |
+| Order | planning areas by name, then code (`/api/districts` order changed); the mapper's `RANGE_ORDER` (= `IndicativePsleScoreRange.NEWEST_FIRST`, shared with the details page) | the tables keep no position |
 | Hourly check | compares version and hash only; a changed `ACTIVE` is picked up on restart only | as designed; written down so nobody expects the old one-hour reload |
 | ArchitectureTest | rule 9b: `SchoolDataController` must use `persistence.dataset` | rule 9 alone would pass if nothing used the package |
 | Last-known name | `SchoolDatasetStore.schoolNames`, `SchoolDataController.getLastKnownSchoolNames`, `ShortlistController.getLastKnownNames`, model attribute `missingNames`; the plan's warning text still names the code | open decision 3; the warning text comes from the `ChoicePlan` entity, which stays unchanged |

@@ -13,7 +13,7 @@ import sg.schoolmatch.entity.school.School;
  * {@code primarySchool} is one of the school's affiliated primary schools. A guest has no primary school, so a
  * guest always gets the non-affiliated range. Rules: docs/recommendation-scoring.md §1 and §3.
  */
-public class PsleScoreFilter extends Filter {
+public final class PsleScoreFilter extends Filter {
 
     private final int score;
     private final int postingGroup;
@@ -48,7 +48,9 @@ public class PsleScoreFilter extends Filter {
 
     @Override
     public boolean isValid() {
-        return score >= 4 && score <= 32 && postingGroup >= 1 && postingGroup <= 3;
+        return score >= IndicativePsleScoreRange.MIN_SCORE && score <= IndicativePsleScoreRange.MAX_SCORE
+                && postingGroup >= IndicativePsleScoreRange.MIN_POSTING_GROUP
+                && postingGroup <= IndicativePsleScoreRange.MAX_POSTING_GROUP;
     }
 
     /** e.g. "PSLE 12 (PG3)" (FR-FILTER-08). */

@@ -1,7 +1,7 @@
 package sg.schoolmatch.entity.search;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import sg.schoolmatch.entity.location.ReferenceLocation;
 import sg.schoolmatch.entity.route.TravelMode;
 import sg.schoolmatch.entity.school.School;
@@ -12,9 +12,9 @@ import sg.schoolmatch.entity.school.School;
  * FilterController computes the commute times first (via DirectionsController) and sets
  * {@link #setCommuteMinutesBySchool}; {@link #matches} only reads that map.
  */
-public class TransportationFilter extends Filter {
+public final class TransportationFilter extends Filter {
 
-    public static final Set<Integer> DURATION_OPTIONS_MIN = Set.of(15, 30, 45, 60);   // DC-36 helper
+    public static final List<Integer> DURATION_OPTIONS_MIN = List.of(15, 30, 45, 60);   // DC-36 helper (display order)
 
     private final ReferenceLocation referenceLocation;
     private final TravelMode travelMode;

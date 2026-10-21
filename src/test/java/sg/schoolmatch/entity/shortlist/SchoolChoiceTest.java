@@ -94,6 +94,15 @@ class SchoolChoiceTest {
         assertThat(choice.assess(13, 3)).isEqualTo(AdmissionChance.REACH);
     }
 
+    @ParameterizedTest(name = "{0}: {2}")
+    @CsvFileSource(resources = "/testcases/TC-PLAN.csv", numLinesToSkip = 1)
+    @Tag("FR-PLAN-01")
+    @DisplayName("TC-SchoolChoice-06: chance(score, U) follows the same table as assess (shared with recommendations)")
+    void chance_followsTheTestCaseTable(String tcId, String requirement, String technique,
+                                        int score, AdmissionChance expected) {
+        assertThat(SchoolChoice.chance(score, 12)).isEqualTo(expected);
+    }
+
     private static SchoolChoice choiceFor(School school) {
         SchoolChoice choice = new SchoolChoice(school.getSchoolCode(), 1);
         choice.setSchool(school);

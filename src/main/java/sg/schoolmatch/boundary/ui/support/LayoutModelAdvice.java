@@ -2,7 +2,6 @@ package sg.schoolmatch.boundary.ui.support;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -15,6 +14,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import sg.schoolmatch.config.AppProperties;
+import sg.schoolmatch.config.ClockConfig;
 import sg.schoolmatch.control.AuthController;
 import sg.schoolmatch.control.ProfileController;
 import sg.schoolmatch.control.SchoolDataController;
@@ -46,8 +46,8 @@ import sg.schoolmatch.entity.school.SchoolDataCache;
 @ControllerAdvice(annotations = Controller.class)
 public class LayoutModelAdvice {   // DC-49
 
-    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH);
-    private static final ZoneId SINGAPORE = ZoneId.of("Asia/Singapore");
+    /** The date format of every page, e.g. "4 Oct 2026". */
+    public static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH);
 
     private final SchoolDataController schoolDataController;
     private final AuthController authController;
@@ -92,7 +92,7 @@ public class LayoutModelAdvice {   // DC-49
         attributes.put("psleDataAvailable", PsleAvailability.available(dataset));   // DC-74
         attributes.put("noPsleDataMessage", PsleAvailability.NOT_AVAILABLE_MESSAGE);
         if (dataset != null && dataset.getImportedAt() != null) {
-            attributes.put("dataAccessedOn", DATE.format(dataset.getImportedAt().atZone(SINGAPORE)));
+            attributes.put("dataAccessedOn", DATE.format(dataset.getImportedAt().atZone(ClockConfig.SINGAPORE)));
         }
         attributes.put("googleStub", props.external().google().isStub());
         if (props.google().hasBrowserKey()) {
@@ -138,7 +138,7 @@ public class LayoutModelAdvice {   // DC-49
         try {
             return schoolDataController.getActiveDataset();
         } catch (RuntimeException e) {
-            return null;   // pages still render while the data layer is unfinished
+            return null;   // pages still render without a dataset (a failing database, or a page test's mock)
         }
     }
 

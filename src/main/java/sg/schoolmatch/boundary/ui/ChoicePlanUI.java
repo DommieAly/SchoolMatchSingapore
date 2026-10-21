@@ -112,7 +112,7 @@ public class ChoicePlanUI {
             choicePlanController.addChoice(sessionId, code.strip(), position);
             return backToPlan(redirect, PageMessages.FLASH_MESSAGE, ADDED_MESSAGE);
         } catch (InvalidInputException e) {
-            return backToPlan(redirect, PageMessages.FLASH_ERROR, String.join(" ", e.getFieldErrors().values()));
+            return backToPlan(redirect, PageMessages.FLASH_ERROR, e.joinedMessages());
         } catch (DataAccessException e) {
             return backToPlan(redirect, PageMessages.FLASH_ERROR, SAVE_FAILED_MESSAGE);
         }
@@ -142,7 +142,7 @@ public class ChoicePlanUI {
             }
             return "redirect:/plan";
         } catch (InvalidInputException e) {
-            return backToPlan(redirect, PageMessages.FLASH_ERROR, String.join(" ", e.getFieldErrors().values()));
+            return backToPlan(redirect, PageMessages.FLASH_ERROR, e.joinedMessages());
         } catch (DataAccessException e) {
             return backToPlan(redirect, PageMessages.FLASH_ERROR, SAVE_FAILED_MESSAGE);
         }
@@ -168,7 +168,7 @@ public class ChoicePlanUI {
             choicePlanController.useProfileScore(sessionId);
             return backToPlan(redirect, PageMessages.FLASH_MESSAGE, SCORE_UPDATED_MESSAGE);
         } catch (InvalidInputException e) {
-            return backToPlan(redirect, PageMessages.FLASH_ERROR, String.join(" ", e.getFieldErrors().values()));
+            return backToPlan(redirect, PageMessages.FLASH_ERROR, e.joinedMessages());
         } catch (DataAccessException e) {
             return backToPlan(redirect, PageMessages.FLASH_ERROR, SAVE_FAILED_MESSAGE);
         }

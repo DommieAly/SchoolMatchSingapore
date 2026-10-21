@@ -82,7 +82,7 @@ class AccountFlowTest {
                 .andExpect(flash().attribute(PageMessages.FLASH_MESSAGE, "Account created. Please log in."))
                 .andReturn();
         assertThat(registered.getResponse().getCookie(cookieName())).isNull();
-        Account account = accountRepository.findByUsernameIgnoreCase(username).orElseThrow();
+        Account account = accountRepository.findByUsernameKey(Account.usernameKey(username)).orElseThrow();
         assertThat(account.getEmail()).isEqualTo(username.toLowerCase() + "@example.com");
         assertThat(shortlistRepository.findById(account.getAccountId())).as("empty shortlist created").isPresent();
 
@@ -134,7 +134,7 @@ class AccountFlowTest {
         mvc.perform(post("/profile").cookie(session).param("homeAddress", "579767"))
                 .andExpect(redirectedUrl("/profile"));
 
-        Account account = accountRepository.findByUsernameIgnoreCase(username).orElseThrow();
+        Account account = accountRepository.findByUsernameKey(Account.usernameKey(username)).orElseThrow();
         UserProfile profile = profileRepository.findById(account.getAccountId()).orElseThrow();
         assertThat(profile.getHomeLocation()).isNotNull();
         assertThat(profile.getHomeLocation().isWithinSingapore()).isTrue();
@@ -161,7 +161,7 @@ class AccountFlowTest {
                 .andExpect(content().string(containsString("Which address is yours?")))
                 .andExpect(content().string(containsString("name=\"homeChoice\" value=\"1\"")))
                 .andExpect(content().string(containsString("value=\"Chooser\"")));
-        Account account = accountRepository.findByUsernameIgnoreCase(username).orElseThrow();
+        Account account = accountRepository.findByUsernameKey(Account.usernameKey(username)).orElseThrow();
         assertThat(profileRepository.findById(account.getAccountId())).as("nothing saved yet").isEmpty();
 
         mvc.perform(post("/profile").cookie(session).session(httpSession).param("displayName", "Chooser")
@@ -193,7 +193,7 @@ class AccountFlowTest {
                 .andExpect(redirectedUrl("/schools/" + code))
                 .andExpect(flash().attribute(PageMessages.FLASH_MESSAGE, "Added to shortlist"));
 
-        Account account = accountRepository.findByUsernameIgnoreCase(username).orElseThrow();
+        Account account = accountRepository.findByUsernameKey(Account.usernameKey(username)).orElseThrow();
         assertThat(shortlistRepository.findById(account.getAccountId()).orElseThrow().getSchoolCodes())
                 .containsExactly(code);
     }

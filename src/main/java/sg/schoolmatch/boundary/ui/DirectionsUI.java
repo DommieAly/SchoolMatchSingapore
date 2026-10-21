@@ -22,6 +22,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriComponentsBuilder;
 import sg.schoolmatch.boundary.ui.support.AuthInterceptor;
+import sg.schoolmatch.boundary.ui.support.FacilityPages;
 import sg.schoolmatch.boundary.ui.support.FilterParams;
 import sg.schoolmatch.boundary.ui.support.MapMarker;
 import sg.schoolmatch.boundary.ui.support.PageMessages;
@@ -172,7 +173,7 @@ public class DirectionsUI {
             model.addAttribute(PageMessages.FIELD_ERRORS, e.getFieldErrors());
             return "directions-input";
         }
-        if (route == null || !route.isAvailable()) {
+        if (!route.isAvailable()) {
             model.addAttribute(PageMessages.FLASH_ERROR, NO_ROUTE_MESSAGE);                 // AF-2, T-58
             return "directions-input";
         }
@@ -336,12 +337,7 @@ public class DirectionsUI {
                     .encode().toUriString();
         }
         if (destination instanceof Facility facility) {
-            UriComponentsBuilder url = UriComponentsBuilder.fromPath("/facilities/{placeId}");
-            String schoolCode = schoolCodeIn(safeFrom);
-            if (schoolCode != null) {
-                url.queryParam("from", schoolCode);
-            }
-            return url.buildAndExpand(facility.getPlaceId()).encode().toUriString();
+            return FacilityPages.detailsUrl(facility.getPlaceId(), schoolCodeIn(safeFrom));
         }
         return null;
     }
@@ -453,10 +449,7 @@ public class DirectionsUI {
         try {
             double lat = Double.parseDouble(latitude.strip());
             double lng = Double.parseDouble(longitude.strip());
-            if (!Double.isFinite(lat) || !Double.isFinite(lng)) {
-                return null;
-            }
-            return new Coordinate(lat, lng);   // checks the ranges
+            return new Coordinate(lat, lng);   // checks the ranges (also rejects NaN and infinity)
         } catch (RuntimeException e) {         // null, not a number, out of range
             return null;
         }

@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -34,15 +33,10 @@ import sg.schoolmatch.entity.school.ValidationStatus;
 public final class SchoolDatasetMapper {
 
     /**
-     * PSLE ranges: newest year first, then PG3 to PG1, ordinary ranges before IP ones, non-affiliated before
-     * affiliated. The order of {@code SchoolDetailsUI.NEWEST_FIRST}, which sorts the details table this way anyway;
-     * it is total over the table's key, so every database gives the same list.
+     * PSLE ranges in {@link IndicativePsleScoreRange#NEWEST_FIRST} order, the order of the details table; it is
+     * total over the table's key, so every database gives the same list.
      */
-    public static final Comparator<IndicativePsleScoreRange> RANGE_ORDER = Comparator
-            .comparingInt(IndicativePsleScoreRange::getAdmissionYear).reversed()
-            .thenComparing(Comparator.comparingInt(IndicativePsleScoreRange::getPostingGroup).reversed())
-            .thenComparing(IndicativePsleScoreRange::isIntegratedProgramme)
-            .thenComparing(IndicativePsleScoreRange::isAffiliated);
+    public static final Comparator<IndicativePsleScoreRange> RANGE_ORDER = IndicativePsleScoreRange.NEWEST_FIRST;
 
     /**
      * Planning areas by name, then code. The table keeps no position; the importer's {@code districts.geojson} has
@@ -137,10 +131,8 @@ public final class SchoolDatasetMapper {
                 .sorted(Comparator.comparingInt(DatasetWarningRow::warningNo))
                 .map(DatasetWarningRow::message)
                 .toList();
-        Map<String, Integer> counts = new LinkedHashMap<>();
-        counts.put("schools", rows.schools().size());
-        counts.put("districts", rows.districts().size());
-        counts.put("scoreRanges", rows.scoreRanges().size());
+        Map<String, Integer> counts = SnapshotManifest.counts(rows.schools().size(), rows.districts().size(),
+                rows.scoreRanges().size());
         return new SnapshotManifest(SnapshotManifest.FORMAT_VERSION, v.datasetKind(), v.datasetVersion(),
                 v.effectiveDate(), v.importedAt(), sources,
                 v.manifestStatus() == null ? null : ValidationStatus.valueOf(v.manifestStatus()), warnings, counts,

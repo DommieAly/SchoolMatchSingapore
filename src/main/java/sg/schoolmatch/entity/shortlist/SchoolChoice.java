@@ -50,15 +50,18 @@ public class SchoolChoice {
      * See docs/recommendation-scoring.md §2.
      */
     public AdmissionChance assess(int score, int postingGroup) {
-        Optional<IndicativePsleScoreRange> range = getApplicableRange(postingGroup);
-        if (range.isEmpty()) {
-            return null;
-        }
-        int upper = range.get().getUpperScore();
-        if (score <= upper - SAFE_MARGIN) {
+        return getApplicableRange(postingGroup).map(range -> chance(score, range.getUpperScore())).orElse(null);
+    }
+
+    /**
+     * The DC-20 label of {@code score} against the upper score U: SAFE if score ≤ U − {@link #SAFE_MARGIN}, MATCH if
+     * score ≤ U, otherwise REACH. Shared by the choice plan and the recommendations, so both label a school the same.
+     */
+    public static AdmissionChance chance(int score, int upperScore) {   // DC-36 helper
+        if (score <= upperScore - SAFE_MARGIN) {
             return AdmissionChance.SAFE;
         }
-        if (score <= upper) {
+        if (score <= upperScore) {
             return AdmissionChance.MATCH;
         }
         return AdmissionChance.REACH;

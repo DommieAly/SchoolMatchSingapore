@@ -112,9 +112,9 @@ public record SnapshotRows(
 
     /** Design section 6.2 step 5: the manifest counts must equal the snapshot's rows. */
     void checkCounts(Map<String, Integer> counts) {
-        check(counts, "schools", schools.size());
-        check(counts, "districts", districts.size());
-        check(counts, "scoreRanges", scoreRanges.size());
+        check(counts, SnapshotManifest.COUNT_SCHOOLS, schools.size());
+        check(counts, SnapshotManifest.COUNT_DISTRICTS, districts.size());
+        check(counts, SnapshotManifest.COUNT_SCORE_RANGES, scoreRanges.size());
     }
 
     private void check(Map<String, Integer> counts, String key, int rows) {

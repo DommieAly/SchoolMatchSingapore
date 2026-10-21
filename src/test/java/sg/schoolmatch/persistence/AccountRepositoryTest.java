@@ -72,7 +72,7 @@ class AccountRepositoryTest {
         assertThat(found.getUsername()).isEqualTo("MixedCase_1");
         assertThat(found.getUsernameKey()).isEqualTo("mixedcase_1");
         assertThat(accountRepository.existsByUsernameKey("mixedcase_1")).isTrue();
-        assertThat(accountRepository.findByUsernameIgnoreCase("mixedcase_1")).contains(found);
+        assertThat(accountRepository.findByUsernameKey(Account.usernameKey("mixedcase_1"))).contains(found);
     }
 
     @Test

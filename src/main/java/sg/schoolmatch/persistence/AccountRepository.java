@@ -20,9 +20,4 @@ public interface AccountRepository extends JpaRepository<Account, String> {
     Optional<Account> findByEmailIgnoreCase(String email);
 
     boolean existsByEmailIgnoreCase(String email);
-
-    /** Ignores case; kept for tests and tools. Logins use {@link #findByUsernameKey}. */
-    default Optional<Account> findByUsernameIgnoreCase(String username) {
-        return findByUsernameKey(Account.usernameKey(username));
-    }
 }

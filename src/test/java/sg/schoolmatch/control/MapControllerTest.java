@@ -17,8 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import sg.schoolmatch.boundary.external.ExternalCallBudget;
 import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.entity.facility.Facility;
@@ -27,6 +25,7 @@ import sg.schoolmatch.entity.school.District;
 import sg.schoolmatch.entity.school.School;
 import sg.schoolmatch.entity.search.CurrentResultSet;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
+import sg.schoolmatch.support.TestProperties;
 import sg.schoolmatch.support.TestSchools;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -194,8 +193,7 @@ class MapControllerTest {
     }
 
     private MapController controller(Map<String, String> settings) {
-        AppProperties props = new Binder(new MapConfigurationPropertySource(settings))
-                .bindOrCreate("app", AppProperties.class);
+        AppProperties props = TestProperties.bind(settings);
         return new MapController(schoolDataController, props, budget, jsonMapper);
     }
 

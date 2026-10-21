@@ -32,7 +32,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     private static final Pattern ADD_TO_SHORTLIST = Pattern.compile("^/schools/([^/]+)/shortlist$");
     private static final Pattern SCHOOL_CODE = Pattern.compile("^[a-z0-9-]{1,100}$");
-    private static final int MAX_LOCAL_PATH_LENGTH = 2000;
+    public static final int MAX_LOCAL_PATH_LENGTH = 2000;
 
     private final AuthController authController;
     private final SessionCookie sessionCookie;

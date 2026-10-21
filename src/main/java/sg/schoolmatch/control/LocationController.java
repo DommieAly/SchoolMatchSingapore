@@ -14,7 +14,7 @@ import sg.schoolmatch.error.InvalidInputException;
 /**
  * Design class «control» LocationController — turns device positions and typed addresses into a
  * ReferenceLocation (FR-FILTER-04, FR-ROUTE-02, NFR-SEC-06). DC-11: uses OneMap, not Google.
- * DC-14: depends on SchoolDataController (planning-area check). Called by DirectionsUI (/location*, DC-23),
+ * DC-14: depends on SchoolDataController (an arrow kept from the design). Called by DirectionsUI (/location*, DC-23),
  * ProfileController, FilterController, RecommendationController.
  * <p>
  * Rules: an address has 1–200 characters after trimming; OneMap hits are kept only when their point is inside
@@ -45,7 +45,7 @@ public class LocationController {
 
     private static final double FIVE_DECIMALS = 1e5;
 
-    private final SchoolDataController schoolDataController;
+    private final SchoolDataController schoolDataController;   // design arrow (DC-14), not called
     private final OneMapInterface oneMap;
 
     public LocationController(SchoolDataController schoolDataController, OneMapInterface oneMap) {

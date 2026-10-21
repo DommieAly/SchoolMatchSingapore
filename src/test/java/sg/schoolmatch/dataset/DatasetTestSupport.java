@@ -2,10 +2,9 @@ package sg.schoolmatch.dataset;
 
 import java.util.List;
 import java.util.Map;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.core.io.DefaultResourceLoader;
 import sg.schoolmatch.config.AppProperties;
+import sg.schoolmatch.support.TestProperties;
 
 /** Helpers for the dataset tests: real AppProperties (with their defaults) without starting Spring. */
 final class DatasetTestSupport {
@@ -32,7 +31,7 @@ final class DatasetTestSupport {
 
     /** {@code app.*} settings bound exactly as Spring would, e.g. {@code Map.of("app.dataset.dir", "x")}. */
     static AppProperties props(Map<String, String> values) {
-        return new Binder(new MapConfigurationPropertySource(values)).bindOrCreate("app", AppProperties.class);
+        return TestProperties.bind(values);
     }
 
     static SnapshotReader reader(Map<String, String> values) {

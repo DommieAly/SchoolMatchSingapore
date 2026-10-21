@@ -6,7 +6,8 @@ import sg.schoolmatch.entity.school.School;
  * Design class «entity» Filter — one active criterion on the Current Result Set (FR-FILTER-01, FR-FILTER-08).
  * Subclasses: SchoolAttributeFilter, PsleScoreFilter, ProximityFilter, TransportationFilter.
  */
-public abstract class Filter {
+public abstract sealed class Filter
+        permits SchoolAttributeFilter, PsleScoreFilter, ProximityFilter, TransportationFilter {
 
     /** True when {@code school} passes this filter. */
     public abstract boolean matches(School school);

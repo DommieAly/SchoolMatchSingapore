@@ -1,6 +1,5 @@
 package sg.schoolmatch.boundary.ui;
 
-import java.util.Comparator;
 import java.util.List;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -24,16 +23,6 @@ import sg.schoolmatch.entity.school.School;
 @Controller
 public class SchoolDetailsUI {
 
-    /**
-     * Ranges table order: newest year first, then PG3, PG2, PG1, the ordinary ranges before the IP ones, and
-     * non-affiliated before affiliated.
-     */
-    private static final Comparator<IndicativePsleScoreRange> NEWEST_FIRST = Comparator
-            .comparingInt(IndicativePsleScoreRange::getAdmissionYear).reversed()
-            .thenComparing(Comparator.comparingInt(IndicativePsleScoreRange::getPostingGroup).reversed())
-            .thenComparing(IndicativePsleScoreRange::isIntegratedProgramme)
-            .thenComparing(IndicativePsleScoreRange::isAffiliated);
-
     private final SchoolController schoolController;
     private final SchoolDataController schoolDataController;
 
@@ -50,7 +39,7 @@ public class SchoolDetailsUI {
     public String selectSchool(@PathVariable("code") String code, Model model) {
         School school = schoolController.getSchoolDetails(code);
         model.addAttribute("school", school);
-        List<IndicativePsleScoreRange> ranges = school.getScoreRanges().stream().sorted(NEWEST_FIRST).toList();
+        List<IndicativePsleScoreRange> ranges = school.getScoreRanges().stream().sorted(IndicativePsleScoreRange.NEWEST_FIRST).toList();
         model.addAttribute("scoreRanges", ranges);
         // DC-82: MOE's notes for "6(D) - 8(M)" (Higher Chinese grades) and "26 - 30*" (places left), when shown.
         model.addAttribute("higherChineseNote", ranges.stream().anyMatch(IndicativePsleScoreRange::hasHigherChineseGrades));

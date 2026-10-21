@@ -107,7 +107,7 @@ public class GoogleRoutesApi {   // DC-63
                 result[i] = Route.unavailable(mode);
                 continue;
             }
-            Route cached = cache == null ? null : cache.get(new MatrixKey(origin, destination, mode), Route.class);
+            Route cached = cache.get(new MatrixKey(origin, destination, mode), Route.class);
             if (cached != null) {
                 result[i] = cached;
             } else {
@@ -147,7 +147,7 @@ public class GoogleRoutesApi {   // DC-63
             }
             routes[index] = element.toRoute(mode);
             boolean answered = element.routeExists() || "ROUTE_NOT_FOUND".equals(element.condition());
-            if (cache != null && answered) {
+            if (answered) {
                 cache.put(new MatrixKey(origin, batch.get(index), mode), routes[index]);
             }
         }

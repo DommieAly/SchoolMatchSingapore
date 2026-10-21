@@ -21,6 +21,7 @@ import sg.schoolmatch.entity.facility.FacilityDataCache;
 import sg.schoolmatch.entity.facility.FacilityFilterCriteria;
 import sg.schoolmatch.entity.facility.FacilityType;
 import sg.schoolmatch.entity.school.School;
+import sg.schoolmatch.error.InputMessages;
 import sg.schoolmatch.error.InvalidInputException;
 import sg.schoolmatch.error.NotFoundException;
 
@@ -37,12 +38,10 @@ import sg.schoolmatch.error.NotFoundException;
 public class FacilityController {
 
     static final String RADIUS_FIELD = "radiusKm";
-    static final String RADIUS_MESSAGE = "Choose 1, 2 or 3 km";
+    static final String RADIUS_MESSAGE = InputMessages.FACILITY_RADIUS;
 
     /** Google place ids (and the stub's) use only these characters; anything else is not looked up. */
     private static final Pattern PLACE_ID = Pattern.compile("[A-Za-z0-9_-]{1,300}");
-
-    private final int defaultRadiusKm = FacilityFilterCriteria.DEFAULT_RADIUS_KM;   // design value 3 (DC-24)
 
     private final GoogleMapsPlatformInterface googleMaps;
     private final Clock clock;
@@ -67,7 +66,7 @@ public class FacilityController {
             return List.of();
         }
         Coordinate centre = school.getCoordinate();
-        return sortByDistance(cacheFor(school).findNearby(centre, defaultRadiusKm), centre);
+        return sortByDistance(cacheFor(school).findNearby(centre, FacilityFilterCriteria.DEFAULT_RADIUS_KM), centre);
     }
 
     /**
@@ -78,14 +77,11 @@ public class FacilityController {
      * @throws sg.schoolmatch.error.ExternalServiceUnavailableException when Google cannot be reached
      */
     public List<Facility> filterFacilities(School school, FacilityFilterCriteria criteria) {
-        if (criteria == null || !criteria.isValid()) {
+        if (!criteria.isValid()) {
             throw new InvalidInputException(RADIUS_FIELD, RADIUS_MESSAGE);
         }
-        if (school == null || !school.hasValidCoordinate()) {
-            return List.of();
-        }
-        Coordinate centre = school.getCoordinate();
-        return getNearbyFacilities(school).stream().filter(f -> criteria.matches(f, centre)).toList();
+        // getNearbyFacilities is empty for a school without a valid coordinate, so matches always gets a centre.
+        return getNearbyFacilities(school).stream().filter(f -> criteria.matches(f, school.getCoordinate())).toList();
     }
 
     /**
@@ -108,18 +104,23 @@ public class FacilityController {
         return merge(placeId, summary.orElse(null), details.orElse(null));
     }
 
-    /** Nearest first; equal distances by name, then placeId, so the order never changes between requests. */
+    /**
+     * Nearest first; equal distances by name, then placeId, so the order never changes between requests. The list
+     * comes from {@link FacilityDataCache#findNearby}, so every facility has a valid coordinate.
+     */
     private List<Facility> sortByDistance(List<Facility> list, Coordinate origin) {   // DC-31: origin added
         Comparator<Facility> byDistance = Comparator.comparingDouble(f -> f.distanceTo(origin));
         return list.stream()
-                .filter(Facility::hasValidCoordinate)
                 .sorted(byDistance
                         .thenComparing(f -> f.getName() == null ? "" : f.getName().toLowerCase(Locale.ROOT))
                         .thenComparing(Facility::getPlaceId))
                 .toList();
     }
 
-    /** The school's cache; asks Google for both types when it is missing or older than the TTL (DC-17). */
+    /**
+     * The school's cache; asks Google for both types when it is missing or older than the TTL (DC-17). Keeps the
+     * places within the DC-24 "nearby" radius ({@link FacilityFilterCriteria#DEFAULT_RADIUS_KM}, 3 km).
+     */
     private FacilityDataCache cacheFor(School school) {
         Instant now = clock.instant();
         FacilityDataCache cache = cacheBySchool.get(school.getSchoolCode());
@@ -131,7 +132,7 @@ public class FacilityController {
         for (FacilityType type : FacilityType.values()) {
             for (Facility facility : googleMaps.searchPlaces(type, centre)) {
                 if (facility != null && facility.getPlaceId() != null && facility.hasValidCoordinate()
-                        && facility.distanceTo(centre) <= defaultRadiusKm) {
+                        && facility.distanceTo(centre) <= FacilityFilterCriteria.DEFAULT_RADIUS_KM) {
                     nearby.putIfAbsent(facility.getPlaceId(), facility);
                 }
             }

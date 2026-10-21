@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import sg.schoolmatch.entity.location.ReferenceLocation;
 import sg.schoolmatch.entity.route.TravelMode;
+import sg.schoolmatch.entity.school.IndicativePsleScoreRange;
 
 /**
  * Design class «entity» MatchCriteria — what a student wants, used to rank schools (FR-REC-01).
@@ -43,8 +44,10 @@ public class MatchCriteria {
 
     /** Valid: PSLE score 4..32, posting group 1..3, and no negative weight. */
     public boolean isValid() {
-        return psleScore != null && psleScore >= 4 && psleScore <= 32
-                && postingGroup != null && postingGroup >= 1 && postingGroup <= 3
+        return psleScore != null && psleScore >= IndicativePsleScoreRange.MIN_SCORE
+                && psleScore <= IndicativePsleScoreRange.MAX_SCORE
+                && postingGroup != null && postingGroup >= IndicativePsleScoreRange.MIN_POSTING_GROUP
+                && postingGroup <= IndicativePsleScoreRange.MAX_POSTING_GROUP
                 && weights.values().stream().allMatch(w -> w != null && w >= 0);
     }
 

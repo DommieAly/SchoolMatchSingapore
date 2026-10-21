@@ -77,4 +77,12 @@ class StubGoogleMapsPlatformTest {
                 });
         assertThat(stub.getPlaceDetails("ChIJ-not-a-stub-id")).isEmpty();
     }
+
+    @Test
+    @Tag("FR-FACDETAIL-02")
+    @DisplayName("TC-StubGoogle-05: a stub id with an impossible coordinate or a number too long is unknown (DC-62)")
+    void malformedStubIds_areUnknown() {
+        assertThat(stub.getPlaceDetails("stub-library-1-999999999-103844901")).isEmpty();
+        assertThat(stub.getPlaceDetails("stub-library-1-99999999999999999999-1")).isEmpty();
+    }
 }

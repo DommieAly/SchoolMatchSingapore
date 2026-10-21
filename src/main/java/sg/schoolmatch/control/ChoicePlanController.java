@@ -60,10 +60,9 @@ public class ChoicePlanController {
         Shortlist shortlist = shortlistController.getShortlist(sessionId);
         UserProfile profile = profileController.getProfile(sessionId);
         ChoicePlan plan = shortlist.getChoicePlan();
-        if (plan == null || (plan.getBasedOnScore() == null && scoreOf(profile) != null)) {
+        if (plan == null || (plan.getBasedOnScore() == null && profile.getPsleScore() != null)) {
             if (plan == null) {
-                plan = new ChoicePlan(null, null);
-                shortlist.setChoicePlan(plan);
+                plan = attachNewPlan(shortlist);
             }
             copyScoreFromProfile(plan, profile);
             plan = save(shortlist).getChoicePlan();
@@ -90,9 +89,8 @@ public class ChoicePlanController {
                 .orElseThrow(() -> new InvalidInputException("code", NOT_IN_DATASET_MESSAGE));
         ChoicePlan plan = shortlist.getChoicePlan();
         if (plan == null) {
-            plan = new ChoicePlan(null, null);
+            plan = attachNewPlan(shortlist);
             copyScoreFromProfile(plan, profileController.getProfile(sessionId));
-            shortlist.setChoicePlan(plan);
         }
         if (plan.contains(schoolCode)) {
             throw new InvalidInputException("code", school.getName() + " is already in your plan.");
@@ -167,13 +165,12 @@ public class ChoicePlanController {
     public void useProfileScore(String sessionId) {   // DC-65
         Shortlist shortlist = shortlistController.getShortlist(sessionId);
         UserProfile profile = profileController.getProfile(sessionId);
-        if (scoreOf(profile) == null) {
+        if (profile.getPsleScore() == null) {
             throw new InvalidInputException("score", NO_SCORE_MESSAGE);
         }
         ChoicePlan plan = shortlist.getChoicePlan();
         if (plan == null) {
-            plan = new ChoicePlan(null, null);
-            shortlist.setChoicePlan(plan);
+            plan = attachNewPlan(shortlist);
         }
         copyScoreFromProfile(plan, profile);
         save(shortlist);
@@ -194,10 +191,17 @@ public class ChoicePlanController {
                 + ", but your profile now says posting group " + plan.getCurrentProfilePostingGroup() + ".";
     }
 
+    /** A new empty plan, attached to the shortlist (saved with it). */
+    private static ChoicePlan attachNewPlan(Shortlist shortlist) {
+        ChoicePlan plan = new ChoicePlan(null, null);
+        shortlist.setChoicePlan(plan);
+        return plan;
+    }
+
     /** Sets the plan's score and posting group from the profile; a score without a PG uses the default PG3. */
     private void copyScoreFromProfile(ChoicePlan plan, UserProfile profile) {
-        Integer score = scoreOf(profile);
-        Integer postingGroup = profile == null ? null : profile.getPostingGroup();
+        Integer score = profile.getPsleScore();
+        Integer postingGroup = profile.getPostingGroup();
         if (score != null && postingGroup == null) {
             postingGroup = ChoicePlan.DEFAULT_POSTING_GROUP;
         }
@@ -208,23 +212,13 @@ public class ChoicePlanController {
 
     /** DC-21: each choice's affiliation, and the profile's current score and posting group. */
     private static void fillFromProfile(ChoicePlan plan, UserProfile profile) {
-        String primarySchool = profile == null ? null : profile.getPrimarySchool();
+        String primarySchool = profile.getPrimarySchool();
         for (SchoolChoice choice : plan.getChoices()) {
-            choice.setAffiliated(choice.getSchool() != null && isAffiliated(choice.getSchool(), primarySchool));
+            // DC-22: affiliated when the member's primary school is one of the school's affiliated primary schools
+            choice.setAffiliated(choice.getSchool() != null
+                    && choice.getSchool().hasAffiliatedPrimarySchool(primarySchool));
         }
-        plan.setCurrentProfile(scoreOf(profile), profile == null ? null : profile.getPostingGroup());
-    }
-
-    /**
-     * DC-22: true when the member's primary school is one of the school's affiliated primary schools. The name rule
-     * is {@link School#hasAffiliatedPrimarySchool} (shared with search and recommendations).
-     */
-    private static boolean isAffiliated(School school, String primarySchool) {
-        return school.hasAffiliatedPrimarySchool(primarySchool);
-    }
-
-    private static Integer scoreOf(UserProfile profile) {
-        return profile == null ? null : profile.getPsleScore();
+        plan.setCurrentProfile(profile.getPsleScore(), profile.getPostingGroup());
     }
 
     private static String positionMessage(int last) {

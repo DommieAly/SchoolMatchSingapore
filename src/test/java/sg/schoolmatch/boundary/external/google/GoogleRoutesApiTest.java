@@ -31,8 +31,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -48,6 +46,7 @@ import sg.schoolmatch.entity.route.Route;
 import sg.schoolmatch.entity.route.RouteStep;
 import sg.schoolmatch.entity.route.TravelMode;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
+import sg.schoolmatch.support.TestProperties;
 
 /**
  * {@link GoogleRoutesApi} against a {@link MockRestServiceServer} (no network, no real key): request shape,
@@ -383,8 +382,7 @@ class GoogleRoutesApiTest {
         settings.put("app.google.server-key", "test-key");
         settings.put("app.google.routes-base-url", BASE);
         settings.put("app.google.matrix-batch-size", String.valueOf(batchSize));
-        AppProperties props = new Binder(new MapConfigurationPropertySource(settings))
-                .bindOrCreate("app", AppProperties.class);
+        AppProperties props = TestProperties.bind(settings);
         return new GoogleRoutesApi(builder, props, budget, cacheManager);
     }
 

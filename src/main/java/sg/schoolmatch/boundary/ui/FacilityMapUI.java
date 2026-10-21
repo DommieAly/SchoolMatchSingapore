@@ -1,7 +1,6 @@
 package sg.schoolmatch.boundary.ui;
 
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -15,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.util.UriComponentsBuilder;
+import sg.schoolmatch.boundary.ui.support.FacilityPages;
 import sg.schoolmatch.boundary.ui.support.MapMarker;
 import sg.schoolmatch.boundary.ui.support.PageMessages;
 import sg.schoolmatch.control.FacilityController;
@@ -27,7 +27,7 @@ import sg.schoolmatch.entity.facility.FacilityType;
 import sg.schoolmatch.entity.school.School;
 import sg.schoolmatch.error.ExternalFailureLog;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
-import sg.schoolmatch.error.InvalidInputException;
+import sg.schoolmatch.error.InputMessages;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -48,10 +48,10 @@ import tools.jackson.databind.json.JsonMapper;
 @Controller
 public class FacilityMapUI {
 
-    static final String TYPE = "type";
+    static final String TYPE = FacilityPages.TYPE;
     static final String RADIUS_KM = "radiusKm";
     static final String TYPE_MESSAGE = "Choose library or tuition centre";
-    static final String RADIUS_MESSAGE = "Choose 1, 2 or 3 km";
+    static final String RADIUS_MESSAGE = InputMessages.FACILITY_RADIUS;
 
     private static final Logger log = LoggerFactory.getLogger(FacilityMapUI.class);
 
@@ -83,7 +83,7 @@ public class FacilityMapUI {
                                          Model model) {
         School school = schoolController.getSchoolDetails(code);
         Map<String, String> errors = new LinkedHashMap<>();
-        Set<FacilityType> selectedTypes = parseTypes(types, errors);
+        Set<FacilityType> selectedTypes = FacilityPages.parseTypes(types, TYPE_MESSAGE, errors);
         int radius = parseRadius(radiusKm, errors);
         FacilityFilterCriteria criteria = new FacilityFilterCriteria(selectedTypes, radius);
 
@@ -92,9 +92,7 @@ public class FacilityMapUI {
             model.addAttribute("schoolNotMappable", true);
         } else {
             try {
-                facilities = facilityController.filterFacilities(school, criteria);
-            } catch (InvalidInputException e) {
-                errors.putAll(e.getFieldErrors());
+                facilities = facilityController.filterFacilities(school, criteria);   // radius already checked
             } catch (ExternalServiceUnavailableException e) {
                 ExternalFailureLog.warn(log, "Nearby facilities map", e);
                 model.addAttribute("serviceUnavailable", true);
@@ -127,27 +125,9 @@ public class FacilityMapUI {
         return "facility-map";
     }
 
-    /** "Library" / "Tuition centre" for the list and the legend. */
+    /** "Library" / "Tuition centre" for the list and the legend; a facility without a type counts as a library. */
     static String typeLabel(FacilityType type) {
-        return type == FacilityType.TUITION_CENTRE ? "Tuition centre" : "Library";
-    }
-
-    private static Set<FacilityType> parseTypes(List<String> types, Map<String, String> errors) {
-        Set<FacilityType> selected = EnumSet.noneOf(FacilityType.class);
-        if (types == null) {
-            return selected;
-        }
-        for (String text : types) {
-            if (text == null || text.isBlank()) {
-                continue;
-            }
-            try {
-                selected.add(FacilityType.valueOf(text.strip().toUpperCase(Locale.ROOT)));
-            } catch (IllegalArgumentException e) {
-                errors.put(TYPE, TYPE_MESSAGE);
-            }
-        }
-        return selected;
+        return FacilityPages.SINGULAR.get(type == null ? FacilityType.LIBRARY : type);
     }
 
     /** 1, 2 or 3 km (DC-24); blank means the default (3 km); anything else is an error and uses the default. */
@@ -169,15 +149,14 @@ public class FacilityMapUI {
 
     private static FacilityRow row(Facility facility, School school) {
         String distance = String.format(Locale.ROOT, "%.1f", facility.distanceTo(school.getCoordinate()));
-        String detailsUrl = UriComponentsBuilder.fromPath("/facilities/{placeId}").queryParam("from", "{from}")
-                .encode().buildAndExpand(facility.getPlaceId(), school.getSchoolCode()).toUriString();
-        return new FacilityRow(facility, typeLabel(facility.getFacilityType()), distance, detailsUrl);
+        return new FacilityRow(facility, typeLabel(facility.getFacilityType()), distance,
+                FacilityPages.detailsUrl(facility.getPlaceId(), school.getSchoolCode()));
     }
 
     /** What the map shows, e.g. "Libraries and tuition centres". */
     private static String typesLabel(Set<FacilityType> types) {
         if (types.size() == 1) {
-            return types.contains(FacilityType.LIBRARY) ? "Libraries" : "Tuition centres";
+            return FacilityPages.PLURAL.get(types.iterator().next());
         }
         return "Libraries and tuition centres";
     }

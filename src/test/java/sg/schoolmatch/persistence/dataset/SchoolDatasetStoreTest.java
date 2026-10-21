@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.jdbc.test.autoconfigure.JdbcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -41,7 +40,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.dataset.LoadedSnapshot;
 import sg.schoolmatch.dataset.SchoolRecord;
 import sg.schoolmatch.dataset.SnapshotManifest;
@@ -52,6 +50,7 @@ import sg.schoolmatch.entity.school.District;
 import sg.schoolmatch.entity.school.SchoolDataCache;
 import sg.schoolmatch.entity.school.SchoolDataCache;
 import sg.schoolmatch.support.FixedClock;
+import sg.schoolmatch.support.TestProperties;
 
 /**
  * SchoolDatasetStore.ensureLoaded: the loader's write path (docs/database-design.md, sections 6.2, 6.4, 6.5 and
@@ -103,7 +102,7 @@ abstract class SchoolDatasetStoreTest {
     private FixedClock clock;
 
     private final SnapshotReader reader = new SnapshotReader(
-            new Binder().bindOrCreate("app", AppProperties.class), new DefaultResourceLoader());   // defaults
+            TestProperties.defaults(), new DefaultResourceLoader());   // defaults
     private final SnapshotValidator validator = new SnapshotValidator();
     private final LoadedSnapshot mini = reader.read(MINI);
 

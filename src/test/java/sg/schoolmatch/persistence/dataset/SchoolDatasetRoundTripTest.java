@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.jdbc.test.autoconfigure.JdbcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -32,7 +31,6 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.dataset.LoadedSnapshot;
 import sg.schoolmatch.dataset.SnapshotReader;
 import sg.schoolmatch.dataset.SnapshotValidator;
@@ -43,6 +41,7 @@ import sg.schoolmatch.entity.school.School;
 import sg.schoolmatch.entity.school.SchoolDataCache;
 import sg.schoolmatch.entity.search.AttributeCategory;
 import sg.schoolmatch.support.FixedClock;
+import sg.schoolmatch.support.TestProperties;
 
 /**
  * The read path (docs/database-design.md, sections 6.3, 7.2 and 10): a snapshot loaded by
@@ -90,7 +89,7 @@ abstract class SchoolDatasetRoundTripTest {
     private JdbcTemplate jdbc;
 
     private static final SnapshotReader READER = new SnapshotReader(
-            new Binder().bindOrCreate("app", AppProperties.class), new DefaultResourceLoader());   // defaults: ACTIVE
+            TestProperties.defaults(), new DefaultResourceLoader());   // defaults: ACTIVE
     private final SnapshotValidator validator = new SnapshotValidator();
 
     /** Migrates the empty database at {@code url} with every Flyway migration before Spring starts. */
