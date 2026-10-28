@@ -55,10 +55,10 @@ import tools.jackson.databind.json.JsonMapper;
  * {@code to} = {@code school:<code>} (a bare school code also works) or {@code facility:<placeId>};
  * {@code from} = the local page that Cancel returns to (default: the destination's details page).
  * <ul>
- *   <li>No starting point → back to the input page with "Set a starting point first" (AF-1).</li>
- *   <li>No route → input page with "No route found", nothing partial is shown (AF-2, FR-ROUTE-08).</li>
- *   <li>Routing service down → input page with "Directions are temporarily unavailable" (EX-1).</li>
- *   <li>Locations refused by the control → input page with the reason (EX-2).</li>
+ *   <li>No starting point → back to the input page with "Set a starting point first" (step 3).</li>
+ *   <li>No route → input page with "No route found", nothing partial is shown (EX-2, FR-ROUTE-08).</li>
+ *   <li>Routing service down → input page with "Directions are temporarily unavailable" (EX-3).</li>
+ *   <li>Locations refused by the control → input page with the reason (EX-1).</li>
  * </ul>
  * Privacy (UC Filter Schools, NFR-SEC-06): typed addresses and positions are never logged.
  */
@@ -157,7 +157,7 @@ public class DirectionsUI {
             return "directions-input";   // the page explains that this place has no map location (EX-2)
         }
         if (start == null || !start.isResolved()) {
-            model.addAttribute(PageMessages.FLASH_ERROR, NO_START_MESSAGE);   // AF-1
+            model.addAttribute(PageMessages.FLASH_ERROR, NO_START_MESSAGE);   // step 3
             return "directions-input";
         }
 
@@ -166,15 +166,15 @@ public class DirectionsUI {
             route = directionsController.getDirections(start, destination, travelMode.get());
         } catch (ExternalServiceUnavailableException e) {
             ExternalFailureLog.warn(log, "Directions", e);
-            model.addAttribute(PageMessages.FLASH_ERROR, DIRECTIONS_UNAVAILABLE_MESSAGE);   // EX-1, T-59
+            model.addAttribute(PageMessages.FLASH_ERROR, DIRECTIONS_UNAVAILABLE_MESSAGE);   // EX-3, T-59
             return "directions-input";
         } catch (InvalidInputException e) {
-            model.addAttribute(PageMessages.FLASH_ERROR, INVALID_LOCATIONS_MESSAGE);        // EX-2
+            model.addAttribute(PageMessages.FLASH_ERROR, INVALID_LOCATIONS_MESSAGE);        // EX-1
             model.addAttribute(PageMessages.FIELD_ERRORS, e.getFieldErrors());
             return "directions-input";
         }
         if (!route.isAvailable()) {
-            model.addAttribute(PageMessages.FLASH_ERROR, NO_ROUTE_MESSAGE);                 // AF-2, T-58
+            model.addAttribute(PageMessages.FLASH_ERROR, NO_ROUTE_MESSAGE);                 // EX-2, T-58
             return "directions-input";
         }
         displayDirections(model, route, start, destination, travelMode.get(), to, from);

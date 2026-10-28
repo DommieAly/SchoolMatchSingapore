@@ -36,9 +36,9 @@ import tools.jackson.databind.json.JsonMapper;
  * (FR-FACILITY-02). The page takes the same {@code type} and {@code radiusKm} as the facilities list
  * (NearbyFacilitiesUI), so the markers match the list (FR-FACMAP-04).
  * <ul>
- *   <li>Facilities without a valid location are left out and counted (AF-1, FR-FACMAP-05).</li>
- *   <li>No facility → a message; the school marker still shows (AF-2).</li>
- *   <li>Places service down → "temporarily unavailable" (EX-1 of View Nearby Facilities).</li>
+ *   <li>Facilities without a valid location are left out and counted (AF-3, FR-FACMAP-05).</li>
+ *   <li>No facility → a message; the school marker still shows (EX-2).</li>
+ *   <li>Places service down → "temporarily unavailable" (EX-3).</li>
  *   <li>No browser key / limit reached → "Map unavailable"; the list beside it still works (EX-1).</li>
  * </ul>
  * Model: {@code school}, {@code facilities} (rows with a location), {@code omittedCount}, {@code radiusKm},

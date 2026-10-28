@@ -231,7 +231,7 @@
   /**
    * View School's Districts (FR-MAP-06, FR-MAP-07): shows or hides the planning areas. Only the data layer
    * changes, so the school markers stay. Resolves false when there is no map or the districts cannot be loaded
-   * (EX-1: the map stays as it was).
+   * (View Schools on Map AF-2: the map stays as it was).
    */
   function toggleDistrictLayer(visible) {
     if (!mapReady) {
