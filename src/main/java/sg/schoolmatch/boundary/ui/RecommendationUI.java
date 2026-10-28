@@ -47,7 +47,7 @@ import sg.schoolmatch.error.InvalidInputException;
  * <ul>
  *   <li>Login required (DC-07). The form is prefilled from {@code ProfileController.getProfile(sessionId)
  *       .toMatchCriteria()}; the starting point is the one chosen with the location picker (DC-23), else home.
- *       An incomplete profile shows what is missing and a link to the profile (AF-1).</li>
+ *       An incomplete profile shows what is missing and a link to the profile (EX-1).</li>
  *   <li>POST /recommendations runs {@code RecommendationController.recommend}, keeps the results in the HTTP
  *       session under a random id and redirects to GET /recommendations/results/{id}, so Refresh never repeats the
  *       commute-time calls. The last {@value #MAX_STORED_RESULTS} results are kept; only the login session that
@@ -121,7 +121,7 @@ public class RecommendationUI {
 
     /**
      * POST /recommendations — {@code submitCriteria}: ranks the schools and redirects to the results.
-     * Invalid input (AF-1) or a school data error (EX-1) shows the form again with the messages.
+     * Invalid input (EX-1) or a school data error (EX-3) shows the form again with the messages.
      */
     @PostMapping(CRITERIA_PATH)
     public String submitCriteria(@RequestAttribute(AuthInterceptor.SESSION_ID_ATTRIBUTE) String sessionId,
@@ -241,7 +241,7 @@ public class RecommendationUI {
     }
 
     /**
-     * AF-1: what the profile still needs before recommendations can use it (UserProfile.isComplete).
+     * EX-1: what the profile still needs before recommendations can use it (UserProfile.isComplete).
      * DC-74: without PSLE data the PSLE score and posting group are not needed.
      */
     private static List<String> missingProfileFields(UserProfile profile, boolean psleData) {

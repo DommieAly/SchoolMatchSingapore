@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
       maps.toggleDistrictLayer(visible).then(function (ok) {
         districtSwitch.disabled = false;
         if (!ok && visible) {
-          // UC View School's Districts EX-1: say so; the school map stays as it was.
+          // UC View Schools on Map AF-2: say so; the school map stays as it was.
           districtSwitch.checked = false;
           if (districtStatus) {
             districtStatus.textContent = 'Planning areas are not available right now.';

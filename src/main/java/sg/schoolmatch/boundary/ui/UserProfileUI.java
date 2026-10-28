@@ -114,7 +114,7 @@ public class UserProfileUI {
 
     /**
      * POST /profile — saves the whole profile (T-14). Invalid values: the page again with the field errors and
-     * the typed values, nothing saved (AF-2). Several address matches: the choice list (UC special requirement).
+     * the typed values, nothing saved (AF-2). Several address matches: the choice list (AF-3).
      * Database error: a message, the saved profile unchanged (EX-2).
      */
     @PostMapping("/profile")

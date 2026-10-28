@@ -53,7 +53,7 @@ public class NearbyFacilitiesUI {
     /**
      * GET /schools/{code}/facilities?type=&radiusKm= — the first visit uses all types and 3 km; the filter
      * panel submits here too (applyFacilityFilter). Unknown code → 404. An invalid radius or type shows a
-     * field message and the list for the valid values (NFR-USE-03). Google down → EX-1 message, no list.
+     * field message and the list for the valid values (NFR-USE-03). Google down → EX-2 message, no list.
      */
     @GetMapping("/schools/{code}/facilities")
     public String applyFacilityFilter(@PathVariable String code,
@@ -124,7 +124,7 @@ public class NearbyFacilitiesUI {
         return distances;
     }
 
-    /** AF-1 of View Nearby Facilities, worded for the active filters. */
+    /** EX-1 of View Nearby Facilities, worded for the active filters. */
     private static String noFacilitiesMessage(School school, FacilityFilterCriteria criteria) {
         if (!school.hasValidCoordinate()) {
             return "This school has no map location, so nearby facilities cannot be found.";

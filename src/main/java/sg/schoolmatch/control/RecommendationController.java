@@ -77,10 +77,10 @@ public class RecommendationController {
     }
 
     /**
-     * The top recommendations, best first, with {@code rank} 1..n. Empty when no school fits (AF-2).
+     * The top recommendations, best first, with {@code rank} 1..n. Empty when no school fits (EX-2).
      *
      * @throws InvalidInputException when the criteria are not valid (field → message, NFR-USE-03)
-     * @throws ExternalServiceUnavailableException when the school data cannot be read (EX-1)
+     * @throws ExternalServiceUnavailableException when the school data cannot be read (EX-3)
      */
     public List<Recommendation> recommend(MatchCriteria criteria) {
         boolean psleData;
@@ -123,7 +123,7 @@ public class RecommendationController {
     }
 
     /**
-     * Field → message for every problem at once (AF-1 of the use case: the form shows them all).
+     * Field → message for every problem at once (EX-1 of the use case: the form shows them all).
      * DC-74: without PSLE data the score and posting group are optional (still checked when given).
      */
     private static Map<String, String> validate(MatchCriteria criteria, boolean psleData) {
