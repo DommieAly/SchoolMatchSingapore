@@ -153,6 +153,8 @@ class GoogleMapsCreditFlowTest {
         assertThat(page).contains("Commute times:</span>", "10 min");
         assertThat(page).containsOnlyOnce(CREDIT);
         assertThat(page).containsOnlyOnce(BOX);
+        String oneLine = page.replaceAll("\\s+", " ");
+        assertThat(oneLine).containsSubsequence(BOX, CREDIT, "10 min", "</ol> </div> </div> <aside");
     }
 
     @Test

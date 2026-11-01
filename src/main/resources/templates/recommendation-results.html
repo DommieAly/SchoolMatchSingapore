@@ -52,7 +52,7 @@
             </div>
 
             <!--/* DC-88: only when a commute time from Google is on the page; the box keeps the credit with the times */-->
-            <div th:classappend="${!#lists.isEmpty(recommendations.?[commuteMin != null]) and !googleStub} ? 'google-content-box'">
+            <div th:classappend="${!#lists.isEmpty(recommendations.?[commuteMin != null]) and googleStub != true} ? 'google-content-box'">
             <th:block th:if="${!#lists.isEmpty(recommendations.?[commuteMin != null])}">
                 <p th:replace="~{fragments/google-maps-credit :: credit('Commute times')}"></p>
             </th:block>

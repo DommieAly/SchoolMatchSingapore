@@ -945,7 +945,7 @@ select[multiple] option:checked {
 }
 
 .google-maps-credit-name { white-space: nowrap; }
-.google-content-box { padding: 1rem; background: var(--sm-surface-2); border: 1px solid var(--sm-line); border-radius: var(--sm-radius-lg); }
+.google-content-box { padding: 1rem 1rem 0; background: var(--sm-surface-2); border: 1px solid var(--sm-line); border-radius: var(--sm-radius-lg); }
 .card-body > .google-maps-credit { margin: 1rem 0 0; }
 
 .card > .google-maps-credit {

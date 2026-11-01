@@ -22,11 +22,12 @@ check() {  # check <name> <headers> <expected status> [expected location]
 }
 check "home page"                 "$(req "$B/")" 200
 check "members page as guest"     "$(req "$B/profile")" 302 "/login?next=/profile"
-check "register"                  "$(req -H "Origin: $B" --data-urlencode "username=$U" --data-urlencode "email=$U@example.com" --data-urlencode "password=$P" --data-urlencode "confirm=$P" "$B/register")" 302 "/login"
+registered=$(req -H "Origin: $B" --data-urlencode "username=$U" --data-urlencode "email=$U@example.com" --data-urlencode "password=$P" --data-urlencode "confirm=$P" "$B/register")
+check "register"                  "$registered" 302 "/login"
 check "log in"                    "$(req -H "Origin: $B" --data-urlencode "identifier=$U" --data-urlencode "password=$P" "$B/login")" 302 "/"
 check "members page as member"    "$(req "$B/profile")" 200
 check "log out"                   "$(req -H "Origin: $B" -X POST "$B/logout")" 302 "/"
 check "form from another site"    "$(curl -s "${K[@]}" -o /dev/null -D - -H "Origin: https://evil.example" --data-urlencode "identifier=x" --data-urlencode "password=y" "$B/login" | tr -d '\r')" 403
+[[ $(awk 'NR==1{print $2}' <<<"$registered") == 302 ]] && echo "Test account left behind: $U@example.com (docs/deployment.md, \"Deleting one account\")"
 ((FAIL)) && echo "Some checks failed (docs/deployment.md, Troubleshooting)." || echo "All checks passed."
-echo "Test account left behind: $U@example.com (docs/deployment.md, \"Deleting one account\")"
 exit $FAIL

@@ -140,7 +140,7 @@
 
         <!--/* displayResults (FR-SEARCH-03, FR-SEARCH-06): one summary card per school */-->
         <section th:fragment="displayResults" th:if="${totalCount > 0}" aria-label="Results"
-                 th:classappend="${cardCommuteMin != null and !googleStub} ? 'google-content-box'">
+                 th:classappend="${cardCommuteMin != null and googleStub != true} ? 'google-content-box'">
             <!--/* DC-88: only when the cards show travel times from Google */-->
             <th:block th:if="${cardCommuteMin != null}">
                 <p th:replace="~{fragments/google-maps-credit :: credit('Travel times')}"></p>

@@ -32,7 +32,7 @@ class VisitorLimitInterceptorTest {
 
     @Test
     @Tag("NFR-LIMIT-01")
-    @DisplayName("TC-VisitorLimit-01: the numbers of each rule: 10/60 address search, 20/200 sign-in, 10/40 heavy Google, 30/120 Google pages")
+    @DisplayName("TC-VisitorLimit-01: the numbers of each rule: 10/60 address search, 20/200 sign-in, 10/40 heavy Google, 10/40 Get recommendations, 30/120 Google pages")
     void numbers() {
         assertThat(Rule.ADDRESS_SEARCH.perMinute).isEqualTo(10);
         assertThat(Rule.ADDRESS_SEARCH.perHour).isEqualTo(60);

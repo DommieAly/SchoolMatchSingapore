@@ -11,7 +11,7 @@ Branch `feat/postgresql`, 4 Oct 2026. **As built** (implementation steps 1–8 o
 - Hibernate 7.4.5 `validate` passes for the seven JPA entities on both databases.
 - Both databases gave the same results. A later review found one difference these rows did not try: H2 accepted a format value with a trailing line break, such as `'ACTIVE'` plus a newline, which PostgreSQL refuses. The format CHECKs now refuse it on both (section 8).
 
-**How the build is checked.** `./mvnw verify` runs about 1,450 tests. The database tests run twice, on H2 2.4.240 and on embedded PostgreSQL 17.11 (section 10):
+**How the build is checked.** `./mvnw verify` runs about 1,600 tests. The database tests run twice, on H2 2.4.240 and on embedded PostgreSQL 17.11 (section 10):
 
 - `MigrationsTest`: V1–V3 apply on a connection that is then closed, Hibernate validates, the columns and constraint names are the same on both databases, and 94 bad rows are each refused with the expected constraint named.
 - The loader, the read path and the round trip run on both databases with the seed, both test fixtures and the real `ACTIVE` snapshot `2026-10-04.1`.

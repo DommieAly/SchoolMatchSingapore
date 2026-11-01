@@ -3,8 +3,10 @@ package sg.schoolmatch.flow;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -14,11 +16,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import sg.schoolmatch.boundary.ui.support.ReferenceLocationStore;
 import sg.schoolmatch.control.DirectionsController;
 import sg.schoolmatch.control.FacilityController;
 import sg.schoolmatch.control.SchoolController;
+import sg.schoolmatch.entity.common.Coordinate;
 import sg.schoolmatch.entity.facility.Facility;
 import sg.schoolmatch.entity.location.LocationSource;
 import sg.schoolmatch.entity.location.ReferenceLocation;
@@ -75,6 +80,21 @@ class FacilityFlowTest {
                 .andExpect(content().string(containsString(nearest.getName())))
                 .andExpect(content().string(containsString("km from CATHOLIC HIGH SCHOOL")))
                 .andExpect(content().string(containsString("Back to facilities")));
+    }
+
+    @Test
+    @Tag("NFR-ATTR-01")
+    @DisplayName("TC-FacilityFlow-06: stub travel times are made up, so search results have neither the credit nor its box (DC-88)")
+    void stubTravelTimesHaveNoGoogleCredit() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(ReferenceLocationStore.CURRENT,
+                new ReferenceLocation(new Coordinate(1.3510, 103.8484), LocationSource.MANUAL_ENTRY, "BISHAN MRT"));
+
+        mvc.perform(get("/schools").param("travel", "1").param("mode", "TRANSIT").param("maxMin", "45").session(session))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("cardCommuteMin", notNullValue()))
+                .andExpect(content().string(not(containsString("google-maps-credit"))))
+                .andExpect(content().string(not(containsString("google-content-box"))));
     }
 
     @Test

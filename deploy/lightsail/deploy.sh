@@ -20,8 +20,15 @@ SITE_ADDRESS=${SITE_ADDRESS:-$("${SSH[@]}" "sed -n 's/^SITE_ADDRESS=//p' /opt/sc
 SITE_ADDRESS=${SITE_ADDRESS:-${1//./-}.sslip.io}
 [[ $SITE_ADDRESS =~ ^[A-Za-z0-9.-]+$ ]] || { echo "FAIL: SITE_ADDRESS must be a host name only, with no https:// and no /"; exit 1; }
 # A commit without the password block takes the password off (docs/deployment.md, "Putting a password on the site")
-if ! grep -Eq '^[[:space:]]*basic_auth' Caddyfile && "${SSH[@]}" "grep -q '^SITE_PASSWORD_HASH=' /opt/schoolmatch/.env"; then
-    echo "WARNING: the server's .env has a site password, but this commit's Caddyfile does not use it, so the site will be open to everyone."
+PASSWORD_WARNING=
+if ! grep -Eq '^[[:space:]]*basic_auth' Caddyfile; then
+    if "${SSH[@]}" "grep -q '^SITE_PASSWORD_HASH=' /opt/schoolmatch/.env"; then
+        PASSWORD_WARNING="WARNING: the server's .env has a site password, but this commit's Caddyfile does not use it, so the site will be open to everyone."
+        echo "$PASSWORD_WARNING"
+    fi
+else
+    rc=0; "${SSH[@]}" "grep -q '^SITE_PASSWORD_HASH=.' /opt/schoolmatch/.env" || rc=$?
+    [[ $rc != 1 ]] || { echo "FAIL: this commit's Caddyfile has the password block, but the server's .env has no SITE_PASSWORD_HASH, so no one could open the site (docs/deployment.md, \"Putting a password on the site\")."; exit 1; }
 fi
 
 # --load: a build with a docker-container builder otherwise leaves no image for docker save
@@ -50,3 +57,4 @@ for i in $(seq 1 36); do          # wait 3 to 6 minutes for the HTTPS certificat
 done
 echo
 echo "Online: https://$SITE_ADDRESS ($IMAGE)"
+[[ -z $PASSWORD_WARNING ]] || echo "$PASSWORD_WARNING"

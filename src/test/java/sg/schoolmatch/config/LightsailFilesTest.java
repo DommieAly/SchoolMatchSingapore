@@ -239,6 +239,8 @@ class LightsailFilesTest {
         assertThat(deploy).doesNotContain("docker push", "rehearsal");
         assertThat(deploy).as("a commit without the password block must not open the site silently")
                 .contains("WARNING: the server's .env has a site password");
+        assertThat(deploy).as("a password block with no hash on the server would lock everyone out")
+                .contains("FAIL: this commit's Caddyfile has the password block");
         assertThat(file("rehearsal.override.yaml")).contains("GOOGLE_MODE: stub", "ONEMAP_MODE: stub", "127.0.0.1:8443:443");
         assertThat(file(".gitignore")).contains(".rehearsal/");
     }
