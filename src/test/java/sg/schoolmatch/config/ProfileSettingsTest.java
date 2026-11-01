@@ -74,6 +74,22 @@ class ProfileSettingsTest {
     }
 
     @Test
+    @Tag("NFR-SEC-03")
+    @DisplayName("TC-ProfileSettings-06: the prod profile works behind an HTTPS load balancer: it trusts the forwarded scheme, redirects with relative URLs, marks both cookies Secure with the __Host- prefix, keeps row values out of database errors and shuts down gracefully (docs/deployment.md)")
+    void prodProfileBehindLoadBalancer() {
+        Properties p = profile("prod");
+        assertThat(p.getProperty("server.forward-headers-strategy")).isEqualTo("native");
+        assertThat(p.getProperty("server.tomcat.use-relative-redirects")).isEqualTo("true");
+        assertThat(p.getProperty("server.servlet.session.cookie.secure")).isEqualTo("true");
+        assertThat(p.getProperty("server.tomcat.keep-alive-timeout")).isEqualTo("75s");
+        assertThat(p.getProperty("server.shutdown")).isEqualTo("graceful");
+        assertThat(p.getProperty("spring.lifecycle.timeout-per-shutdown-phase")).isEqualTo("20s");
+        assertThat(p.getProperty("server.servlet.session.cookie.name")).isEqualTo("__Host-JSESSIONID");
+        assertThat(p.getProperty("app.session.cookie-name")).isEqualTo("__Host-SM_SESSION");
+        assertThat(p.getProperty("spring.datasource.hikari.data-source-properties.logServerErrorDetail")).isEqualTo("false");
+    }
+
+    @Test
     @Tag("FR-DATA-02")
     @DisplayName("TC-ProfileSettings-04: compose.yaml runs PostgreSQL 17 (service db, named volume, local port only) with the postgres profile's defaults")
     void composeFile() {

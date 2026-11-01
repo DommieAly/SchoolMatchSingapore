@@ -1,0 +1,19 @@
+# Keep the build context small and keep secrets and local data out of the image (Dockerfile).
+.git
+.github
+.idea
+.vscode
+*.iml
+target/
+.local/
+.env
+.env.*
+!.env.example
+data/raw/
+data/tools/
+**/__pycache__/
+*.log
+.DS_Store
+# Not needed in the image (the Dockerfile copies only what it names); keeps the rehearsal's private keys out
+deploy/
+docs/

@@ -35,6 +35,8 @@ build/
 ### SchoolMatch ###
 # Local secrets and keys (copy .env.example to .env)
 .env
+.env.*
+!.env.example
 # Local H2 databases (delete this folder to reset your data)
 .local/
 # Raw downloads made by the dataset importer

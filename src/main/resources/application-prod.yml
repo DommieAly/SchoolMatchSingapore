@@ -1,10 +1,12 @@
-# Production (docs/database-design.md, section 9). The deployment itself is decided later (design section 11, step 9).
+# Production (docs/database-design.md, section 9). How to deploy it: docs/deployment.md (AWS ECS Express Mode + RDS).
 # Every database value comes from the environment and has no default, so a missing one stops start-up:
 #   DB_URL       e.g. jdbc:postgresql://<host>:5432/schoolmatch?sslmode=verify-full&sslrootcert=<CA bundle>&reWriteBatchedInserts=true
 #   DB_USERNAME  an app user without DDL rights where the provider allows it (Flyway then needs a separate run)
 #   DB_PASSWORD
 # Keys stay in the environment too (NFR-SEC-01); nothing secret is written in this file.
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 20s   # graceful shutdown ends before the platform's 30 s kill
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -15,12 +17,30 @@ spring:
         # TLS, and the driver checks the server's certificate and host name. A sslmode=... inside DB_URL wins over
         # this default, so DB_URL may repeat verify-full but must never name a weaker mode.
         sslmode: verify-full
+        logServerErrorDetail: false   # keep row values (emails, addresses) out of exception messages and the logs
   jpa:
     hibernate:
       ddl-auto: validate   # as in application.yml; repeated so nobody overrides it here (Flyway owns the schema)
   h2:
     console:
       enabled: false
+
+# Production runs behind an HTTPS proxy or load balancer that talks plain HTTP to the container (docs/deployment.md).
+server:
+  # Trust X-Forwarded-Proto/-For from the proxy, so redirects say https:// (otherwise the browser is sent back to
+  # http:// and the Secure cookies are not sent). Tomcat accepts these headers only from private-network addresses.
+  forward-headers-strategy: native
+  servlet:
+    session:
+      cookie:
+        # The page-state cookie (flash messages, starting point). The __Host- prefix makes the browser refuse a cookie
+        # of this name that another site under the same parent domain (e.g. another *.on.aws app) tries to plant.
+        name: __Host-JSESSIONID
+        secure: true
+  shutdown: graceful       # finish requests in progress when the platform stops the container
+  tomcat:
+    keep-alive-timeout: 75s   # longer than the load balancer's 60 s idle timeout, so it never reuses a closed connection
+    use-relative-redirects: true   # Location: /login, so the browser keeps the scheme, host and port it used
 
 app:
   dataset:
@@ -29,4 +49,5 @@ app:
     # rolls the school data back on purpose (data/README.md, "Rollback").
     allow-rollback: ${DATASET_ALLOW_ROLLBACK:false}
   session:
+    cookie-name: __Host-SM_SESSION   # the login cookie; __Host- as for JSESSIONID above (needs Secure, Path=/, no Domain)
     cookie-secure: true    # production is served over HTTPS only (NFR-SEC-03)

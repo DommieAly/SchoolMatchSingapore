@@ -267,6 +267,7 @@ Every design class keeps its **exact Lab 2 name**. Spring calls its web classes 
 | [`docs/recommendation-scoring.md`](docs/recommendation-scoring.md) | PSLE range rules, SAFE / MATCH / REACH, plan warnings, recommendation scores |
 | [`data/README.md`](data/README.md) | data sources, licences, the active snapshot, school codes, curation rules, loading and rollback |
 | [`docs/database-design.md`](docs/database-design.md) | the database as built: tables, keys, normal forms, the loader, profiles and tests |
+| [`docs/deployment.md`](docs/deployment.md) | putting the app online on AWS (ECS Express Mode + RDS PostgreSQL), the production rehearsal in [`deploy/rehearsal/`](deploy/rehearsal/), and tear-down |
 | `src/test/resources/testcases/TC-*.csv` | Lab 4 test-case tables (header `tc_id,requirement,technique,input,expected`). Each one is read by the tests of its area, e.g. `TC-SEARCH.csv` by `SchoolControllerTest`, `TC-FILTER.csv` by `FilterFlowTest` |
 | Example tests to copy | `CoordinateTest` (plain JUnit), `SchoolControllerTest` (Mockito), `SchoolSearchUITest` (MockMvc), `SearchFlowTest` (whole app), `ShortlistRepositoryTest` (`@DataJpaTest`, save and reload), `GoogleRoutesApiTest` (`MockRestServiceServer`), `PagesSmokeTest` (every GET route, guest and member; log in with `support/TestMembers`), `ArchitectureTest` |
 

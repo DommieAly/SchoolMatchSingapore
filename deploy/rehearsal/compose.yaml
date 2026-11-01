@@ -1,0 +1,52 @@
+# Production rehearsal (docs/deployment.md, step 2): the real image with the prod profile, PostgreSQL over TLS with
+# certificate checking (verify-full), and an HTTPS proxy in front, like the load balancer on AWS.
+#   ./make-certs.sh && docker compose up -d --build --wait && ./smoke.sh      then open https://localhost:8443
+#   docker compose down -v                                                    remove everything (throwaway data)
+# --build rebuilds schoolmatch:latest from this working tree; --wait returns when the app answers its health check.
+name: sm-rehearsal
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: schoolmatch
+      POSTGRES_USER: schoolmatch
+      POSTGRES_PASSWORD: rehearsal-only-password
+    volumes:
+      - ./certs:/certs:ro
+    # PostgreSQL wants its key owned by its own user with mode 600; the bind mount cannot give that, so copy it first.
+    entrypoint: ["sh", "-c", "cp /certs/server.crt /certs/server.key /tmp/ && chown postgres /tmp/server.* && chmod 600 /tmp/server.key && exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/tmp/server.crt -c ssl_key_file=/tmp/server.key"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U schoolmatch -d schoolmatch"]
+      interval: 3s
+      retries: 20
+  app:
+    image: schoolmatch:latest
+    build: ../..
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/schoolmatch?sslmode=verify-full&sslrootcert=/certs/ca.crt&reWriteBatchedInserts=true
+      DB_USERNAME: schoolmatch
+      DB_PASSWORD: rehearsal-only-password
+      GOOGLE_MODE: stub
+      ONEMAP_MODE: stub
+    volumes:
+      - ./certs/ca.crt:/certs/ca.crt:ro
+    mem_limit: 1g
+    healthcheck:   # the same path as the AWS health check
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/actuator/health/readiness"]
+      interval: 2s
+      retries: 60
+  proxy:
+    image: caddy:2-alpine
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8443:443"
+    command: ["caddy", "reverse-proxy", "--from", "localhost:443", "--to", "app:8080", "--internal-certs"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "--no-check-certificate", "https://localhost/actuator/health/readiness"]
+      interval: 2s
+      retries: 30

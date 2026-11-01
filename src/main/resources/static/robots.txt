@@ -1,0 +1,4 @@
+# The deployed demo is not meant for search engines: crawlers would use up the small daily Google quota
+# (docs/deployment.md). Share the link with the class only.
+User-agent: *
+Disallow: /
