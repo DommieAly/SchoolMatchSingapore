@@ -43,7 +43,7 @@ public class DirectionsController {
      * partial route (FR-ROUTE-08). The result's origin and destination are set.
      *
      * @throws InvalidInputException when the origin is not resolved, the destination has no valid coordinate
-     *                               or the mode is missing (Get Directions EX-2)
+     *                               or the mode is missing (Get Directions EX-1)
      * @throws sg.schoolmatch.error.ExternalServiceUnavailableException when Google cannot be reached or today's
      *                               budget is used up
      */

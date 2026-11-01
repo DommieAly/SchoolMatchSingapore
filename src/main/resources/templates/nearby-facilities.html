@@ -71,14 +71,14 @@
                 th:replace="~{fragments/icon :: icon('map')}"></svg>View on map</a>
     </div>
 
-    <!--/* displayServiceUnavailable (EX-1): the banner above holds the message */-->
+    <!--/* displayServiceUnavailable (EX-2): the banner above holds the message */-->
     <div th:if="${serviceUnavailable}" class="empty-state">
         <span class="empty-state-icon"><svg th:replace="~{fragments/icon :: icon('alert')}"></svg></span>
         <p class="empty-state-title">The list cannot be loaded right now</p>
         <a class="btn btn-primary" th:href="${pageUrl}">Try again</a>
     </div>
 
-    <!--/* displayNoNearbyFacilities (AF-1, FR-FACILITY-06) */-->
+    <!--/* displayNoNearbyFacilities (EX-1, FR-FACILITY-06) */-->
     <div th:if="${noFacilitiesMessage != null}" class="empty-state">
         <span class="empty-state-icon"><svg th:replace="~{fragments/icon :: icon('pin')}"></svg></span>
         <p class="empty-state-title" th:text="${noFacilitiesMessage}">No libraries or tuition centres found near the school.</p>

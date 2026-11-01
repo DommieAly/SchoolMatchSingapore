@@ -30,7 +30,7 @@
         Nearby facility information is temporarily unavailable. Please try again in a few minutes.
         <a th:href="@{/schools/{code}(code=${school.schoolCode})}">Back to the school</a>
     </div>
-    <!--/* AF-2: no facility to show */-->
+    <!--/* EX-2: no facility to show */-->
     <div th:if="${foundCount == 0 and schoolNotMappable == null and serviceUnavailable == null}"
          class="alert alert-info" role="status"
          th:text="|No libraries or tuition centres to show within ${radiusKm} km of ${school.name}.|">
