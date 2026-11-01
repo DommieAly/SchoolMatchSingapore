@@ -82,6 +82,9 @@
                 th:replace="~{fragments/icon :: icon('locate')}"></svg>Use my current location</button>
         <p class="form-text mt-0 mb-0" data-device-status>Your browser asks for permission first.</p>
     </form>
+    <!--/* DC-87: visitors are told where a location goes before they give one (Google Maps Platform Terms 4.4(c)(iii)(A)) */-->
+    <p class="form-text mt-2 mb-0">A typed address goes to OneMap. For travel times and directions, the starting point
+        goes to Google, rounded to about 100 m. <a th:href="@{/about/privacy}">Terms and privacy</a></p>
     <script defer th:src="@{/js/DeviceLocationInterface.js}"></script>
     <script defer th:src="@{/js/draft-return.js}"></script>
 </div>

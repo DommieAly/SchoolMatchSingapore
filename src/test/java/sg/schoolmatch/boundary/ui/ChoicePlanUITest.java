@@ -158,7 +158,7 @@ class ChoicePlanUITest {
 
         mvc.perform(get("/plan").cookie(member()))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Add your PSLE score in your profile to see SAFE/MATCH/REACH")))
+                .andExpect(content().string(containsString("Add a PSLE score in your profile to see SAFE/MATCH/REACH")))
                 .andExpect(content().string(containsString("href=\"/profile\"")))
                 .andExpect(content().string(not(containsString("data-chance="))));
     }

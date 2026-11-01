@@ -162,6 +162,8 @@ public class FacilityController {
         merged.setTelephone(pick(details, summary, Facility::getTelephone));
         merged.setWebsite(pick(details, summary, Facility::getWebsite));
         merged.setOpeningHours(pick(details, summary, Facility::getOpeningHours));
+        merged.setAttributions(details != null && !details.getAttributions().isEmpty() ? details.getAttributions()
+                : summary != null ? summary.getAttributions() : List.of());
         return merged;
     }
 

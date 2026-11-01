@@ -32,7 +32,8 @@ public record AppProperties(
         @DefaultValue SearchSettings search,
         @DefaultValue OneMapSettings onemap,
         @DefaultValue HttpSettings http,
-        @DefaultValue TransportFilterSettings transportFilter) {
+        @DefaultValue TransportFilterSettings transportFilter,
+        @DefaultValue VisitorLimitSettings visitorLimit) {
 
     /**
      * {@code app.external.<service>.mode}: "stub" (default) or "live". Selects the bean for each interface:
@@ -300,5 +301,9 @@ public record AppProperties(
             }
             maxSpeedKmh = Collections.unmodifiableMap(merged);
         }
+    }
+
+    /** Limits per visitor address (VisitorLimitInterceptor, DC-90). Off by default; on in the prod profile. */
+    public record VisitorLimitSettings(@DefaultValue("false") boolean enabled) {
     }
 }

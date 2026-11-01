@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.web.util.UriComponentsBuilder;
+import sg.schoolmatch.entity.facility.Facility;
 import sg.schoolmatch.entity.facility.FacilityType;
 
 /**
@@ -37,6 +38,11 @@ public final class FacilityPages {
             url.queryParam("from", "{from}");
         }
         return url.encode().buildAndExpand(placeId, fromSchoolCode).toUriString();
+    }
+
+    /** The third-party data credits of a list of facilities, each once, for the Google Maps credit (DC-93). */
+    public static List<Facility.Attribution> attributions(List<Facility> facilities) {
+        return facilities.stream().flatMap(facility -> facility.getAttributions().stream()).distinct().toList();
     }
 
     /**

@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <!--/* DM 21 Directions — DirectionsUI.selectTravelMode, displayDirections (FR-ROUTE-07, DC-05).
-       Model: to, from, destination, destinationUrl, startLocation, mode, modeLabel, modes (ModeOption list with
-       url), route, distanceKm ("2.4"), durationText ("12 min"), steps (StepView list), changeUrl, cancelUrl,
-       interactive, markersJson (start + destination), routePolyline (only with an interactive map). */-->
+       Model: to, from, destination (School or Facility), destinationFromGoogle (it is a Facility), destinationUrl,
+       startLocation, mode, modeLabel, modes (ModeOption list with url), route, distanceKm ("2.4"), durationText
+       ("12 min"), steps (StepView list), changeUrl, cancelUrl, interactive, markersJson (start + destination),
+       routePolyline (only with an interactive map). */-->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Directions')}"></head>
 <body>
@@ -62,12 +63,18 @@
                         </li>
                     </ol>
                     <p class="note mt-3 mb-0"><svg th:replace="~{fragments/icon :: icon('info')}"></svg><span>
-                        <th:block th:unless="${googleStub}">Estimated by Google Maps Platform.</th:block>
                         Check the route before you travel.</span></p>
                     <p th:if="${googleStub}" class="small mt-2 mb-0">
                         <span class="badge-stub">Demo data (stub)</span>
                         Straight-line estimate, not real directions.
                     </p>
+                    <!--/* DC-88: the time, distance and steps are Google's and sit outside the map. DC-93: a facility's name is too */-->
+                    <th:block th:if="${destinationFromGoogle}">
+                        <p th:replace="~{fragments/google-maps-credit :: placesCredit('Route', ${destination.attributions})}"></p>
+                    </th:block>
+                    <th:block th:unless="${destinationFromGoogle}">
+                        <p th:replace="~{fragments/google-maps-credit :: credit('Route')}"></p>
+                    </th:block>
                 </div>
             </section>
             <a class="btn btn-outline-secondary mt-3" th:href="${cancelUrl}"

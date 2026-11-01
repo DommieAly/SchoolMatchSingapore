@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<!--/*
+  credit(label): the Google Maps credit for Google content shown outside a Google map (NFR-ATTR-01, DC-88).
+    <p th:replace="~{fragments/google-maps-credit :: credit('Travel times')}"></p>
+  placesCredit(label, sources): the same for Places content, followed by the third-party data credits Google gave with
+  it (Facility.Attribution, DC-93). sources may be empty.
+    <p th:replace="~{fragments/google-maps-credit :: placesCredit('Places', ${placeSources})}"></p>
+  label says which content on the page is Google's. Put it inside the box that holds that content, at the top or the
+  bottom, and only where Google's content is really shown. th:replace runs before th:if, so a condition goes on a
+  th:block around it. The size, weight and colour rules are in app.css (.google-maps-credit).
+  Rules: https://developers.google.com/maps/documentation/places/web-service/policies and .../routes/policies
+  ("Google Maps" unchanged, on one line, translate="no"). Known difference from the rules (DC-88): Google allows this
+  text only where space is limited and asks for its logo otherwise. The logo file would replace the name span here.
+  Not shown in stub mode: stub data is made up, and Google's rules forbid crediting Google for other content. The
+  pages show the "Demo data (stub)" badge instead, as directions.html does.
+*/-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<p th:fragment="credit(label)" th:unless="${googleStub}" class="google-maps-credit"><span th:text="|${label}:|">Travel times:</span> <span class="google-maps-credit-name" translate="no">Google Maps</span></p>
+<p th:fragment="placesCredit(label, sources)" th:unless="${googleStub}" class="google-maps-credit"><span th:text="|${label}:|">Places:</span> <span class="google-maps-credit-name" translate="no">Google Maps</span><th:block th:each="source : ${sources}">, <a th:if="${source.hasWebLink()}" th:href="${source.providerUri}" target="_blank" rel="noopener" th:text="${source.provider}">Data provider</a><span th:unless="${source.hasWebLink()}" th:text="${source.provider}">Data provider</span></th:block></p>
+</body>
+</html>

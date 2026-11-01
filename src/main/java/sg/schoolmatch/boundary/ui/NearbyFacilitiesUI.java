@@ -82,6 +82,7 @@ public class NearbyFacilitiesUI {
             }
             model.addAttribute("facilities", facilities);
             model.addAttribute("distances", distancesKm(facilities, school));
+            model.addAttribute("placeSources", FacilityPages.attributions(facilities));
             if (facilities.isEmpty()) {
                 model.addAttribute("noFacilitiesMessage", noFacilitiesMessage(school, criteria));
             }

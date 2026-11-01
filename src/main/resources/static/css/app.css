@@ -932,6 +932,28 @@ select[multiple] option:checked {
 
 .note .icon { margin-top: 0.12em; vertical-align: 0; }
 
+/* Google Maps credit (fragments/google-maps-credit, DC-88). Google's rules for the text form: Roboto or the body font,
+   normal style and spacing, weight 400, 12–16 px, gray #5E5E5E (6.5:1 on white, 6:1 on the page), on one line */
+.google-maps-credit {
+  margin: 0 0 0.75rem;
+  font-family: Roboto, var(--sm-font);
+  font-size: 0.875rem;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: #5e5e5e;
+}
+
+.google-maps-credit-name { white-space: nowrap; }
+.google-content-box { padding: 1rem; background: var(--sm-surface-2); border: 1px solid var(--sm-line); border-radius: var(--sm-radius-lg); }
+.card-body > .google-maps-credit { margin: 1rem 0 0; }
+
+.card > .google-maps-credit {
+  margin: 0;
+  padding: 0.5rem 1.25rem;
+  border-top: 1px solid var(--sm-line);
+}
+
 /* PSLE range chips */
 .range-list {
   display: flex;

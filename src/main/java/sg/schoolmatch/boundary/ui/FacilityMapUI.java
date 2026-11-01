@@ -41,7 +41,7 @@ import tools.jackson.databind.json.JsonMapper;
  *   <li>Places service down → "temporarily unavailable" (EX-3).</li>
  *   <li>No browser key / limit reached → "Map unavailable"; the list beside it still works (EX-1).</li>
  * </ul>
- * Model: {@code school}, {@code facilities} (rows with a location), {@code omittedCount}, {@code radiusKm},
+ * Model: {@code school}, {@code facilities} (rows with a location), {@code placeSources}, {@code omittedCount}, {@code radiusKm},
  * {@code typesLabel}, {@code interactive}, {@code markersJson}, {@code listUrl}, and {@code fieldErrors} /
  * {@code serviceUnavailable} / {@code schoolNotMappable} when something went wrong.
  */
@@ -111,6 +111,7 @@ public class FacilityMapUI {
 
         model.addAttribute("school", school);
         model.addAttribute("facilities", onMap.stream().map(f -> row(f, school)).toList());
+        model.addAttribute("placeSources", FacilityPages.attributions(onMap));
         model.addAttribute("foundCount", facilities.size());
         model.addAttribute("omittedCount", facilities.size() - onMap.size());
         model.addAttribute("radiusKm", radius);

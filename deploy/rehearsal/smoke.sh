@@ -1,8 +1,7 @@
 #!/bin/bash
-# Smoke test of a running deployment (docs/deployment.md, steps 2 and 7): register, log in, open a members-only page,
+# Smoke test of a running deployment (docs/deployment.md, steps 1 and 6): register, log in, open a members-only page,
 # log out, and check that a form posted from another site is refused. It leaves one smoke_… test account behind.
 # Usage: ./smoke.sh [base URL]   default https://localhost:8443 (the rehearsal). Exit code 0 = every check passed.
-# On AWS, run it only after the deployment has finished: its deliberate 403 counts toward the rollback alarm.
 B=${1:-https://localhost:8443}; B=${B%/}
 K=(); [[ $B == https://localhost* ]] && K=(-k)          # the rehearsal's certificate is self-made
 J=$(mktemp); U=smoke_$RANDOM$RANDOM; P="Smoke$(openssl rand -hex 8)1"; FAIL=0
@@ -29,4 +28,5 @@ check "members page as member"    "$(req "$B/profile")" 200
 check "log out"                   "$(req -H "Origin: $B" -X POST "$B/logout")" 302 "/"
 check "form from another site"    "$(curl -s "${K[@]}" -o /dev/null -D - -H "Origin: https://evil.example" --data-urlencode "identifier=x" --data-urlencode "password=y" "$B/login" | tr -d '\r')" 403
 ((FAIL)) && echo "Some checks failed (docs/deployment.md, Troubleshooting)." || echo "All checks passed."
+echo "Test account left behind: $U@example.com (docs/deployment.md, \"Deleting one account\")"
 exit $FAIL

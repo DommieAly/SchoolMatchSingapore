@@ -18,6 +18,7 @@
                 <p class="page-subtitle">Keep a shortlist, plan your six choices and get recommendations.</p>
             </header>
             <div th:replace="~{fragments/messages :: messages}"></div>
+            <p th:replace="~{fragments/demo-notice :: demoNotice}"></p>
             <div class="card">
                 <div class="card-body p-4">
                     <form method="post" th:action="@{/register}" th:object="${form}" novalidate

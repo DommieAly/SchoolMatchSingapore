@@ -1,5 +1,6 @@
-# Production rehearsal (docs/deployment.md, step 2): the real image with the prod profile, PostgreSQL over TLS with
-# certificate checking (verify-full), and an HTTPS proxy in front, like the load balancer on AWS.
+# A short rehearsal of the image alone: the prod profile, PostgreSQL over TLS with certificate checking (verify-full),
+# and an HTTPS proxy in front. Not for production. The rehearsal of the real production files is in deploy/lightsail
+# (docs/deployment.md, step 1).
 #   ./make-certs.sh && docker compose up -d --build --wait && ./smoke.sh      then open https://localhost:8443
 #   docker compose down -v                                                    remove everything (throwaway data)
 # --build rebuilds schoolmatch:latest from this working tree; --wait returns when the app answers its health check.
@@ -34,7 +35,7 @@ services:
     volumes:
       - ./certs/ca.crt:/certs/ca.crt:ro
     mem_limit: 1g
-    healthcheck:   # the same path as the AWS health check
+    healthcheck:   # the same path as in production
       test: ["CMD", "curl", "-fs", "http://localhost:8080/actuator/health/readiness"]
       interval: 2s
       retries: 60

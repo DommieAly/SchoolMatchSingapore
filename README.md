@@ -35,7 +35,7 @@ More commands: [Everyday commands](#everyday-commands). More on PostgreSQL: [Run
 
 ## Current state (3 Oct 2026)
 
-Every page of the dialog map is built, and `./mvnw verify` runs about 1,400 tests. The app runs on real data: 147 secondary schools from data.gov.sg with OneMap coordinates, plus the 2025 PSLE score ranges (139 schools) and affiliated primary schools (27 schools) from MOE SchoolFinder, in `data/curated/`. `data/snapshots/ACTIVE` names the snapshot the app loads into its database at start-up; [`data/README.md`](data/README.md) describes it. The user data and the school data share one database, whose tables Flyway creates ([`docs/database-design.md`](docs/database-design.md)).
+Every page of the dialog map is built, and `./mvnw verify` runs about 1,600 tests. The app runs on real data: 147 secondary schools from data.gov.sg with OneMap coordinates, plus the 2025 PSLE score ranges (139 schools) and affiliated primary schools (27 schools) from MOE SchoolFinder, in `data/curated/`. `data/snapshots/ACTIVE` names the snapshot the app loads into its database at start-up; [`data/README.md`](data/README.md) describes it. The user data and the school data share one database, whose tables Flyway creates ([`docs/database-design.md`](docs/database-design.md)).
 
 **What works now:**
 
@@ -45,6 +45,7 @@ Every page of the dialog map is built, and `./mvnw verify` runs about 1,400 test
 - Nearby libraries and tuition centres (list, filter, details, map) and directions to a school or a facility (walk, drive, public transport).
 - Shortlist, compare 2–4 schools, the 6-choice plan with SAFE / MATCH / REACH labels and warnings, and recommendations with a reason for every factor.
 - "About the data" (`/about/data`, footer link) and a health check at `/actuator/health`.
+- "Terms and privacy" (`/about/privacy`, footer link, DC-87), with a "use made-up details only" line on the register and profile pages and a line on the location picker that says where a location goes. To change the contact address, edit `contactEmail` in `about-privacy.html` and `email` in `deploy/lightsail/Caddyfile`.
 - The dataset importer (`import` profile). It built the active snapshot on 3 Oct 2026: 147 schools, 0 errors (see [`data/README.md`](data/README.md)).
 
 **What is still open, stub or test data:**
@@ -52,7 +53,7 @@ Every page of the dialog map is built, and `./mvnw verify` runs about 1,400 test
 - **MOE SchoolFinder data: the TA is still to be informed.** The lead approved using it on 3 Oct 2026. If the TA says no, `psle-ranges.csv` and `affiliations.csv` are emptied and the data imported again; every page still works without ranges (DC-74).
 - **8 schools have no PSLE range**: the specialised schools that admit students through their own process (e.g. NUS High, School of the Arts). Their ranges show "Not available". 8 Integrated Programme schools (e.g. Raffles Institution) have only an IP range, which the app uses as their PG3 range and marks "IP" (DC-77); their PG1 and PG2 show "Not available" ([`data/README.md`](data/README.md), MOE SchoolFinder data).
 - The old 10-school seed with made-up TEST VALUE ranges stays in `data/snapshots/0000-seed` and as the test fixture.
-- **DC-74 to DC-86 wait for team approval** ([`docs/design-changes.md`](docs/design-changes.md)). DC-75 (school name search ignores punctuation and word order) changes search for every dataset, the seed included, not only what the missing PSLE data needs; every search that matched before still matches. It can go into its own PR if the team wants to review it separately.
+- **DC-74 to DC-95 wait for team approval** ([`docs/design-changes.md`](docs/design-changes.md)). DC-75 (school name search ignores punctuation and word order) changes search for every dataset, the seed included, not only what the missing PSLE data needs; every search that matched before still matches. It can go into its own PR if the team wants to review it separately.
 - **The OneMap Terms of Use question is still open** (clause 3 against the licence page; see [`data/README.md`](data/README.md), Licences).
 - **Google runs in stub mode by default.** Routes are straight lines with three "(stub)" steps, and facilities are made-up "(stub)" places. Live mode was tried with real keys on 3 Oct 2026: the map, nearby libraries and tuition centres, and walk, drive and public-transport routes work (Google returns transit routes in Singapore). The travel-time filter and recommendation commute times have not yet been tried live. Without a browser key, map pages show "Map unavailable"; the lists beside the maps still work.
 - **OneMap runs in stub mode by default.** The stub answers only `579767`, `catholic high school` and `bishan`; set `ONEMAP_MODE=live` for real address search.
@@ -183,7 +184,7 @@ In PowerShell, keep the quotes around `-D…` arguments: without them PowerShell
 | `demo` | rehearsals and the demo | H2 file `.local/h2/schoolmatch-demo` | whatever `GOOGLE_MODE` in `.env` says: set `GOOGLE_MODE=live` and the keys on the demo laptop (with no `.env` at all it is live, and stops at start-up without a server key) |
 | `import` | building a new school snapshot (owner B; no web server) | H2 in memory; reads no snapshot (`load-on-startup: false`) and writes only the JSON snapshot | – |
 | `postgres` | trying the app on PostgreSQL, as in production | PostgreSQL 17 from `compose.yaml` (or your own server) through `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`; defaults `localhost:5432`, `schoolmatch`/`schoolmatch` | as in `.env` |
-| `prod` | the deployed app (later, design step 9) | PostgreSQL from `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, no defaults; TLS with certificate check (`sslmode=verify-full`); no H2 console; Secure cookie; an older snapshot is not loaded unless `DATASET_ALLOW_ROLLBACK=true` | as in the environment |
+| `prod` | the deployed app ([`docs/deployment.md`](docs/deployment.md)) | PostgreSQL from `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, no defaults; TLS with certificate check (`sslmode=verify-full`); no H2 console; Secure cookie; an older snapshot is not loaded unless `DATASET_ALLOW_ROLLBACK=true`; limits per visitor on (DC-90) | as in the environment |
 
 ### Run with PostgreSQL
 
@@ -211,7 +212,7 @@ src/main/java/sg/schoolmatch/
 ├─ SchoolMatchApplication   starts the app
 ├─ boundary/
 │  ├─ ui/                   the 16 design UI classes (XxxUI, Spring @Controller): handle page requests
-│  │  └─ support/           helpers for the UI layer: login check, layout data, error pages, session cookie,
+│  │  └─ support/           helpers for the UI layer: login check, limits per visitor, layout data, error pages, session cookie,
 │  │                        search/filter URL parameters (FilterParams), starting point in the session, map markers
 │  └─ external/             interfaces to outside services (DataGovSgInterface, GoogleMapsPlatformInterface, OneMapInterface)
 │     ├─ ExternalCallBudget daily spending limit for live Google calls (DC-41)
@@ -234,6 +235,7 @@ src/test/java/sg/schoolmatch/   tests in the same packages, plus architecture/, 
 src/test/resources/         application-test.yml, fixtures/ (test snapshots), testcases/ (Lab 4 test tables as CSV), sql/ (school rows for @DataJpaTest)
 compose.yaml                the optional local PostgreSQL 17 (Run with PostgreSQL)
 data/                       school data snapshots and hand-curated CSV files
+deploy/lightsail/           the production files and scripts (docs/deployment.md); deploy/rehearsal/ holds the smoke test
 docs/                       design diagrams and the documents listed below
 ```
 
@@ -267,7 +269,7 @@ Every design class keeps its **exact Lab 2 name**. Spring calls its web classes 
 | [`docs/recommendation-scoring.md`](docs/recommendation-scoring.md) | PSLE range rules, SAFE / MATCH / REACH, plan warnings, recommendation scores |
 | [`data/README.md`](data/README.md) | data sources, licences, the active snapshot, school codes, curation rules, loading and rollback |
 | [`docs/database-design.md`](docs/database-design.md) | the database as built: tables, keys, normal forms, the loader, profiles and tests |
-| [`docs/deployment.md`](docs/deployment.md) | putting the app online on AWS (ECS Express Mode + RDS PostgreSQL), the production rehearsal in [`deploy/rehearsal/`](deploy/rehearsal/), and tear-down |
+| [`docs/deployment.md`](docs/deployment.md) | putting the app online on one Amazon Lightsail server (app, PostgreSQL and a Caddy HTTPS proxy in Docker Compose), with the scripts and the rehearsal in [`deploy/lightsail/`](deploy/lightsail/), a password on the site, deleting one account, and tear-down |
 | `src/test/resources/testcases/TC-*.csv` | Lab 4 test-case tables (header `tc_id,requirement,technique,input,expected`). Each one is read by the tests of its area, e.g. `TC-SEARCH.csv` by `SchoolControllerTest`, `TC-FILTER.csv` by `FilterFlowTest` |
 | Example tests to copy | `CoordinateTest` (plain JUnit), `SchoolControllerTest` (Mockito), `SchoolSearchUITest` (MockMvc), `SearchFlowTest` (whole app), `ShortlistRepositoryTest` (`@DataJpaTest`, save and reload), `GoogleRoutesApiTest` (`MockRestServiceServer`), `PagesSmokeTest` (every GET route, guest and member; log in with `support/TestMembers`), `ArchitectureTest` |
 
@@ -296,7 +298,8 @@ Every design class keeps its **exact Lab 2 name**. Spring calls its web classes 
 - To use live Google (key holders only): put the keys in `.env`, set `GOOGLE_MODE=live`, and restart the app. Live mode without `GOOGLE_MAPS_SERVER_KEY` stops at start-up with a message saying so. Write values without quotes: `.env` is read as a `.properties` file, so quotes become part of the value.
 - **Never commit a key**, and never paste one into an issue, chat, screenshot or code. `.env` is gitignored for this reason. If a key leaks, tell E at once; E deletes it in Google Cloud Console and issues a new one.
 - **Spending limit:** every live Google call first takes from a daily allowance (`ExternalCallBudget`): the monthly free amount × 0.8 ÷ 30 per kind of call, counted per budget day in the database; the day ends at midnight Pacific Time, like Google's own daily quotas (`app.external.budget.zone`, DC-80). When today's allowance is used up, the page says the service is temporarily unavailable and the terminal shows one WARN line with the reason (DC-81). Stub mode never counts. The free amounts in `application.yml` were checked against Google's pricing pages on 3 Oct 2026 (DC-79).
-- **OneMap** (address search) is free and needs no key. `OneMapClient` works: set `ONEMAP_MODE=live` in `.env` for real address search. It sends at most one request per second and caches answers for 24 hours. Stub mode answers only a few recorded searches (`src/main/resources/stub/onemap`: `579767`, `catholic high school`, `bishan`). Still open: the OneMap terms on storing coordinates (see [`data/README.md`](data/README.md)).
+- **Limits per visitor:** with `app.visitor-limit.enabled` (on only in the `prod` profile), requests that can call Google or OneMap and the sign-in forms are counted per visitor address. Over a limit the visitor gets a 429 page saying how long to wait (a minute, or at the hour limit about how many minutes); the other pages still work (DC-90, [`docs/routes.md`](docs/routes.md)).
+- **OneMap** (address search) is free and needs no key. `OneMapClient` works: set `ONEMAP_MODE=live` in `.env` for real address search. It sends at most one request per second, and when 5 searches are already waiting another one gets "temporarily unavailable" at once (DC-91). It caches answers for 24 hours. Stub mode answers only a few recorded searches (`src/main/resources/stub/onemap`: `579767`, `catholic high school`, `bishan`). Still open: the OneMap terms on storing coordinates (see [`data/README.md`](data/README.md)).
 - **data.gov.sg** is used only by the dataset importer (`import` profile, see [`data/README.md`](data/README.md)). The running app reads the committed snapshot.
 
 ## Login and sessions

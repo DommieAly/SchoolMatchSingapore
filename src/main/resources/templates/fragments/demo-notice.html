@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<!--/*
+  demoNotice: the quiet line on pages that ask for personal details (register and profile; NFR-PRIV-01, DC-87).
+    <p th:replace="~{fragments/demo-notice :: demoNotice}"></p>
+*/-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<p th:fragment="demoNotice" class="note mb-3" role="note"><svg th:replace="~{fragments/icon :: icon('info')}"></svg><span>Course demo: use made-up details only. <a class="text-nowrap" th:href="@{/about/privacy}">Terms and privacy</a></span></p>
+</body>
+</html>

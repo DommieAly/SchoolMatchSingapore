@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--/* DM 19 DirectionsInput (+ DM 20 DirectionsLoading overlay) — DirectionsUI.selectGetDirections and, when the
        route cannot be shown, DirectionsUI.selectTravelMode (FR-ROUTE-01..04, FR-ROUTE-08, NFR-SEC-06, DC-11, DC-23).
-       Model: to, from, destination (School or Facility) or null, destinationUrl, destinationMappable,
-       startLocation, modes (ModeOption list), mode (selected), returnTo (for the picker), cancelUrl,
+       Model: to, from, destination (School or Facility) or null, destinationFromGoogle (it is a Facility),
+       destinationUrl, destinationMappable, startLocation, modes (ModeOption list), mode (selected), returnTo (for the picker), cancelUrl,
        and flashError / fieldErrors (no starting point, no route, service down). */-->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Get directions')}"></head>
@@ -33,6 +33,10 @@
                                 <p class="small text-body-secondary mb-0"
                                    th:text="${destination.address != null ? destination.address : 'Address not available'}">
                                     9 BISHAN STREET 22</p>
+                                <!--/* DC-88: a facility's name and address are Google's */-->
+                                <th:block th:if="${destinationFromGoogle}">
+                                    <p th:replace="~{fragments/google-maps-credit :: placesCredit('Place details', ${destination.attributions})}"></p>
+                                </th:block>
                                 <div th:unless="${destinationMappable}" class="alert alert-warning small mt-3 mb-0" role="alert">
                                     This place has no map location, so directions cannot be calculated.
                                 </div>

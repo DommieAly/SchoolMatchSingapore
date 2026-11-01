@@ -69,9 +69,22 @@ Every route below is built.
 | `GET /recommendations/results/{id}` | `RecommendationUI` | `displayRecommendations` | – (reads the stored results) | B |
 | `GET /api/districts` (`application/geo+json` via `@ResponseBody`) | `SchoolMapUI` | `toggleDistrictLayer` | `MapController.toggleDistricts` (DC-16, DC-59) | D |
 | `GET /about/data` (data sources page, not a dialog-map state; footer link) | `HomeUI` | `displayDataSources` (DC-68) | `SchoolDataController.getActiveManifest`, `getActiveDataset` | B |
+| `GET /about/privacy` (Terms and privacy page, not a dialog-map state; footer link, and a link from the register and profile pages) | `HomeUI` | `displayTermsAndPrivacy` (DC-87) | – | A |
 | `GET /actuator/health`, `GET /actuator/info` (Spring Boot Actuator; every other `/actuator/*` is 404) | – | – | – | A |
 
 The chosen reference location (from `/location*`) is kept in the servlet session (the `JSESSIONID` cookie). That session holds page state only; login uses the `SM_SESSION` cookie.
+
+## Limits per visitor
+
+`VisitorLimitInterceptor` (DC-90) counts these requests per visitor address when `app.visitor-limit.enabled` is true (the `prod` profile). Over a limit the visitor gets the error page with status 429 and a `Retry-After` header. Every other request is never counted. A new route that can call Google or OneMap must be added to `VisitorLimitInterceptor.ruleFor` and to this table.
+
+| Rule | Routes (a HEAD counts as its GET) | A minute | An hour |
+|:--:|:--:|:--:|:--:|
+| Address search | `POST /location`, `POST /profile` | 10 | 60 |
+| Sign-in | `POST /login`, `POST /register` | 20 | 200 |
+| Heavy Google use | `GET /schools?travel=1` without `page`, `GET /schools/map?travel=1` | 10 | 40 |
+| Get recommendations | `POST /recommendations` | 10 | 40 |
+| Google pages | `GET /schools?travel=1&page=N` (the pager's links), `GET /schools/map`, `GET /schools/{code}/facilities`, `GET /schools/{code}/facilities/map`, `GET /facilities/{placeId}`, `GET /directions` with `mode` or with `to=facility:…` | 30 | 120 |
 
 ## UI class operations
 
@@ -79,7 +92,7 @@ Handler methods in a UI class are named after the design's input operations. The
 
 | UI class | Handlers in code (route) | Other design operations |
 |:--:|:--:|:--:|
-| `HomeUI` | `displayHomePage` (`GET /`), `displayDataSources` (`GET /about/data`, DC-68) | links: `selectLogin`, `selectRegister`, `selectSearchSchools`, `selectGetRecommendations`, `selectProfile` |
+| `HomeUI` | `displayHomePage` (`GET /`), `displayDataSources` (`GET /about/data`, DC-68), `displayTermsAndPrivacy` (`GET /about/privacy`, DC-87) | links: `selectLogin`, `selectRegister`, `selectSearchSchools`, `selectGetRecommendations`, `selectProfile` |
 | `LoginUI` | `displayLoginForm` (`GET /login`), `submitLogin` (`POST /login`) | `showLoginError`, `highlightInvalidFields`, `displayServiceUnavailable` |
 | `RegisterUI` | `displayRegistrationForm` (`GET /register`), `submitRegistration` (`POST /register`) | `highlightInvalidFields`, `displayMessage` |
 | `UserProfileUI` | `displayUserProfile` (`GET /profile`), `submitProfile` (`POST /profile`; `submitPreferences` merged into it, DC-48), `selectLogOut` (`GET /logout`), `promptLogoutConfirmation` (`POST /logout`) | – |

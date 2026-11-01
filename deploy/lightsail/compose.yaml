@@ -1,0 +1,98 @@
+# The production site on one Amazon Lightsail server (docs/deployment.md): the app, PostgreSQL 17 and a Caddy HTTPS
+# proxy. On the server this file is /opt/schoolmatch/compose.yaml, next to .env (mode 600) and certs/.
+#   deploy.sh <ip>            from your computer: sends the image and this file, then starts everything
+#   docker compose ps         on the server, in /opt/schoolmatch: what is running
+#   docker compose logs app   the same place: the app's log (Docker keeps at most 3 x 10 MB per container)
+#   docker compose down       stop; accounts and the HTTPS certificate stay in the named volumes (-v would delete them)
+# The ${...} values come from .env, which Compose reads by itself. Limits: 1 GB + 384 MB + 128 MB, which leaves about
+# 500 MB of the 2 GB for Ubuntu and Docker. The server also has a 1 GB swap file for short peaks.
+name: schoolmatch
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: schoolmatch
+      POSTGRES_USER: schoolmatch
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?run write-server-env.sh first}   # used only when the volume is new
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./certs/server.crt:/certs/server.crt:ro
+      - ./certs/server.key:/certs/server.key:ro
+    # PostgreSQL wants its key owned by its own user with mode 600; the bind mount cannot give that, so copy it first.
+    entrypoint: ["sh", "-c", "cp /certs/server.crt /certs/server.key /tmp/ && chown postgres /tmp/server.* && chmod 600 /tmp/server.key && exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/tmp/server.crt -c ssl_key_file=/tmp/server.key"]
+    mem_limit: 384m
+    stop_grace_period: 30s   # Docker's default 10 s can kill it in the middle of a clean shutdown
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U schoolmatch -d schoolmatch"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+      start_interval: 2s
+    logging: *logging
+
+  app:
+    image: ${IMAGE:?deploy.sh sets IMAGE in .env}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env           # DB_PASSWORD and the Google keys. The image already sets SPRING_PROFILES_ACTIVE=prod
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/schoolmatch?sslmode=verify-full&sslrootcert=/certs/ca.crt&reWriteBatchedInserts=true
+      DB_USERNAME: schoolmatch
+      GOOGLE_MODE: ${GOOGLE_MODE:-live}
+      ONEMAP_MODE: ${ONEMAP_MODE:-live}
+    volumes:
+      - ./certs/ca.crt:/certs/ca.crt:ro
+    mem_limit: 1g            # the image gives the Java heap 70% of this
+    stop_grace_period: 30s   # the prod profile's graceful shutdown takes up to 20 s; Docker's default is 10 s
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/actuator/health/readiness"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 180s     # 10-30 s on a laptop; this server's CPU is slower, above all after a quiet day
+      start_interval: 3s
+    logging: *logging
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?deploy.sh sets SITE_ADDRESS in .env}
+      SITE_USERNAME: ${SITE_USERNAME:-}             # only for the password block in the Caddyfile
+      SITE_PASSWORD_HASH: ${SITE_PASSWORD_HASH:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data       # the HTTPS certificate: keeping it avoids asking for a new one on every start
+      - caddy-config:/config
+    mem_limit: 128m
+    stop_grace_period: 30s
+    healthcheck:   # Caddy's own admin port inside the container: it answers even before the certificate has arrived
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 30s
+      start_interval: 2s
+    logging: *logging
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:

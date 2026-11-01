@@ -17,12 +17,14 @@ import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.error.InvalidInputException;
 import sg.schoolmatch.error.NotAuthenticatedException;
 import sg.schoolmatch.error.NotFoundException;
+import sg.schoolmatch.error.TooManyRequestsException;
 
 /**
  * Turns the app's exceptions into friendly pages ({@code templates/error.html}, NFR-USE-03):
  * <ul>
  *   <li>NotFoundException → 404 (FR-SCHOOL-01: unknown school code)</li>
  *   <li>ExternalServiceUnavailableException → 503 "temporarily unavailable"</li>
+ *   <li>TooManyRequestsException → 429 with {@code Retry-After} (limits per visitor, DC-90)</li>
  *   <li>UnsupportedOperationException("TODO …") → 501 "Not built yet" with the TODO text</li>
  *   <li>InvalidInputException not handled by the page itself → 400 with the field messages</li>
  *   <li>NotAuthenticatedException → clear the cookie and go to the login page (session ended between checks):
@@ -54,6 +56,13 @@ public class ErrorPageAdvice {
         log.warn("{} unavailable for {}", e.getService(), request.getRequestURI(), e);
         return errorPage(request, HttpStatus.SERVICE_UNAVAILABLE, "Temporarily unavailable",
                 e.getService() + " is temporarily unavailable. Please try again in a few minutes.");
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ModelAndView tooManyRequests(TooManyRequestsException e, HttpServletRequest request,
+                                        HttpServletResponse response) {
+        response.setHeader(HttpHeaders.RETRY_AFTER, String.valueOf(e.getRetryAfterSeconds()));
+        return errorPage(request, HttpStatus.TOO_MANY_REQUESTS, "Too many requests", e.getMessage());
     }
 
     /** Only the skeleton's {@code TODO …} exceptions become "Not built yet"; any other one is a real bug (500). */

@@ -1,12 +1,12 @@
-# Production (docs/database-design.md, section 9). How to deploy it: docs/deployment.md (AWS ECS Express Mode + RDS).
+# Production (docs/database-design.md, section 9). How to deploy it: docs/deployment.md (one Amazon Lightsail server).
 # Every database value comes from the environment and has no default, so a missing one stops start-up:
-#   DB_URL       e.g. jdbc:postgresql://<host>:5432/schoolmatch?sslmode=verify-full&sslrootcert=<CA bundle>&reWriteBatchedInserts=true
-#   DB_USERNAME  an app user without DDL rights where the provider allows it (Flyway then needs a separate run)
+#   DB_URL       e.g. jdbc:postgresql://<host>:5432/schoolmatch?sslmode=verify-full&sslrootcert=<CA certificate>&reWriteBatchedInserts=true
+#   DB_USERNAME  the database user
 #   DB_PASSWORD
 # Keys stay in the environment too (NFR-SEC-01); nothing secret is written in this file.
 spring:
   lifecycle:
-    timeout-per-shutdown-phase: 20s   # graceful shutdown ends before the platform's 30 s kill
+    timeout-per-shutdown-phase: 20s   # graceful shutdown ends before Docker's 30 s kill (stop_grace_period in deploy/lightsail/compose.yaml)
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -25,7 +25,7 @@ spring:
     console:
       enabled: false
 
-# Production runs behind an HTTPS proxy or load balancer that talks plain HTTP to the container (docs/deployment.md).
+# Production runs behind an HTTPS proxy (Caddy, deploy/lightsail) that talks plain HTTP to the container.
 server:
   # Trust X-Forwarded-Proto/-For from the proxy, so redirects say https:// (otherwise the browser is sent back to
   # http:// and the Secure cookies are not sent). Tomcat accepts these headers only from private-network addresses.
@@ -34,20 +34,31 @@ server:
     session:
       cookie:
         # The page-state cookie (flash messages, starting point). The __Host- prefix makes the browser refuse a cookie
-        # of this name that another site under the same parent domain (e.g. another *.on.aws app) tries to plant.
+        # of this name that another site under the same parent domain (e.g. another *.sslip.io site) tries to plant.
         name: __Host-JSESSIONID
         secure: true
   shutdown: graceful       # finish requests in progress when the platform stops the container
   tomcat:
-    keep-alive-timeout: 75s   # longer than the load balancer's 60 s idle timeout, so it never reuses a closed connection
+    keep-alive-timeout: 75s   # longer than the proxy's 60 s idle timeout (Caddyfile), so it never reuses a closed connection
     use-relative-redirects: true   # Location: /login, so the browser keeps the scheme, host and port it used
 
 app:
   dataset:
-    # A snapshot older than the database's active version is not loaded, so an old image that restarts during a
-    # rolling deploy cannot switch every instance back. Set DATASET_ALLOW_ROLLBACK=true for the one deploy that
+    # A snapshot older than the database's active version is not loaded, so deploying an older image cannot move the
+    # school data back by accident. Set DATASET_ALLOW_ROLLBACK=true for the one deploy that
     # rolls the school data back on purpose (data/README.md, "Rollback").
     allow-rollback: ${DATASET_ALLOW_ROLLBACK:false}
   session:
     cookie-name: __Host-SM_SESSION   # the login cookie; __Host- as for JSESSIONID above (needs Secure, Path=/, no Domain)
     cookie-secure: true    # production is served over HTTPS only (NFR-SEC-03)
+  visitor-limit:
+    enabled: true          # one visitor cannot send requests without end; this does not protect the Google allowance (DC-90)
+
+# The health check the containers use also asks the database, so docker compose ps shows the app as unhealthy during a
+# database outage (DC-95).
+management:
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: readinessState,db

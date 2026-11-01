@@ -3,6 +3,7 @@ package sg.schoolmatch.boundary.external.onemap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.ExpectedCount.once;
+import static org.springframework.test.web.client.ExpectedCount.times;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withException;
@@ -14,7 +15,11 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -30,6 +35,7 @@ import sg.schoolmatch.boundary.external.OneMapHit;
 import sg.schoolmatch.boundary.external.OneMapInterface;
 import sg.schoolmatch.config.AppProperties;
 import sg.schoolmatch.config.CacheConfig;
+import sg.schoolmatch.error.ExternalFailureLog;
 import sg.schoolmatch.error.ExternalServiceUnavailableException;
 import sg.schoolmatch.support.TestProperties;
 
@@ -147,6 +153,44 @@ class OneMapClientTest {
             assertThat(second).isEqualTo(first).hasSize(1);
         }
         assertThat(OneMapClient.cacheKey("  Bishan   Street 22 ")).isEqualTo("bishan street 22");
+    }
+
+    @Test
+    @Tag("NFR-LIMIT-02")
+    @DisplayName("TC-OneMap-08: with 5 calls already waiting, another call fails at once and sends nothing; the waiting ones still get their turn")
+    void refusesWhenTooManyWait() throws Exception {
+        assertThat(OneMapClient.MAX_WAITING).isEqualTo(5);
+        String url = SEARCH + "?searchVal=a&returnGeom=Y&getAddrDetails=Y&pageNum=1";
+        server.expect(times(OneMapClient.MAX_WAITING), requestTo(url))
+                .andRespond(withSuccess(resource("/fixtures/external/onemap/empty.json"), MediaType.APPLICATION_JSON));
+        OneMapClient client = client(0);
+        Executor newThread = task -> new Thread(task).start();
+        List<CompletableFuture<List<OneMapHit>>> waiting = new ArrayList<>();
+
+        synchronized (client) {   // no call gets its turn while this test holds the lock
+            for (int i = 0; i < OneMapClient.MAX_WAITING; i++) {
+                waiting.add(CompletableFuture.supplyAsync(() -> client.search("a"), newThread));
+            }
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (client.waitingCalls() < OneMapClient.MAX_WAITING && System.nanoTime() < deadline) {
+                Thread.onSpinWait();
+            }
+            assertThat(client.waitingCalls()).isEqualTo(OneMapClient.MAX_WAITING);
+
+            assertThatThrownBy(() -> client.search("a"))
+                    .isInstanceOf(ExternalServiceUnavailableException.class)
+                    .satisfies(e -> {
+                        assertThat(((ExternalServiceUnavailableException) e).getService()).isEqualTo("OneMap");
+                        assertThat(ExternalFailureLog.describe((ExternalServiceUnavailableException) e))
+                                .isEqualTo("OneMap: 5 searches are already waiting for their turn; nothing was sent to OneMap");
+                    });
+        }
+
+        for (CompletableFuture<List<OneMapHit>> call : waiting) {
+            assertThat(call.get(10, TimeUnit.SECONDS)).isEmpty();
+        }
+        server.verify();
+        assertThat(client.waitingCalls()).isZero();
     }
 
     /** The cache from CacheConfig around a OneMapClient whose HTTP calls go to a mock server. */

@@ -45,12 +45,17 @@
             <div th:if="${#lists.isEmpty(recommendations)}" class="empty-state py-5">
                 <span class="empty-state-icon"><svg th:replace="~{fragments/icon :: icon('search')}"></svg></span>
                 <p class="empty-state-title">No school matches your criteria.</p>
-                <p th:if="${psleDataAvailable != false}">Try a longer commute, another way to travel, or check your PSLE
+                <p th:if="${psleDataAvailable != false}">Try a longer commute, another way to travel, or check the PSLE
                     score and posting group. Only schools with PSLE range data can be recommended.</p>
                 <p th:if="${psleDataAvailable == false}">Try a longer commute or another way to travel.</p>
                 <a class="btn btn-primary" th:href="@{/recommendations}">Refine criteria</a>
             </div>
 
+            <!--/* DC-88: only when a commute time from Google is on the page; the box keeps the credit with the times */-->
+            <div th:classappend="${!#lists.isEmpty(recommendations.?[commuteMin != null]) and !googleStub} ? 'google-content-box'">
+            <th:block th:if="${!#lists.isEmpty(recommendations.?[commuteMin != null])}">
+                <p th:replace="~{fragments/google-maps-credit :: credit('Commute times')}"></p>
+            </th:block>
             <ol class="list-unstyled mb-0" th:unless="${#lists.isEmpty(recommendations)}">
                 <li th:each="rec : ${recommendations}" class="card mb-3"
                     th:with="score=${#numbers.formatDecimal(rec.totalScore * 100, 1, 0)}">
@@ -95,6 +100,7 @@
                     </div>
                 </li>
             </ol>
+            </div>
         </div>
 
         <aside class="col-12 col-lg-4">

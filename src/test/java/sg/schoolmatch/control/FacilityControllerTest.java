@@ -230,6 +230,26 @@ class FacilityControllerTest {
     }
 
     @Test
+    @Tag("NFR-ATTR-01")
+    @DisplayName("TC-Facility-10: details keep Google's third-party data credits: those of the details, else those of the cached summary")
+    void getFacilityDetails_keepsAttributions() {
+        Facility.Attribution fromSearch = new Facility.Attribution("From search", null);
+        Facility.Attribution fromDetails = new Facility.Attribution("From details", null);
+        l1.setAttributions(List.of(fromSearch));
+        facilityController.getNearbyFacilities(school);
+
+        when(googleMaps.getPlaceDetails(l1.getPlaceId())).thenReturn(Optional.empty());
+        assertThat(facilityController.getFacilityDetails(l1.getPlaceId()).getAttributions()).containsExactly(fromSearch);
+
+        Facility details = new Facility(l1.getPlaceId(), "L1", null);
+        when(googleMaps.getPlaceDetails(l1.getPlaceId())).thenReturn(Optional.of(details));
+        assertThat(facilityController.getFacilityDetails(l1.getPlaceId()).getAttributions()).containsExactly(fromSearch);
+
+        details.setAttributions(List.of(fromDetails));
+        assertThat(facilityController.getFacilityDetails(l1.getPlaceId()).getAttributions()).containsExactly(fromDetails);
+    }
+
+    @Test
     @Tag("FR-FACDETAIL-01")
     @DisplayName("TC-Facility-08: not cached (e.g. after a restart) but known to Google → details still shown")
     void getFacilityDetails_notCachedButKnown() {

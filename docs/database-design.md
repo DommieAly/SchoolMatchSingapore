@@ -408,7 +408,7 @@ The JSON may keep `planningAreaName` and `ipRangeNote` as copies for reviewers. 
 2. `SELECT dataset_version FROM active_dataset WHERE singleton_id = 1 FOR UPDATE`. This row lock makes a second app instance wait.
 3. **Nothing to do** when the active version, its `content_sha256` and its `loader_format` all equal the snapshot's. Commit and stop. This is the normal start-up, and it takes milliseconds.
 4. **Older snapshot.** If the snapshot's `importedAt` is older than the active version's and `app.dataset.allow-rollback` is false, keep the active version, log a WARN and stop.
-   - This stops an old image that restarts during a rolling deploy from switching every instance back.
+   - This stops an older image from moving the school data back by accident.
    - The setting is false only in `prod`.
 5. Insert or update the `dataset_version` row.
    - It records kind (lower-cased), dates, both statuses, notes, hash, `loader_format` and `loaded_at = now`.
@@ -623,7 +623,7 @@ As built, `embedded-postgres` 2.2.2 starts the 17.11 binaries on Apple silicon (
 | `test` | `jdbc:h2:mem:${random.uuid};H2FLAGS;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000` | one fresh database per Spring test context (today all contexts share `mem:test`, and `create-drop` lets one context drop another's tables); `spring.test.database.replace: none`, so `@DataJpaTest` keeps this URL and Flyway; `create-drop` removed |
 | `import` | `jdbc:h2:mem:import;H2FLAGS` | `app.dataset.load-on-startup: false`; still writes only the JSON snapshot |
 | `postgres` (new) | `jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:schoolmatch}?reWriteBatchedInserts=true`, `${DB_USERNAME:schoolmatch}`, `${DB_PASSWORD:schoolmatch}` | a local PostgreSQL 17, or `compose.yaml` (service `db`, image `postgres:17-alpine`, named volume `schoolmatch-pg`, port `127.0.0.1:${DB_PORT:-5432}`) |
-| `prod` (new) | `${DB_URL}` (e.g. `jdbc:postgresql://<host>:5432/schoolmatch?sslmode=verify-full&sslrootcert=<CA bundle>&reWriteBatchedInserts=true`), `${DB_USERNAME}`, `${DB_PASSWORD}`; no defaults, so a missing value stops start-up | `spring.datasource.hikari.data-source-properties.sslmode: verify-full` (the default for every connection; a `sslmode` in `DB_URL` wins, so `DB_URL` must never name a weaker one); `ddl-auto: validate` repeated; `app.dataset.allow-rollback: ${DATASET_ALLOW_ROLLBACK:false}`; `spring.h2.console.enabled: false`; `app.session.cookie-secure: true`; Hikari pool 10 |
+| `prod` (new) | `${DB_URL}` (e.g. `jdbc:postgresql://<host>:5432/schoolmatch?sslmode=verify-full&sslrootcert=<CA certificate>&reWriteBatchedInserts=true`), `${DB_USERNAME}`, `${DB_PASSWORD}`; no defaults, so a missing value stops start-up | `spring.datasource.hikari.data-source-properties.sslmode: verify-full` (the default for every connection; a `sslmode` in `DB_URL` wins, so `DB_URL` must never name a weaker one); `ddl-auto: validate` repeated; `app.dataset.allow-rollback: ${DATASET_ALLOW_ROLLBACK:false}`; `spring.h2.console.enabled: false`; `app.session.cookie-secure: true`; Hikari pool 10 |
 
 `.env.example` gains commented lines for `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `DB_URL` and `DATASET_ALLOW_ROLLBACK`. `compose.yaml` reads the same `DB_*` values (from `.env` or the environment) with the same defaults, so `DB_PORT=5433` in `.env` moves both the container and the app.
 
@@ -745,10 +745,9 @@ Each step is one pull request and ends with `./mvnw verify` green on Ubuntu and 
 - This document updated to "as built"; `database-schema.sql` removed, because the migrations are the source (its shared-SQL rules moved to section 8).
 - **Green because** the step is docs and configuration only.
 
-**Step 9. Deployment (later).**
+**Step 9. Deployment.**
 
-- Managed PostgreSQL 17 with TLS, secrets in the environment, and the decisions in section 12.
-- Not part of this branch.
+- PostgreSQL 17 in a container next to the app on one Amazon Lightsail server, with TLS and secrets in the environment ([`deployment.md`](deployment.md), DC-92).
 
 Steps 1–7 are the minimum for the prototype week (12–16 Oct). Step 2 is the only one that needs network.
 
@@ -756,10 +755,10 @@ Steps 1–7 are the minimum for the prototype week (12–16 Oct). Step 2 is the 
 
 | # | Question | Default in this design |
 |:--:|:--:|:--:|
-| 1 | Which managed PostgreSQL for deployment (AWS RDS, or another provider)? | PostgreSQL 17; anything from 15 works (`REGEXP_LIKE`) |
+| 1 | Which managed PostgreSQL for deployment (AWS RDS, or another provider)? | none: PostgreSQL 17 runs in a container on the Lightsail server, which costs about a quarter of the RDS options (DC-92). Anything from 15 works (`REGEXP_LIKE`) |
 | 2 | How does production get the snapshot? | copy `data/snapshots/` into the image and load at start-up; the alternative is `load-on-startup: false` plus a one-off load run against the database |
 | 3 | Show a withdrawn school's last-known name on the shortlist and plan instead of only its code? (F) | yes; built in step 7 (DC-86). The team can still say no: then remove `missingNames` from the two pages |
-| 4 | Add account deletion (PDPA)? Then the `choice_plan` row must be deleted in code, or `choice_plan` gets the account id as its key | not now |
+| 4 | Add account deletion (PDPA)? Then the `choice_plan` row must be deleted in code, or `choice_plan` gets the account id as its key | not in the app: until the course project ends, one account is deleted by hand with `deploy/lightsail/delete-account.sql` ([`deployment.md`](deployment.md), "Deleting one account") |
 | 5 | Run more than one app instance? Needs sticky sessions or Spring Session JDBC (the HTTP session holds the start location and recommendations), an atomic `external_usage` update, and hashed session tokens | one instance |
 | 6 | Link each school to its MOE SchoolFinder page? Then add nullable `school.school_finder_url` (not unique) in a new migration | not now |
 | 7 | OneMap Terms of Use clause 3 and the MOE data now also sit in a hosted database | already open with the TA; same question |
@@ -788,7 +787,7 @@ Steps 1–7 are the minimum for the prototype week (12–16 Oct). Step 2 is the 
 | A new MOE or data.gov.sg text format | `moe-text-format` and `transport-list` stop the import and name the school; nothing is changed silently |
 | Two instances start together | the row lock on `active_dataset`; the second instance waits and then skips |
 | An old image re-activates an old snapshot | `allow-rollback: false` in `prod` |
-| A child's PSLE score and home address in a hosted database | TLS with `sslmode=verify-full`, secrets only in the environment, encryption at rest, an app database user without DDL rights (decide at deployment) |
+| A child's PSLE score and home address in a hosted database | decided for the Lightsail server (DC-92): TLS with `sslmode=verify-full`, secrets only in the environment and in a mode 600 `.env`, no published database port, made-up data only, and a password on the site before real parents may look for it. Accepted for made-up data: the app connects as the database owner (no user without DDL rights), and AWS documents encryption at rest for attached disks, not for the server's own disk where this database lives |
 
 ## 14. As built: differences from the first design
 

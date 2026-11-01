@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<!--/* Terms and privacy (not a dialog-map state) — HomeUI.displayTermsAndPrivacy, GET /about/privacy (NFR-PRIV-01, DC-87).
+       No model of its own: all the text is here. To change the contact address, edit contactEmail on <main>; that is
+       the only copy on the site (deploy/lightsail/Caddyfile gives the same address to the certificate services).
+       "What is stored" lists every column of the user tables (TC-PrivacyFlow-05 checks this): add a new column here in
+       the same PR. The Google section is what the Google Maps Platform Terms of Service,
+       section 3.2.2(a)(i), require; keep its wording. Never put a removal date on this page: it is not decided. */-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Terms and privacy')}"></head>
+<body>
+<nav th:replace="~{layout :: navbar}"></nav>
+
+<main class="container py-4" th:with="contactEmail='dommyshappynow@gmail.com'">
+    <header class="page-header">
+        <h1 class="page-title">Terms and privacy</h1>
+        <p class="page-subtitle">What this site is, what it stores, where your data goes and how to remove it.</p>
+    </header>
+    <div th:replace="~{fragments/messages :: messages}"></div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-5 d-flex flex-column gap-4">
+            <section class="card">
+                <div class="card-body">
+                    <h2 class="section-title">What this site is</h2>
+                    <p class="mb-2">This is an NTU SC2006 student prototype, not an official service of NTU, MOE or
+                        any government agency.</p>
+                    <p class="mb-0">PSLE ranges are historical and are not a promise of a place.
+                        <a th:href="@{/about/data}">About the data</a> says where they come from.</p>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-body">
+                    <h2 class="section-title">Use made-up details only</h2>
+                    <p class="mb-2">Use made-up details only. Do not enter a real child's score, school or home
+                        address.</p>
+                    <p class="mb-0">This site is for parents and guardians, and for students aged 13 or over. It is
+                        not meant for children under 13.</p>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-body">
+                    <h2 class="section-title">How to remove your data</h2>
+                    <p class="mb-2">You can clear your score, school and address on your
+                        <a th:href="@{/profile}">profile page</a>: empty the field and press Save profile. Clearing
+                        the address also clears its coordinates.</p>
+                    <p class="mb-2">You can remove schools on your <a th:href="@{/shortlist}">shortlist</a> and
+                        <a th:href="@{/plan}">choice plan</a> pages. A choice plan keeps the score and posting group
+                        it was made for, even after you clear them on your profile.</p>
+                    <p class="mb-2">To delete a whole account, or to remove that copy from a choice plan, write to
+                        <a class="text-break" th:href="|mailto:${contactEmail}|"
+                           th:text="${contactEmail}">contact address</a>.</p>
+                    <p class="mb-0">All accounts and all data are deleted when the course project ends.</p>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12 col-lg-7 d-flex flex-column gap-4">
+            <section class="card">
+                <div class="card-body">
+                    <h2 class="section-title">What is stored</h2>
+                    <p class="mb-3">The database holds these fields. Only the username, email address and password
+                        are needed to register; everything else is there only if you enter it.</p>
+                    <dl class="data-list mb-3">
+                        <dt>Account</dt>
+                        <dd>A random account id, username, a lower-case copy of the username, email address, hashed
+                            password (a one-way code, never the password itself), when the account was created, and
+                            its status (active or inactive)</dd>
+
+                        <dt>Profile</dt>
+                        <dd>Display name, PSLE score, posting group, primary school, home address and its coordinates
+                            (latitude and longitude), CCA and programme choices, usual travel mode, and commute
+                            limit</dd>
+
+                        <dt>Shortlist</dt>
+                        <dd>The schools you saved, and when the list last changed</dd>
+
+                        <dt>Choice plan</dt>
+                        <dd>Your ranked schools, the PSLE score and posting group the plan was made for, and when it
+                            last changed</dd>
+
+                        <dt>Login</dt>
+                        <dd>A random login id, when the login started and expires, and whether you logged out. Ended
+                            logins are deleted about once an hour.</dd>
+                    </dl>
+                    <p class="mb-0 small text-body-secondary">The server also keeps your starting point (a typed
+                        address or device position), address matches and latest recommendations in memory, not in the
+                        database. They go when you log out or after 30 minutes without activity. Separately, the server
+                        keeps each typed address with OneMap's answer for up to 24 hours, and travel-time answers with
+                        the rounded starting point for up to 30 minutes, so the same search does not cost a second call.
+                        These copies carry no name or account, and they go when the server restarts. The site sets two
+                        cookies, one to keep you logged in and one for these page details. It sets no advertising or
+                        analytics cookies. To slow down anyone who sends too many requests, the server also counts some
+                        requests by IP address. These counts stay in memory for about one hour. If the site is down for
+                        a moment, the HTTPS proxy's error log can keep your IP address, your browser's name, and the
+                        address of the page you asked for and of the page you came from, with any score or search words
+                        in those addresses, until the server is deleted.</p>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-body">
+                    <h2 class="section-title">Where your data goes</h2>
+                    <ul class="ps-3 mb-3 d-grid gap-2">
+                        <li>Data is stored on a server in Singapore (Amazon Web Services).</li>
+                        <li>Typed addresses and postal codes go to OneMap (Singapore Land Authority), to find their
+                            location.</li>
+                        <li>Locations go to Google, to work out travel times and directions. Google gets map
+                            coordinates, with the starting point rounded to about 100 m, and not your name or
+                            account.</li>
+                        <li>Pages with a map load it from Google in your browser, so Google can see your IP address
+                            and the area you view.</li>
+                        <li>Every page loads its styles and scripts from jsDelivr, a public file service, which can see
+                            your IP address.</li>
+                    </ul>
+                    <p class="mb-0 small text-body-secondary">These services handle what they receive under their own
+                        terms. We cannot delete it for you.</p>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-body">
+                    <h2 class="section-title">Google Maps</h2>
+                    <p class="mb-0 text-break">SchoolMatch SG includes Google Maps features and content. Use of Google
+                        Maps features and content is subject to the then-current versions of the
+                        <a href="https://maps.google.com/help/terms_maps/" rel="noopener" target="_blank">Google Maps End User Additional Terms of Service</a>
+                        (https://maps.google.com/help/terms_maps/) and the
+                        <a href="https://policies.google.com/privacy" rel="noopener" target="_blank">Google Privacy Policy</a>
+                        (https://policies.google.com/privacy).</p>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{layout :: footer}"></footer>
+</body>
+</html>

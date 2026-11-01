@@ -22,6 +22,8 @@ import sg.schoolmatch.dataset.SnapshotManifest;
  * <p>
  * Also {@code GET /about/data}: where the school data comes from (NFR-DATA-01, DC-09, data.gov.sg licence notice;
  * owner B). Not a dialog-map state.
+ * <p>
+ * Also {@code GET /about/privacy}: the Terms and privacy page (NFR-PRIV-01, DC-87; owner A). Not a dialog-map state.
  */
 @Controller
 public class HomeUI {
@@ -68,6 +70,12 @@ public class HomeUI {
                 .filter(Objects::nonNull)
                 .findFirst().orElse(null));
         return "about-data";
+    }
+
+    /** GET /about/privacy — what the site is, what it stores, where data goes and how to remove it; no model (DC-87). */
+    @GetMapping("/about/privacy")
+    public String displayTermsAndPrivacy() {
+        return "about-privacy";
     }
 
     /** One source line of the about page; {@code licensed} = a data.gov.sg dataset (needs the licence notice). */

@@ -2,6 +2,7 @@ package sg.schoolmatch.flow;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -74,6 +75,22 @@ class FacilityFlowTest {
                 .andExpect(content().string(containsString(nearest.getName())))
                 .andExpect(content().string(containsString("km from CATHOLIC HIGH SCHOOL")))
                 .andExpect(content().string(containsString("Back to facilities")));
+    }
+
+    @Test
+    @Tag("NFR-ATTR-01")
+    @DisplayName("TC-FacilityFlow-05: stub facilities are made up, so their pages have no Google Maps credit (DC-88)")
+    void stubFacilitiesHaveNoGoogleCredit() throws Exception {
+        Facility nearest = facilityController.getNearbyFacilities(schoolController.getSchoolDetails(CODE)).getFirst();
+
+        mvc.perform(get("/schools/" + CODE + "/facilities"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Demo data (stub)")))
+                .andExpect(content().string(not(containsString("google-maps-credit"))));
+        mvc.perform(get("/facilities/" + nearest.getPlaceId()).param("from", CODE))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Demo data (stub)")))
+                .andExpect(content().string(not(containsString("google-maps-credit"))));
     }
 
     @Test

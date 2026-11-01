@@ -283,6 +283,7 @@ public class DirectionsUI {
         model.addAttribute("to", to);
         model.addAttribute("from", safeFrom);
         model.addAttribute("destination", destination);
+        model.addAttribute("destinationFromGoogle", destination instanceof Facility);   // DC-88: the page credits Google
         model.addAttribute("destinationUrl", detailsUrl);
         model.addAttribute("destinationMappable", destination != null && destination.hasValidCoordinate());
         model.addAttribute("startLocation", start);

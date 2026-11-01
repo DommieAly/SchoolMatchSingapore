@@ -1,230 +1,243 @@
-# Deploying SchoolMatch SG on AWS
+# Deploying SchoolMatch SG on Amazon Lightsail
 
-This guide puts the app online at an `https://` address for the demo, on **Amazon ECS Express Mode** (the app) and **Amazon RDS for PostgreSQL 17** (the database), in the Singapore Region `ap-southeast-1`. One teammate with the AWS account does it; the console steps take about an hour, plus about 20 minutes of waiting.
+This guide puts the app online at an `https://` address on **one Amazon Lightsail server** in the Singapore Region `ap-southeast-1`: the app, PostgreSQL 17 and a Caddy HTTPS proxy, all in Docker Compose. One teammate with the AWS account runs the scripts in [`deploy/lightsail/`](../deploy/lightsail/) from their own computer. It takes about 30 minutes, most of it waiting.
 
-AWS facts in this guide were checked against AWS documentation and price lists on 25 Oct 2026. AWS renames console buttons from time to time; if a label differs slightly, pick the closest match.
+AWS facts in this guide were checked against AWS documentation and the AWS CLI help on 1 Nov 2026. The scripts are written for AWS CLI 2.27.42 or later.
 
 ## What gets built
 
 ```
-Browser ──HTTPS──▶ Load balancer (made by ECS Express, with its own https://… address and certificate)
-                        │ plain HTTP, port 8080
-                        ▼
-                  App container (1 task on Fargate, image from Amazon ECR, profile "prod")
-                        │ PostgreSQL over TLS (sslmode=verify-full)        │ HTTPS out to the internet
-                        ▼                                                   ▼
-                  RDS PostgreSQL 17 (private: no public access)      Google Routes / Places, OneMap
+Browser ──HTTPS──▶ proxy: Caddy (gets and renews the certificate by itself)
+                     │ plain HTTP inside Docker, port 8080
+                     ▼
+                   app: the image built on your computer, profile "prod" ──HTTPS out──▶ Google Routes / Places, OneMap
+                     │ PostgreSQL over TLS (sslmode=verify-full)
+                     ▼
+                   db: PostgreSQL 17, no published port, data in a named volume
 ```
 
+- **The server:** Ubuntu 24.04, x86, 2 GB memory, 2 vCPUs, 60 GB disk, with a static IP and a 1 GB swap file. The firewall opens ports 80 and 443 to everyone and port 22 only to your computer's public IP.
+- **In this guide,** `<ip>` means the server's static IP, and `<address>` means the host name of the site, `<ip-with-dashes>.sslip.io` (for `203.0.113.7`, `203-0-113-7.sslip.io`). sslip.io is a free name service that answers with the IP written in the name, so no domain has to be bought.
 - The browser loads Google Maps JavaScript itself, with the browser key that the page carries.
-- Exactly **one** app task runs. Page state (flash messages, the chosen starting point, the last recommendations) lives in the task's memory, so a second task would lose it between requests. Logins are in the database and survive restarts.
-- The image contains the app, the school snapshot (`data/snapshots`) and Amazon's RDS certificate bundle. It contains no keys or passwords: those are set on the service.
-- The `prod` profile ([`application-prod.yml`](../src/main/resources/application-prod.yml)) is written for this setup: it trusts the load balancer's `X-Forwarded-*` headers, redirects with relative URLs, marks both cookies `Secure` with the `__Host-` prefix, and checks the database certificate.
+- Exactly **one** app container runs. Page state (flash messages, the chosen starting point, the last recommendations) lives in its memory, so a restart loses that, but logins and accounts are in the database and stay.
+- The image contains the app and the school snapshot (`data/snapshots`). It contains no keys or passwords: those are only in `/opt/schoolmatch/.env` on the server, with mode 600.
+- There are no backups. The site holds made-up data only, and all of it goes when the server is deleted.
 
-Why this platform: AWS App Runner, the usual "container to URL" service, stopped taking new customers on 30 Apr 2026, and AWS points to ECS Express Mode instead. Express Mode gives an `https://` address without buying a domain, and its tasks run in public subnets, so they reach Google and OneMap without a NAT gateway (about USD 43/month). The [alternative](#alternative-one-ec2-server) at the end is cheaper but needs more hands-on server work.
+| Container | Memory limit | Highest use in the rehearsal |
+|:--|:--:|:--:|
+| `app` (the Java heap gets 70% of the limit) | 1 GB | about 520 MB |
+| `db` | 384 MB | about 120 MB, after loading the schools for the first time |
+| `proxy` | 128 MB | about 30 MB |
 
-In this guide, **`<address>`** means the host name of the deployed site only, e.g. `schoolmatch-abc123.ecs.ap-southeast-1.on.aws` (no `https://`, no trailing `/`). You get it in step 7.
+The limits add up to about 1.5 GB, which leaves about 500 MB for Ubuntu and Docker.
+
+## Cost
+
+**USD 12 a month before tax (about USD 13.10 with 9% GST if the account's address is in Singapore), and it is real money on this account: there are no credits and no free tier.** The plan is charged by the hour up to that amount. A stopped server is still charged: only deleting it ends the bill ([Tear down](#tear-down)). The static IP is free while it is attached. The image goes straight to the server over SSH, so there is no container registry to pay for. The plan includes 3 TB of data transfer a month, far more than this site will use.
+
+Set a reminder: Billing and Cost Management → **Budgets** → Create budget → *Monthly cost budget*, amount **USD 20**, alert emails to two teammates. AWS does not stop anything when the budget is reached. If Budgets says access denied, sign in once as the root user and turn on Account → IAM user and role access to Billing information.
+
+## How long it stays online
+
+**The removal date is not decided.** It depends on when the TA's marking is finished, which we do not know yet. The site itself says only that all data is deleted "when the course project ends"; do not write a date on it.
+
+**If the site is still online when the PSLE results come out, put a password on it first** ([how](#putting-a-password-on-the-site)). MOE expects the results on 24-25 Nov 2026 (tentative). That is when real parents may start looking for a site like this one and could type in a real child's details.
 
 ## Before you start
 
-- [ ] **The TA knows about the MOE data** (README, "Current state"). A public site republishes the MOE SchoolFinder PSLE ranges and affiliations.
-- [ ] **The OneMap Terms of Use question** ([`data/README.md`](../data/README.md), Licences) is settled or accepted by the team.
-- [ ] **Testers use made-up data.** The site stores a child's PSLE score and home address, and there is no "delete my account" yet ([`database-design.md`](database-design.md), sections 12 and 13). The address will not stay within the class: new HTTPS certificates are published in public logs that scanners read. Tell testers to use test accounts, made-up scores and a public address such as a school's postal code, and delete the deployment after the demo (step 8). There is also no limit on login attempts; the team accepts that for the demo week.
-- [ ] **Money.** It costs about **USD 24 a week** (table below) and is charged per hour even with no visitors. New AWS accounts get USD 100 in credits at sign-up (plus up to USD 100 more for small "Explore AWS" tasks).
-  - Pick the **Paid plan** at sign-up: the credits are still used first, and the site keeps running if they run out (you pay the difference, so set the budget alert in step 4).
-  - On the **Free plan** nothing is ever charged, but when the credits reach zero (about 4 weeks at this cost) the account closes and the site goes offline, so deploy close to the demo.
-- [ ] **The account can use Singapore.** AWS's newest sign-up flow (since 16 Sep 2026) fixes a new account with a Singapore address to the Sydney Region. Sign up with **"Sign up for AWS (advanced)"** (the classic flow; a card is required) to choose `ap-southeast-1`. An account already fixed to Sydney either does every step in `ap-southeast-2` (the data then sits in Australia), or turns on "Activate advanced features" to open other Regions (this cannot be undone, and the account stops earning activity credits).
-- [ ] **Account safety.** Turn on MFA for the root user at the first sign-in, create an admin user (IAM Identity Center, or IAM) and do every step as that user. Never create access keys for the root user.
-- [ ] **Tools on your computer:** Docker Desktop (running), AWS CLI version 2.32 or later (`aws --version`), a **bash** shell for steps 2, 3 and 7 (macOS or Linux Terminal; on Windows, Git Bash from Git for Windows, or WSL; not PowerShell), and this repository on the `deploy/prep` branch (or `main` once it is merged).
+- [ ] **Made-up data only.** The site stores a child's PSLE score and home address. Tell testers to use test accounts, made-up scores and a public address such as a school's postal code. The Terms and privacy page and the register and profile pages say the same.
+- [ ] **Tell the TA before you share the address** (README, "Current state"): a public site republishes the MOE SchoolFinder PSLE ranges and affiliations.
+- [ ] **The OneMap Terms of Use question** ([`data/README.md`](../data/README.md), "Licences and credits") is settled or accepted by the team.
+- [ ] **Team approval.** The team has approved DC-92 (this server) and DC-94 (the Google caching difference in [Google allowance](#google-allowance)). Going online puts both into use.
+- [ ] **Expect visitors you did not invite.** New HTTPS certificates are published in public logs that scanners read, so the address will not stay within the class.
+- [ ] **Account safety.** MFA is on for the root user, and you work as an admin user. Never create access keys for the root user.
+- [ ] **Tools on your computer:** Docker Desktop (running), the AWS CLI signed in to the right account (`aws sts get-caller-identity` prints its number), and a **bash** shell (macOS or Linux Terminal; on Windows, Git Bash or WSL).
+- [ ] **Keys:** `GOOGLE_MAPS_SERVER_KEY` and `GOOGLE_MAPS_MAP_ID` are in the `.env` of your main checkout of this repository. The key owner is E (backup A).
 
-| Item (Singapore prices, Oct 2026) | Per month | Per week |
-|:--|:--:|:--:|
-| Fargate task, 1 vCPU / 2 GB, x86 | ~$45 | ~$10.5 |
-| Load balancer (+ a little traffic) | ~$20 | ~$4.6 |
-| Public IPv4 addresses (load balancer + task) | ~$11–15 | ~$3 |
-| RDS db.t4g.micro + 20 GB storage | ~$21 | ~$4.9 |
-| Logs, image storage | ~$1–2 | ~$0.4 |
-| **Total** | **~$100** | **~$24** |
+## 1. Rehearse on your computer
 
-## 1. Build the image on your computer
-
-From the repository root, on a commit whose CI is green (the build does not run the tests; CI runs them on every push):
+This runs the **real production files** with [`rehearsal.override.yaml`](../deploy/lightsail/rehearsal.override.yaml), which changes only what must differ on a laptop: stub modes, a certificate from Caddy's own internal authority for `localhost`, the address `127.0.0.1:8443`, a local build of the image, and throwaway `.env` and certificates in `deploy/lightsail/.rehearsal/` (gitignored).
 
 ```bash
-docker build -t schoolmatch:latest .
+cd deploy/lightsail
+./make-rehearsal-files.sh
+docker compose --project-directory .rehearsal -f compose.yaml -f rehearsal.override.yaml up -d --build --wait
+../rehearsal/smoke.sh
 ```
 
-The first build downloads Maven dependencies and takes a few minutes; later builds take about a minute.
+`smoke.sh` registers a throwaway account, logs in, opens the profile, logs out, and posts a form "from another site". It prints one line per check and ends with **"All checks passed."** You can also open https://localhost:8443 and accept the browser's warning about the rehearsal certificate.
 
-## 2. Rehearse production locally
+To check that accounts survive, register an account in the browser, then run the same `docker compose` command with `restart`, or with `down` and then `up -d --wait` (no `-v`), and log in again.
 
-[`deploy/rehearsal/`](../deploy/rehearsal/) runs the image exactly as on AWS: the `prod` profile, PostgreSQL over TLS with certificate checking, and an HTTPS proxy in front that talks plain HTTP to the app, like the load balancer.
+Finish with the same command and `down -v`, which removes the throwaway data. Then go back to the repository root.
+
+## 2. Create the server
 
 ```bash
-cd deploy/rehearsal
-./make-certs.sh
-docker compose up -d --build --wait
-./smoke.sh
+deploy/lightsail/provision.sh
 ```
 
-`--build` rebuilds the image from your working tree, and `--wait` returns once the app answers its health check. `smoke.sh` waits for the site, registers a throwaway account, logs in, opens the profile, logs out, and posts a form "from another site". It prints one line per check and ends with **"All checks passed."**:
+From here on it costs money. The script makes an SSH key at `~/.ssh/schoolmatch-lightsail` if there is none, imports it, creates the server (`ubuntu_24_04`, `small_3_0`, name `schoolmatch`), attaches a static IP, and sets the firewall. It prints the server's IP and the site address. It is safe to run twice. If Lightsail already has the key but this computer does not, it stops and asks you to copy the key from the first computer.
 
-- redirects are relative (`/login`, `/`), never `http://`;
-- every cookie is `Secure`;
-- the profile gives `200` after login;
-- the form from another site gets `403`.
+On its first boot the server runs [`server-setup.sh`](../deploy/lightsail/server-setup.sh) by itself: Docker Engine and the compose plugin from Docker's own apt repository, the 1 GB swap file, automatic security updates, and the folder `/opt/schoolmatch`. This takes a few minutes; the next scripts wait for it. To check by hand: `ssh -i ~/.ssh/schoolmatch-lightsail ubuntu@<ip> cloud-init status --wait` prints `status: done` when first boot has ended, or `status: error` if it failed.
 
-You can also open https://localhost:8443 (accept the browser's warning about the rehearsal certificate). Finish with `docker compose down -v`.
+## 3. Set the Google keys
 
-## 3. Push the image to Amazon ECR
+In Google Cloud → APIs & Services → **Credentials** (see [`google-maps-setup.md`](google-maps-setup.md)):
+
+- **Browser key:** create a **new** key for this site, with Website restriction `https://<address>/*` only and API restriction *Maps JavaScript API* only, so the laptop key keeps its `localhost` entries. Add it to the `.env` of your main checkout as `GOOGLE_MAPS_BROWSER_KEY_SITE=<the key>`. The restriction takes a few minutes to apply. Without this key the site works, but map pages show "Map unavailable".
+- **Server key:** keep its API restriction (Routes API and Places API (New)) and the daily quotas from `google-maps-setup.md`. Because the static IP does not change, you can also limit it: Application restrictions → **IP addresses** → `<ip>`. The key then stops working on every laptop, so first give any laptop that still needs live mode a second server key of its own.
+
+## 4. Send the secrets to the server
 
 ```bash
-git status --porcelain                       # must print nothing: deploy only committed code
-aws login                                    # signs the CLI in through your browser; Region: ap-southeast-1
-export AWS_REGION=ap-southeast-1             # ap-southeast-2 if your account is fixed to Sydney
-ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-REGISTRY=$ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com
-TAG=$(git rev-parse --short HEAD)            # the image name records the commit it was built from
-aws ecr create-repository --repository-name schoolmatch      # first time only
-aws ecr get-login-password | docker login --username AWS --password-stdin $REGISTRY
-docker build --platform linux/amd64 -t $REGISTRY/schoolmatch:$TAG .
-docker image inspect $REGISTRY/schoolmatch:$TAG --format '{{.Architecture}}'   # must print amd64
-docker push $REGISTRY/schoolmatch:$TAG
-echo $REGISTRY/schoolmatch:$TAG              # the image URI for step 6
+deploy/lightsail/write-server-env.sh <ip>
 ```
 
-- `--platform linux/amd64` matters on Apple silicon Macs: Fargate runs x86 by default, and an arm64 image does not start there. Only the small final stage is built for x86, so the build stays fast.
-- Without CLI 2.32+, use `aws configure` with an access key of your admin user instead of `aws login`, and delete that key after the demo.
+It reads the keys from your main checkout's `.env` without printing them and sends them over SSH to `/opt/schoolmatch/.env`, mode 600, with `GOOGLE_MODE=live` and `ONEMAP_MODE=live`. On the server it makes a random database password and the database's own certificates, valid 825 days. It makes both only once and keeps them on later runs, and the private keys never leave the server.
 
-## 4. Set a budget alert
+## 5. Build, send and start
 
-Billing and Cost Management → **Budgets** → Create budget → *Monthly cost budget*, amount **USD 50**, alert emails to two teammates. AWS does not stop anything when the budget is reached; the email is the reminder to [tear down](#8-tear-down).
+From a clean git tree on `deploy/prep` (or `main` once it is merged), on a commit whose CI is green:
 
-## 5. Create the database (RDS)
+```bash
+deploy/lightsail/deploy.sh <ip>
+```
 
-RDS console (Region `ap-southeast-1`, or `ap-southeast-2`) → **Create database**:
+It refuses a tree with uncommitted changes. It builds the image for x86 as `schoolmatch:<short commit>`, sends it over SSH with `docker save | gzip | ssh … docker load`, copies `compose.yaml` and `Caddyfile`, and starts everything. It then waits for the health checks and for the HTTPS certificate, and ends with the site's address. The first run takes several minutes.
 
-| Setting | Value |
-|:--|:--|
-| Creation method | Standard create |
-| Engine | PostgreSQL, version **17.x** (the newest 17) |
-| Templates | Free tier or Sandbox (whichever appears); otherwise Dev/Test |
-| Availability | Single-AZ |
-| DB instance identifier | `schoolmatch-db` |
-| Master username | `schoolmatch` |
-| Credentials management | **Self managed**. Do not pick "Managed in AWS Secrets Manager": it changes the password every 7 days, and the app only reads it at start-up. If you tick *Auto generate a password*, click **View credential details** on the banner right after Create and save the password; it is shown only once. |
-| Instance class | `db.t4g.micro` |
-| Storage | 20 GB gp3, storage autoscaling off |
-| Compute resource / VPC | Don't connect to an EC2 compute resource; **Default VPC** |
-| Public access | **No** |
-| VPC security group | Create new: `schoolmatch-db` |
-| Additional configuration → Initial database name | `schoolmatch` |
-| Backup retention | 1 day |
-| Encryption | Enabled (the default) |
-| Maintenance | Auto minor version upgrade **off**; maintenance window outside your demo slots |
+To look at the server afterwards:
 
-Then let the app reach it: EC2 console → **Security Groups** → `schoolmatch-db` → Edit inbound rules → the PostgreSQL rule on port 5432 → Source: **Custom**, the default VPC's CIDR (VPC console → Your VPCs → default VPC → IPv4 CIDR, usually `172.31.0.0/16`). The database has no public address, so only resources inside your VPC can reach it. (Tighter, after step 6: change the source to the service's security group, shown under the ECS service's Networking, and remove the CIDR.)
+```bash
+ssh -i ~/.ssh/schoolmatch-lightsail ubuntu@<ip>
+cd /opt/schoolmatch
+docker compose ps
+docker compose logs --tail 50 app       # or db, proxy
+```
 
-Wait until the status is **Available** (about 10 minutes), then copy the **Endpoint** from Connectivity & security (e.g. `schoolmatch-db.abc123xyz.ap-southeast-1.rds.amazonaws.com`).
+## 6. Check list
 
-The app connects as the master user, which owns the `schoolmatch` database, so Flyway can create the tables on the first start. A separate app user without DDL rights ([`database-design.md`](database-design.md), section 9) is the better long-term setup but needs SQL access from inside the VPC; it is not needed for the demo.
-
-## 6. Create the app service (ECS Express Mode)
-
-### 6a. Secrets (recommended when more than one person can open the AWS console)
-
-Plain environment variables are visible to anyone who can open the service in the console. To keep `DB_PASSWORD` and `GOOGLE_MAPS_SERVER_KEY` out of sight, do this **before** creating the service:
-
-1. Systems Manager → **Parameter Store** → Create parameter, twice: `/schoolmatch/db-password` and `/schoolmatch/google-server-key`, Tier *Standard* (free), Type **SecureString**, default KMS key. Copy each parameter's ARN.
-2. IAM → Roles → **Create role** → trusted entity *AWS service*, use case **Elastic Container Service Task** → attach `AmazonECSTaskExecutionRolePolicy` → name `schoolmatch-task-execution` → Create. Then open the role → Add permissions → **Create inline policy** → JSON:
-   ```json
-   {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "ssm:GetParameters",
-     "Resource": "arn:aws:ssm:ap-southeast-1:<account id>:parameter/schoolmatch/*"}]}
-   ```
-3. In step 6b, choose `schoolmatch-task-execution` as the task execution role, and enter those two variables with value type **Secret** and the parameter ARN as the value.
-
-If only one person can open the console, skip 6a: choose "Create new role" in 6b and enter the two values as plain environment variables.
-
-### 6b. Create the service
-
-ECS console → **Express mode** → Create. Fill in **Image URI** (from step 3) and the two roles (**Task execution role**: `schoolmatch-task-execution` from 6a, or *Create new role*; **Infrastructure role**: *Create new role*). Then open **Additional configurations – optional**: most of the settings below are inside it, and its defaults (port 80, health check path `/`) would keep the task from ever becoming healthy. Leave **Customize networking configurations** unticked, so the default VPC and its public subnets are used.
-
-| Setting | Value |
-|:--|:--|
-| Name | `schoolmatch` (part of the address; it cannot be changed later) |
-| Container port | `8080` |
-| Health check path | **`/actuator/health/readiness`** |
-| Compute: CPU / Memory | 1 vCPU / 2 GB |
-| Auto scaling: Minimum number of tasks / Maximum number of tasks | **1** / **1** |
-| Environment variables | the table below |
-
-| Variable | Value type | Value |
-|:--|:--|:--|
-| `DB_URL` | Environment variable | `jdbc:postgresql://<RDS endpoint>:5432/schoolmatch?sslmode=verify-full&sslrootcert=/app/certs/rds-global-bundle.pem&reWriteBatchedInserts=true` |
-| `DB_USERNAME` | Environment variable | `schoolmatch` |
-| `DB_PASSWORD` | Secret (6a) or Environment variable | the parameter ARN, or the RDS master password |
-| `GOOGLE_MODE` | Environment variable | `live` |
-| `ONEMAP_MODE` | Environment variable | `live` |
-| `GOOGLE_MAPS_SERVER_KEY` | Secret (6a) or Environment variable | the parameter ARN, or the server key |
-| `GOOGLE_MAPS_BROWSER_KEY` | Environment variable | the browser key for the deployed site (step 7) |
-| `GOOGLE_MAPS_MAP_ID` | Environment variable | the map ID, if you use one |
-
-`SPRING_PROFILES_ACTIVE=prod` is already set inside the image; do not override it.
-
-Create the service. Express Mode now makes the load balancer, certificate, security groups, log group and task. Wait until the service is **Active** and one task is **Running** (5–15 minutes). If the task stops and restarts, read the log ([troubleshooting](#troubleshooting)).
-
-## 7. Google keys, then check the site
-
-The **Application URL** is on the service page (`https://….on.aws`). Use the address the console shows, not one you build from the service name. `<address>` is its host name.
-
-**Google keys first** (Google Cloud → APIs & Services → **Credentials**, see [`google-maps-setup.md`](google-maps-setup.md)):
-
-- **Browser key:** create a separate key for the deployed site, with Website restriction `https://<address>/*` only and API restriction *Maps JavaScript API* only, so the laptop key keeps its `localhost` entries. Put it in `GOOGLE_MAPS_BROWSER_KEY` (service → Update, if you created the service with the laptop key). The restriction takes a few minutes to apply.
-- **Server key:** keep its API restriction (Routes API and Places API (New)) and the daily quotas from `google-maps-setup.md`. Fargate tasks get a new public IP on every start, so an IP restriction would break the key; the quotas are the protection instead.
-
-**Then check:**
+Work through it after the first deployment. Steps 5 to 7 use real Google calls, so keep them few.
 
 1. `https://<address>/actuator/health` shows `{"groups":["liveness","readiness"],"status":"UP"}`.
-2. The task log (service → Logs, or CloudWatch → Log groups) contains `The following 1 profile is active: "prod"` and `Started SchoolMatchApplication`. The first task logs `School dataset 2026-10-04.1 loaded (147 schools …)`; later tasks log `School snapshot 2026-10-04.1 … serving 2026-10-04.1 … 147 schools` instead.
-3. When the service events show the deployment as **completed**, run from the repository root: `deploy/rehearsal/smoke.sh https://<address>`. It must end with "All checks passed." (It leaves one `smoke_…` test account behind.)
-4. In a browser: search, open a school, open the map (a real Google map), register, set a home address in the profile (a real OneMap lookup), get directions, run a recommendation, log out. No page shows the "Demo data (stub)" badge.
+2. `docker compose ps` on the server shows all three containers **healthy**. `docker compose logs app` contains `The following 1 profile is active: "prod"` and `Started SchoolMatchApplication`. The first start also logs `School dataset 2026-10-04.1 loaded (147 schools …)`; later starts only log `School snapshot 2026-10-04.1 …`.
+3. From the repository root: `deploy/rehearsal/smoke.sh https://<address>`. It must end with "All checks passed." It leaves one `smoke_…` test account behind, which you can [delete](#deleting-one-account).
+4. The site is closed where it should be: `curl -sI https://<address>/ | grep -i -E 'strict-transport|nosniff|x-frame'` prints three lines, and `nc -vz -w 5 <ip> 5432` does not connect.
+5. In a browser: search, open a school, open the map (a real Google map, not "Map unavailable"), register with made-up details, set a home address in the profile (a real OneMap lookup), get directions, log out. No page shows the "Demo data (stub)" badge, and the browser console shows no `RefererNotAllowedMapError`.
+6. **One travel-time filter against real Google:** on the search page set a starting point and one short filter, for example walking, 15 minutes. The list shows travel times with the line "Travel times: Google Maps". Do not use the island-wide public-transport filter here (see [Google allowance](#google-allowance)).
+7. **One recommendation against real Google:** log in and run one recommendation with a home address and a commute limit. The results show commute times with the line "Commute times: Google Maps".
+8. **Each visitor has their own count.** This uses no Google call. On your computer, run `for i in $(seq 31); do curl -s -o /dev/null -w '%{http_code} ' 'https://<address>/directions?to=school:catholic-high-school&mode=x'; done`. The last code must be `429`; if it is not, the loop ran into a new minute, so run it again. Within the same clock minute, open the same URL on a phone on mobile data. It must open. If the phone also gets 429, the app is seeing one address for everyone.
 
-## During the demo week
+Only now share the address, after telling the TA.
 
-- **Do not deploy during a demo slot.** A new deployment starts a second task, moves traffic over in steps and then stops the old one; users in the middle of a flow lose their page state. While a deployment is in progress, Express Mode rolls it back automatically if more than 1% of requests fail with 4xx or 5xx (for 2 data points within 3 minutes), which a few wrong links can trigger. Deploy at quiet times, do not run `smoke.sh` until the deployment is completed (its last check is a deliberate 403), and watch the service events.
-- **Keep exactly one task.** Do not raise the maximum above 1 (page state is in memory).
-- **Google allowance.** The app's own daily budget (`app.external.budget`) applies as on a laptop. Its counters are kept in the database, so a restart does not reset them, and the budget day ends at midnight Pacific Time (15:00 Singapore time, 16:00 from 1 Nov). Every visitor shares it, including guests and crawlers. `robots.txt` asks search engines not to crawl, but only polite crawlers obey. When maps or nearby facilities say "temporarily unavailable", the day's allowance is used up. One island-wide public-transport travel-time filter uses about half a day's route-matrix allowance; avoid repeating it on demo day.
-- **Updating:** commit, build and push with step 3 (the tag changes with the commit), then service → **Update** → new image URI. The database and its data stay.
-- Check the budget alert email and the Billing page once a day.
+## Updating the site
 
-## 8. Tear down
+Commit, wait for CI, then run `deploy/lightsail/deploy.sh <ip>` again. Accounts, the database password and the HTTPS certificate stay, and only the app container is replaced. The app is away for about 30 seconds, and anyone in the middle of a flow loses their page state, so do not update during a demo or marking slot.
 
-When the demo is over (or before the credits run out), in your Region:
+After changing a key in your `.env`, run `write-server-env.sh <ip>` and then `deploy.sh <ip>`.
 
-1. ECS → Clusters → `default` → Services → select `schoolmatch` → **Delete** → type `delete`. The dialog lists the resources Express created and any it keeps; delete the kept ones too (e.g. the CloudWatch log group, which never expires on its own). Then ECS → Task definitions → `schoolmatch` → deregister and delete every revision (they hold the plain environment variables).
-2. RDS → `schoolmatch-db` → Delete: untick *Create final snapshot* and *Retain automated backups*, tick the acknowledgement, Delete. Delete any manual snapshots.
-3. ECR → repository `schoolmatch` → Delete.
-4. Parameter Store parameters (6a), the `schoolmatch-db` security group, and the IAM roles created for the service (if nothing else uses them).
-5. Google Cloud → delete the deployed site's browser key. If the server key was a plain environment variable and others had console access, rotate it ([`google-maps-setup.md`](google-maps-setup.md)).
+Before a demo with the whole class on one Wi-Fi, add `APP_VISITORLIMIT_ENABLED=false` to `/opt/schoolmatch/.env` and run `docker compose up -d app`, then remove the line and run the same command afterwards. Otherwise 30 people reach the address-search limit (60 an hour, and every Save profile counts) and the Google-pages limit (120 an hour) within one walk-through.
 
-A Free-plan AWS account closes by itself after 6 months or when its credits run out; its data is kept only 90 days after that.
+To go back to an earlier version: `git checkout <old commit>`, run `deploy/lightsail/deploy.sh <ip>`, then `git checkout -`. First check that the newer commit added no file in `src/main/resources/db/migration`: migrations are not undone, so the older image may not start against the newer tables. Two things to expect: that commit's `Caddyfile` goes online too, so if the password went on after it, the password comes off; and the school data stays at the newer snapshot ([`data/README.md`](../data/README.md), "Rollback").
+
+## Google allowance
+
+- The app's own daily budget (`app.external.budget`) applies as on a laptop. Its counters are in the database, so a restart does not reset them. **The budget day ends at 16:00 Singapore time** (midnight Pacific Time).
+- Every visitor shares it, including guests and crawlers. `robots.txt` asks search engines not to crawl, but only polite ones obey.
+- The limits per visitor do not protect the allowance: 26 facility pages or 2 island-wide travel-time filters from one address use up that kind of call until 16:00 Singapore time. If this happens on a marking day, [put the password on the site](#putting-a-password-on-the-site).
+- When maps or nearby facilities say "temporarily unavailable", the day's allowance is used up.
+- One island-wide public-transport travel-time filter uses about half a day's route-matrix allowance. Avoid repeating it on a demo or marking day.
+- Known difference from Google's terms: the app caches Places content for 24 hours and Routes content for 30 minutes to stay inside the free amount. The same caches keep the rounded starting point for 30 minutes and a typed address for 24 hours. Section 4.4(c)(iii)(B) allows caching a visitor's location only with consent the visitor can withdraw, and a visitor cannot clear these copies. This is proposed for this course prototype only and needs the team's approval (DC-94).
+
+## Putting a password on the site
+
+The [`Caddyfile`](../deploy/lightsail/Caddyfile) has a marked, commented-out block that puts one username and password on every page and leaves `/actuator/health/readiness` open.
+
+1. Make a hash of the password. This asks for the password twice and prints the hash:
+   ```bash
+   docker run --rm -it caddy:2-alpine caddy hash-password
+   ```
+2. On the server, add two lines to `/opt/schoolmatch/.env`. Keep the single quotes: the hash contains `$`, and without them Compose would change it.
+   ```
+   SITE_USERNAME=schoolmatch
+   SITE_PASSWORD_HASH='<the hash>'
+   ```
+3. In `deploy/lightsail/Caddyfile`, remove the `# ` from the four lines of the block. Commit on a branch, merge it to `main` the same day (README: every change goes through a PR), and run `deploy/lightsail/deploy.sh <ip>` from that commit. Until the merge, deploy only from that branch: a deploy from any commit without the block takes the password off.
+4. Check: `curl -s -o /dev/null -w '%{http_code}\n' https://<address>/` prints `401`, and the same for `https://<address>/actuator/health/readiness` prints `200`. In a browser, the password opens the site, and the maps still work.
+
+Give the password to the TA and the team directly, not in a public place. `smoke.sh` stops working while the password is on, because it gets `401`. To take the password off, put the `# ` back, remove the two `SITE_` lines from `.env`, commit, and deploy again.
+
+Never add a `Referrer-Policy` header that strips the referrer: the Google browser key only works on pages whose referrer matches its website restriction.
+
+## Deleting one account
+
+The Terms and privacy page promises this to anyone who writes to the contact address. From the repository root:
+
+```bash
+ssh -i ~/.ssh/schoolmatch-lightsail ubuntu@<ip> 'cd /opt/schoolmatch && docker compose exec -T db psql -U schoolmatch -v ON_ERROR_STOP=1 -v email=someone@example.com' < deploy/lightsail/delete-account.sql
+```
+
+The output is `BEGIN`, `DELETE 0` or `DELETE 1` (the choice plan), `DELETE 1` (the account) and `COMMIT`. If the account line says `DELETE 0`, no account has that email. Everything else that belongs to the account goes with it through its foreign keys. [`delete-account.sql`](../deploy/lightsail/delete-account.sql) deletes the choice plan first, because it is the one table with no link to the account.
+
+## Clearing the score from one choice plan
+
+The Terms and privacy page also promises to remove the PSLE score and posting group kept on a person's choice plan. First ask the person to clear the score on their profile page: while the profile has a score, the site copies it back the next time they open the plan (`ChoicePlanController.getPlan`). Then, from the repository root:
+
+```bash
+ssh -i ~/.ssh/schoolmatch-lightsail ubuntu@<ip> 'cd /opt/schoolmatch && docker compose exec -T db psql -U schoolmatch -v ON_ERROR_STOP=1 -v email=someone@example.com' < deploy/lightsail/clear-plan-score.sql
+```
+
+The output is `BEGIN`, `UPDATE 1` and `COMMIT`. `UPDATE 1` means it worked; `UPDATE 0` means that email has no plan. The plan's schools stay. [`clear-plan-score.sql`](../deploy/lightsail/clear-plan-score.sql) changes nothing else.
+
+## Tear down
+
+When the team decides the site can go:
+
+```bash
+deploy/lightsail/teardown.sh
+```
+
+It prints the AWS account number first, so check that it is the right one. After you type the confirmation, it deletes the server, its static IP and the imported SSH key. Every account and all data on the server go with it, and that keeps the promise on the Terms and privacy page. Then, by hand:
+
+1. Google Cloud → delete the site's browser key.
+2. If only the site used the server key, delete that too; otherwise remove its IP restriction.
+3. Remove `GOOGLE_MAPS_BROWSER_KEY_SITE` from your `.env`, and `rm ~/.ssh/schoolmatch-lightsail ~/.ssh/schoolmatch-lightsail.pub`.
+4. Lightsail console, Region Singapore: no instance and no static IP is left. A static IP left without a server costs about USD 3.60 a month.
 
 ## Troubleshooting
 
+To read a log: on the server, in `/opt/schoolmatch`, `docker compose logs --tail 100 app` (or `db`, `proxy`).
+
+Do not paste the full output of `docker inspect` or `docker compose config`: they contain the secrets.
+
 | What you see | Why, and what to do |
 |:--|:--|
-| Task stops with `CannotPullContainerError … does not contain descriptor matching platform 'linux/amd64'`, or the log shows `exec format error` | The image was built for arm64. Rebuild with `--platform linux/amd64` and check it with `docker image inspect` (step 3). |
-| Task stops with `ResourceInitializationError … not authorized to perform: ssm:GetParameters` | The task execution role lacks the inline policy from 6a, or the service uses a different role. Fix the role, then service → Update (force a new deployment). |
-| Log: `Connection to … refused`, or a timeout to the RDS endpoint | The `schoolmatch-db` security group does not allow the VPC CIDR (or the service's security group) on 5432 (step 5), or the database is not Available yet. |
-| Log: `PKIX path building failed` / SSL error | `sslrootcert` in `DB_URL` must be exactly `/app/certs/rds-global-bundle.pem`. |
-| Log: `password authentication failed` | `DB_USERNAME` / `DB_PASSWORD` do not match the RDS master user. A changed password needs a new deployment (the app reads it at start-up). |
-| Log: `Could not resolve placeholder 'DB_URL'` | A database variable is missing; the prod profile has no defaults on purpose. |
-| Start-up stops with `GOOGLE_MODE=live needs GOOGLE_MAPS_SERVER_KEY …` | Set `GOOGLE_MAPS_SERVER_KEY` on the service (step 6b); the `.env` advice in the message is for laptops. |
-| Health check fails, task restarts every few minutes | The health check path must be `/actuator/health/readiness` and the port `8080` (inside *Additional configurations*). Start-up takes about 10–30 s. |
-| Map pages show "Map unavailable"; the browser console says `RefererNotAllowedMapError` | The browser key does not allow `https://<address>/*` yet (step 7), or `GOOGLE_MAPS_BROWSER_KEY` is not set on the service. |
-| After logging in you are logged out again, or redirects go to `http://` | The image is older than the `deploy/prep` changes to `application-prod.yml`. Rebuild and push (step 3). |
-| "Demo data (stub)" badge on pages | `GOOGLE_MODE` / `ONEMAP_MODE` are not `live` on the service. |
+| `provision.sh` or `teardown.sh` stops with a credentials error | The AWS CLI is not signed in. `aws sts get-caller-identity` must print your account. |
+| SSH or a script times out: `Connection timed out`, `cannot reach the server over SSH`, `no finished server` | Port 22 is open only to the IP your computer had when you ran `provision.sh`, and that changes between home, NTU Wi-Fi and a phone hotspot. Run `provision.sh` again: it sets the firewall to your current IP. On a brand-new server, also give the first boot a few minutes. |
+| SSH or a script says `Permission denied (publickey)` | This computer does not have the key that `provision.sh` first made. Copy `~/.ssh/schoolmatch-lightsail` and its `.pub` file from that computer, run `chmod 600 ~/.ssh/schoolmatch-lightsail`, then run `provision.sh` here so that port 22 opens to this computer's IP. |
+| `write-server-env.sh` keeps waiting, then says `no finished server`, though SSH works | The first boot failed. Read `/var/log/cloud-init-output.log` on the server. Then run it again, which is safe to repeat: `ssh -i ~/.ssh/schoolmatch-lightsail ubuntu@<ip> 'sudo sh -s' < deploy/lightsail/server-setup.sh`. |
+| `REMOTE HOST IDENTIFICATION HAS CHANGED` | A new server has the IP of an old one. `ssh-keygen -R <ip>`, then run the script again. |
+| The log shows `exec format error` | The image was built for arm64. `deploy.sh` builds for x86 and checks it, so run it rather than building by hand. |
+| `deploy.sh` says the containers are healthy but the address does not answer; `docker compose logs proxy` says `too many certificates` or `rateLimited` | **The shared certificate quota of sslip.io has run out.** Every user of sslip.io shares one Let's Encrypt quota, and it ran out several times in 2026. Caddy also tries ZeroSSL by itself, so wait a few minutes first. If it still fails, it keeps trying, but that can take days. Switch to nip.io, which works the same way: `SITE_ADDRESS=<ip-with-dashes>.nip.io deploy/lightsail/deploy.sh <ip>`. Later deploys keep that address. Add `https://<new address>/*` to the browser key. If nip.io has run out too, buy a cheap domain, point an A record at `<ip>`, and use `SITE_ADDRESS=<your domain>`. |
+| `docker compose logs proxy` says the certificate request timed out or could not connect | Ports 80 and 443 must be open to everyone: run `provision.sh` again. |
+| Log: `Connection to db:5432 refused` | The database is not up. See `docker compose ps` and `docker compose logs db`. |
+| Log: `PKIX path building failed` or another SSL error | `sslrootcert` in `DB_URL` must be `/certs/ca.crt`, and `/opt/schoolmatch/certs/` must hold all four files from `write-server-env.sh`. |
+| Log: `password authentication failed` | `DB_PASSWORD` in `.env` differs from the one the database volume was first made with. The volume keeps its first password, so put the old value back. On a server with only test data you can start over: `docker compose down && docker volume rm schoolmatch_db-data`, then `deploy.sh <ip>` (this deletes every account and keeps the certificate). |
+| Log: `Could not resolve placeholder 'DB_URL'` | A database variable is missing; the prod profile has no defaults on purpose. Do not edit `compose.yaml` on the server: run `deploy.sh <ip>` again. |
+| Start-up stops with `GOOGLE_MODE=live needs GOOGLE_MAPS_SERVER_KEY …` | Run `write-server-env.sh <ip>`, then `deploy.sh <ip>`. The `.env` advice in the message is for laptops. |
+| `app` restarts again and again, or `docker inspect -f '{{.State.ExitCode}} {{.State.OOMKilled}}' schoolmatch-app-1` shows `137 true` | It ran out of memory. Check `free -m` and `docker stats --no-stream` on the server. |
+| Map pages show "Map unavailable"; the browser console says `RefererNotAllowedMapError` | The browser key does not allow `https://<address>/*` yet (step 3), or `GOOGLE_MAPS_BROWSER_KEY_SITE` was not in your `.env` when you ran `write-server-env.sh`. |
+| 429 Too many requests during a demo | Everyone on the same Wi-Fi shares one count. `docker compose restart app` clears the counts. For a demo with the whole class on the site, add `APP_VISITORLIMIT_ENABLED=false` to `/opt/schoolmatch/.env`, run `docker compose up -d app`, and remove the line afterwards (then run the same command again). |
+| "temporarily unavailable" from Google, though the allowance cannot be used up | The server key's IP restriction does not list `<ip>` (step 3). |
+| After logging in you are logged out again, or redirects go to `http://` | The image is older than the `deploy/prep` changes to `application-prod.yml`. Run `deploy.sh <ip>` from a current commit. |
+| "Demo data (stub)" badge on pages | `GOOGLE_MODE` / `ONEMAP_MODE` are not `live` in the server's `.env`. Run `write-server-env.sh <ip>`, then `deploy.sh <ip>`. |
 
-## Alternative: one EC2 server
+## Other options we looked at
 
-About half the price (~USD 45/month): one `t3.small` EC2 instance with an Elastic IP, running this image plus a Caddy container that gets a free Let's Encrypt certificate for a name such as `<ip-with-dashes>.sslip.io`, and the same private RDS database (RDS → Set up EC2 connection). The fixed IP also lets the Google server key be IP-restricted, and there is no automatic rollback. The costs: the team looks after the server (SSH or Session Manager, OS and Docker updates), and the shared sslip.io certificate quota ran out several times in 2026 (fall back to nip.io or a cheap domain). Use it if Express Mode is not available on your account or its cost is a problem; `deploy/rehearsal/compose.yaml` is close to what that server would run.
+All prices are approximate, for Singapore, per month. They were checked in Oct 2026.
+
+| Option | Cost | Why it was not chosen |
+|:--|:--:|:--|
+| Amazon ECS Express Mode with a private RDS database | about USD 100 | The easiest to run, with its own `https://` address and automatic rollback, but it costs about eight times as much for one small class project, with no credits on this account. |
+| AWS App Runner with a public RDS database | about USD 40 | App Runner stopped taking new customers on 30 Apr 2026, and without a paid private connection the database would have to be reachable from the internet. |
+| One EC2 server with a private RDS database | about USD 45 | The same hands-on server work as Lightsail for almost four times the cost. A separate database service adds little for made-up data. |

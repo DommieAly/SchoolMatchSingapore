@@ -27,10 +27,11 @@ import sg.schoolmatch.error.ExternalServiceUnavailableException;
  * <ul>
  *   <li>Libraries: {@code searchNearby} with type {@code library}. Tuition centres: {@code searchText}
  *       "tuition centre" (Google has no place type for them). Both within 3 km of the centre, at most 20.</li>
- *   <li>Search field mask {@code places.id,places.displayName,places.formattedAddress,places.location}:
- *       the cheapest tier that still has the location (Nearby Search Pro / Text Search Pro). Details ask for
- *       phone, website and opening hours too (Place Details Enterprise). Tiers checked on Google's pricing
- *       page on 2026-10-02.</li>
+ *   <li>Search field mask {@code places.id,places.displayName,places.formattedAddress,places.location,
+ *       places.attributions}: the cheapest tier that still has the location (Nearby Search Pro / Text Search Pro).
+ *       Details ask for phone, website and opening hours too (Place Details Enterprise). Tiers checked on Google's
+ *       pricing page on 2026-10-02. {@code attributions}, the third-party data credits that must be shown with the
+ *       place (DC-93), is in a tier at or below these, so it adds no cost.</li>
  *   <li>Every request first calls {@link ExternalCallBudget#charge}; the key goes in the {@code X-Goog-Api-Key}
  *       header only. 4xx/5xx, timeouts and unreadable answers → {@code ExternalServiceUnavailableException
  *       ("Google Places")} (cause {@link GoogleApiFailure}, for the log line), except that details for an unknown place id
@@ -46,9 +47,10 @@ public class GooglePlacesApi {
     static final String SEARCH_NEARBY_PATH = "/v1/places:searchNearby";
     static final String SEARCH_TEXT_PATH = "/v1/places:searchText";
     static final String DETAILS_PATH = "/v1/places/{placeId}";
-    static final String SEARCH_FIELD_MASK = "places.id,places.displayName,places.formattedAddress,places.location";
+    static final String SEARCH_FIELD_MASK = "places.id,places.displayName,places.formattedAddress,places.location,"
+            + "places.attributions";
     static final String DETAILS_FIELD_MASK = "id,displayName,formattedAddress,location,nationalPhoneNumber,"
-            + "websiteUri,regularOpeningHours.weekdayDescriptions";
+            + "websiteUri,regularOpeningHours.weekdayDescriptions,attributions";
     static final String LIBRARY_TYPE = "library";
     static final String TUITION_QUERY = "tuition centre";
     static final int MAX_RESULTS = 20;

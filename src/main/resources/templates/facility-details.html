@@ -76,6 +76,8 @@
                         <dt>Location</dt>
                         <dd class="text-body-secondary"><span th:replace="~{fragments/value :: value(${coordinateText})}"></span></dd>
                     </dl>
+                    <!--/* DC-88 */-->
+                    <p th:replace="~{fragments/google-maps-credit :: placesCredit('Place details', ${facility.attributions})}"></p>
                 </div>
             </section>
         </div>
@@ -88,6 +90,9 @@
                     </ul>
                     <th:block th:if="${openingHours.isEmpty()}">
                         <span th:replace="~{fragments/value :: value(null)}"></span>
+                    </th:block>
+                    <th:block th:if="${!openingHours.isEmpty()}">
+                        <p th:replace="~{fragments/google-maps-credit :: placesCredit('Opening hours', ${facility.attributions})}"></p>
                     </th:block>
                 </div>
             </section>

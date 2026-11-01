@@ -58,7 +58,7 @@
                             not a guarantee.</p>
                         <div class="row g-3">
                             <div class="col-sm-6">
-                                <label for="psle" class="form-label">Your PSLE score (AL)</label>
+                                <label for="psle" class="form-label">PSLE score (AL)</label>
                                 <input id="psle" name="psle" type="number" min="4" max="32" step="1" class="form-control"
                                        th:value="${params.psle()}" th:disabled="${psleUnavailableMessage != null}"
                                        th:classappend="${errors['psle'] != null} ? 'is-invalid'"

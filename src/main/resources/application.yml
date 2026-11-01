@@ -120,3 +120,5 @@ app:
       transit: 45
       drive: 80
     max-routed-schools: 160   # at most this many (nearest) schools per routing request; >= the most schools a full snapshot may have (SnapshotValidator.FULL_MAX_SCHOOLS)
+  visitor-limit:           # requests per visitor address on the Google, OneMap and sign-in routes (VisitorLimitInterceptor, DC-90)
+    enabled: false         # on in application-prod.yml

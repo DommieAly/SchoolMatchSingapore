@@ -3,7 +3,7 @@
        (FR-FACILITY-01..06, FR-FACFILTER-01..04, DC-24).
        Model: school, facilityTypes, typeLabels (plural), typeNames (singular), selectedTypes, radiusOptions,
        radiusKm, filtersActive, pageUrl and mapUrl (same filters), schoolHasLocation, and either facilities + distances (placeId → km)
-       [+ noFacilitiesMessage] or serviceUnavailable. googleStub comes from LayoutModelAdvice.
+       + placeSources (their third-party data credits) [+ noFacilitiesMessage] or serviceUnavailable. googleStub comes from LayoutModelAdvice.
        The design's display operations are the sections marked below. */-->
 <!-- DM-12 NearbyFacilities / DM-13 FacilityFilter (NearbyFacilitiesUI) -->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
@@ -85,30 +85,34 @@
     </div>
 
     <!--/* displayFacilities: one Facility Summary per row, nearest first (FR-FACILITY-04, FR-FACILITY-05) */-->
-    <ol th:if="${facilities != null and !facilities.isEmpty()}" class="list-group list-group-numbered shadow-sm">
-        <li class="list-group-item d-flex align-items-start gap-3 py-3" th:each="facility : ${facilities}">
-            <div class="ms-1 me-auto">
-                <div class="d-flex flex-wrap align-items-center column-gap-2 row-gap-1">
-                    <a class="fw-semibold link-underline link-underline-opacity-0 link-underline-opacity-100-hover"
-                       th:href="@{/facilities/{id}(id=${facility.placeId}, from=${school.schoolCode})}"
-                       th:text="${facility.name}">Bishan Public Library</a>
-                    <span th:if="${facility.facilityType != null}" class="facility-tag"
-                          th:classappend="${facility.facilityType.name() == 'LIBRARY'} ? 'is-library' : 'is-tuition'"
-                          th:text="${typeNames[facility.facilityType]}">Library</span>
-                    <span th:if="${facility.facilityType == null}" class="tag">Type not available</span>
+    <div th:if="${facilities != null and !facilities.isEmpty()}" class="card shadow-sm">
+        <ol class="list-group list-group-flush list-group-numbered">
+            <li class="list-group-item d-flex align-items-start gap-3 py-3" th:each="facility : ${facilities}">
+                <div class="ms-1 me-auto">
+                    <div class="d-flex flex-wrap align-items-center column-gap-2 row-gap-1">
+                        <a class="fw-semibold link-underline link-underline-opacity-0 link-underline-opacity-100-hover"
+                           th:href="@{/facilities/{id}(id=${facility.placeId}, from=${school.schoolCode})}"
+                           th:text="${facility.name}">Bishan Public Library</a>
+                        <span th:if="${facility.facilityType != null}" class="facility-tag"
+                              th:classappend="${facility.facilityType.name() == 'LIBRARY'} ? 'is-library' : 'is-tuition'"
+                              th:text="${typeNames[facility.facilityType]}">Library</span>
+                        <span th:if="${facility.facilityType == null}" class="tag">Type not available</span>
+                    </div>
+                    <div class="small text-body-secondary mt-1">
+                        <span th:replace="~{fragments/value :: value(${facility.address})}"></span>
+                    </div>
                 </div>
-                <div class="small text-body-secondary mt-1">
-                    <span th:replace="~{fragments/value :: value(${facility.address})}"></span>
+                <div class="text-end text-nowrap">
+                    <div class="fw-bold" th:text="|${#numbers.formatDecimal(distances[facility.placeId], 1, 1)} km|">0.6 km</div>
+                    <a class="small fw-semibold d-inline-flex align-items-center gap-1 mt-1"
+                       th:href="@{/directions(to=${'facility:' + facility.placeId}, from=${'/schools/' + school.schoolCode + '/facilities'})}"><svg
+                            th:replace="~{fragments/icon :: icon('route')}"></svg>Directions</a>
                 </div>
-            </div>
-            <div class="text-end text-nowrap">
-                <div class="fw-bold" th:text="|${#numbers.formatDecimal(distances[facility.placeId], 1, 1)} km|">0.6 km</div>
-                <a class="small fw-semibold d-inline-flex align-items-center gap-1 mt-1"
-                   th:href="@{/directions(to=${'facility:' + facility.placeId}, from=${'/schools/' + school.schoolCode + '/facilities'})}"><svg
-                        th:replace="~{fragments/icon :: icon('route')}"></svg>Directions</a>
-            </div>
-        </li>
-    </ol>
+            </li>
+        </ol>
+        <!--/* DC-88: names and addresses are Google's; the distances are worked out here */-->
+        <p th:replace="~{fragments/google-maps-credit :: placesCredit('Places', ${placeSources})}"></p>
+    </div>
 </main>
 
 <footer th:replace="~{layout :: footer}"></footer>

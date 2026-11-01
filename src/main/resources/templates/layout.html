@@ -85,7 +85,8 @@
     </div>
 </nav>
 
-<!--/* Footer: dataset version and date (DC-09), data credits, link to GET /about/data, stub badge. Quiet fine print. */-->
+<!--/* Footer: dataset version and date (DC-09), data credits, links to GET /about/data and GET /about/privacy (DC-87),
+       stub badge, licence notices (DC-89). Quiet fine print. */-->
 <footer th:fragment="footer" class="site-footer">
     <div class="container">
         <div class="footer-top">
@@ -94,6 +95,7 @@
             <span th:if="${googleStub}" class="badge-stub"
                   title="Google Maps Platform runs in stub mode: routes and facilities are made-up demo data">Demo data (stub)</span>
             <a class="footer-about" th:href="@{/about/data}" href="/about/data">About the data</a>
+            <a class="footer-about" th:href="@{/about/privacy}" href="/about/privacy">Terms and privacy</a>
         </div>
         <p class="footer-credits">
             School data: <a href="https://data.gov.sg" rel="noopener" target="_blank">data.gov.sg</a> (Ministry of Education)
@@ -108,6 +110,10 @@
                 th:text="' accessed on ' + ${dataAccessedOn}"> accessed on 30 Sep 2026</span> from data.gov.sg which is made
             available under the terms of the
             <a href="https://data.gov.sg/open-data-licence" rel="noopener" target="_blank">Singapore Open Data Licence version 1.0</a>.
+            Contains information from OneMap search<span th:if="${dataAccessedOn != null}"
+                th:text="' accessed on ' + ${dataAccessedOn}"> accessed on 30 Sep 2026</span> from OneMap (onemap.gov.sg,
+            Singapore Land Authority) which is made available under the terms of the
+            <a href="https://www.onemap.gov.sg/legal/opendatalicence.html" rel="noopener" target="_blank">Singapore Open Data Licence version 1.0</a>.
         </p>
     </div>
 </footer>

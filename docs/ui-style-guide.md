@@ -120,6 +120,8 @@ text, so do not try `text-transform`.
 | `badge-stub` | "Demo data (stub)". Quiet amber pill; use it instead of `badge text-bg-warning` |
 | `notice-test` | The "TEST VALUES – not MOE data" box |
 | `note` | A one-line muted note, e.g. "historical, not guaranteed"; can start with an `info` icon |
+| `google-maps-credit` | The Google Maps credit. Use `fragments/google-maps-credit :: credit('Travel times')` inside the box that holds Google's content, or `placesCredit('Places', ${placeSources})` for Places content (it also shows the third-party data credits Google gave). It follows Google's rules for the text form, so do not restyle it. Google asks for its logo where there is room (DC-88) |
+| `google-content-box` | A quiet box around separate cards that hold Google's content (search and recommendation results), so the credit is in the same box as the times. Add it only when Google content and the credit are on the page |
 | `range-list` > `range-chip` | PSLE ranges; inner spans `range-pg`, `range-al`, `range-year` |
 | `facility-tag is-library` / `is-tuition` | Facility type with a dot in the map pin colour |
 | `differs-tag` | The "differs" marker on a compare row label. Put it in its own element after the label text |

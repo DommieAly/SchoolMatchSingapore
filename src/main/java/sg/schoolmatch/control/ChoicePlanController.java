@@ -33,7 +33,7 @@ public class ChoicePlanController {
     public static final String PLAN_FULL_MESSAGE =
             "Your plan already has " + ChoicePlan.MAX_CHOICES + " choices. Remove one before adding another.";
     public static final String NO_CHOICES_MESSAGE = "Your plan has no choices to move.";
-    public static final String NO_SCORE_MESSAGE = "Add your PSLE score in your profile first.";
+    public static final String NO_SCORE_MESSAGE = "Add a PSLE score in your profile first.";
 
     private final ShortlistController shortlistController;
     private final ProfileController profileController;

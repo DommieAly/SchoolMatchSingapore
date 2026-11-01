@@ -7,13 +7,20 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.ConfigurationPropertySources;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.env.MutablePropertySources;
+import org.springframework.core.env.PropertiesPropertySource;
+import org.springframework.core.env.StandardEnvironment;
+import org.springframework.core.env.SystemEnvironmentPropertySource;
 import org.springframework.core.io.Resource;
 
 /**
@@ -75,8 +82,8 @@ class ProfileSettingsTest {
 
     @Test
     @Tag("NFR-SEC-03")
-    @DisplayName("TC-ProfileSettings-06: the prod profile works behind an HTTPS load balancer: it trusts the forwarded scheme, redirects with relative URLs, marks both cookies Secure with the __Host- prefix, keeps row values out of database errors and shuts down gracefully (docs/deployment.md)")
-    void prodProfileBehindLoadBalancer() {
+    @DisplayName("TC-ProfileSettings-06: the prod profile works behind an HTTPS proxy: it trusts the forwarded scheme, redirects with relative URLs, marks both cookies Secure with the __Host- prefix, keeps row values out of database errors and shuts down gracefully (docs/deployment.md)")
+    void prodProfileBehindProxy() {
         Properties p = profile("prod");
         assertThat(p.getProperty("server.forward-headers-strategy")).isEqualTo("native");
         assertThat(p.getProperty("server.tomcat.use-relative-redirects")).isEqualTo("true");
@@ -87,6 +94,43 @@ class ProfileSettingsTest {
         assertThat(p.getProperty("server.servlet.session.cookie.name")).isEqualTo("__Host-JSESSIONID");
         assertThat(p.getProperty("app.session.cookie-name")).isEqualTo("__Host-SM_SESSION");
         assertThat(p.getProperty("spring.datasource.hikari.data-source-properties.logServerErrorDetail")).isEqualTo("false");
+    }
+
+    @Test
+    @Tag("NFR-LIMIT-01")
+    @DisplayName("TC-ProfileSettings-07: the limits per visitor are off in the shared file and on in the prod profile (DC-90)")
+    void visitorLimit() {
+        assertThat(profile("").getProperty("app.visitor-limit.enabled")).isEqualTo("false");
+        assertThat(profile("prod").getProperty("app.visitor-limit.enabled")).isEqualTo("true");
+        for (String name : List.of("dev", "demo", "import", "postgres")) {
+            assertThat(profile(name).getProperty("app.visitor-limit.enabled")).as(name).isNull();
+        }
+    }
+
+    @Test
+    @Tag("NFR-LIMIT-01")
+    @DisplayName("TC-ProfileSettings-08: APP_VISITORLIMIT_ENABLED=false in the environment turns the limits off in the prod profile (docs/deployment.md, Troubleshooting)")
+    void visitorLimitOffByEnvironmentVariable() {
+        assertThat(visitorLimitWith(Map.of())).isTrue();
+        assertThat(visitorLimitWith(Map.of("APP_VISITORLIMIT_ENABLED", "false"))).isFalse();
+    }
+
+    /** The setting as Spring reads it: the environment first, then the prod profile's file. */
+    private static boolean visitorLimitWith(Map<String, Object> environment) {
+        MutablePropertySources sources = new MutablePropertySources();
+        sources.addLast(new SystemEnvironmentPropertySource(
+                StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME, environment));
+        sources.addLast(new PropertiesPropertySource("prod", profile("prod")));
+        return new Binder(ConfigurationPropertySources.from(sources))
+                .bind("app.visitor-limit", AppProperties.VisitorLimitSettings.class).get().enabled();
+    }
+
+    @Test
+    @Tag("NFR-DEPLOY-01")
+    @DisplayName("TC-ProfileSettings-09: in the prod profile the health check the containers use also asks the database (DC-95)")
+    void readinessAsksTheDatabase() {
+        assertThat(profile("prod").getProperty("management.endpoint.health.group.readiness.include"))
+                .isEqualTo("readinessState,db");
     }
 
     @Test

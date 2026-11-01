@@ -22,6 +22,7 @@
         </p>
     </header>
     <div th:replace="~{fragments/messages :: messages}"></div>
+    <p th:replace="~{fragments/demo-notice :: demoNotice}"></p>
 
     <div class="row g-4">
         <div class="col-12 col-lg-8">
@@ -60,7 +61,7 @@
                                 <option value="1">Posting Group 1</option>
                             </select>
                             <div class="invalid-feedback" th:text="${fieldErrors?.get('postingGroup')}">Error</div>
-                            <div id="pg-help" class="form-text">From your PSLE results slip.
+                            <div id="pg-help" class="form-text">From the PSLE results slip.
                                 <span th:if="${psleDataAvailable == false}">Optional: not used until PSLE score ranges
                                     are available.</span></div>
                         </div>
@@ -88,8 +89,8 @@
                                    th:classappend="${fieldErrors?.get('homeAddress') != null} ? 'is-invalid'">
                             <div class="invalid-feedback" th:text="${fieldErrors?.get('homeAddress')}">Error</div>
                             <div id="home-help" class="form-text">
-                                The starting point for commute times. Looked up with OneMap; only the matching
-                                location is kept.
+                                The starting point for commute times. Looked up with OneMap; the address and its
+                                location are saved.
                                 <span th:if="${homeLocationSaved}" class="text-success fw-semibold"><svg
                                         th:replace="~{fragments/icon :: icon('check')}"></svg> Location found.</span>
                             </div>

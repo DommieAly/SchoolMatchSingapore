@@ -45,7 +45,8 @@ class GooglePlacesApiTest {
 
     private static final String BASE = "https://places.test";
     private static final Coordinate CENTRE = new Coordinate(1.3546, 103.8443);
-    private static final String SEARCH_MASK = "places.id,places.displayName,places.formattedAddress,places.location";
+    private static final String SEARCH_MASK = "places.id,places.displayName,places.formattedAddress,places.location,"
+            + "places.attributions";
 
     private final RestClient.Builder builder = RestClient.builder();
     private final MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
@@ -111,7 +112,7 @@ class GooglePlacesApiTest {
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header("X-Goog-Api-Key", "test-key"))
                 .andExpect(header("X-Goog-FieldMask", "id,displayName,formattedAddress,location,"
-                        + "nationalPhoneNumber,websiteUri,regularOpeningHours.weekdayDescriptions"))
+                        + "nationalPhoneNumber,websiteUri,regularOpeningHours.weekdayDescriptions,attributions"))
                 .andRespond(withSuccess(GoogleRoutesApiTest.fixture("place-details.json"), MediaType.APPLICATION_JSON));
 
         Optional<Facility> details = api.getPlaceDetails("ChIJ-bishan-library-test");
@@ -188,6 +189,31 @@ class GooglePlacesApiTest {
                         + "API key not valid. Please pass a valid API key.")
                 .doesNotContain("test-key");
         server.verify();
+    }
+
+    @Test
+    @Tag("NFR-ATTR-01")
+    @DisplayName("TC-GooglePlaces-08: third-party data credits are read from searches and details; one without a provider name is left out; none means an empty list")
+    void attributions_parsed() {
+        String place = "{\"id\": \"ChIJ-credited\", \"attributions\": [{\"provider\": \"Test Data Co\", "
+                + "\"providerUri\": \"https://data.example/\"}, {\"provider\": \"No Link Co\"}, {\"provider\": \" \"}]}";
+        server.expect(requestTo(BASE + "/v1/places:searchNearby"))
+                .andRespond(withSuccess("{\"places\": [" + place + ", {\"id\": \"ChIJ-plain\"}]}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(BASE + "/v1/places/ChIJ-credited"))
+                .andRespond(withSuccess(place, MediaType.APPLICATION_JSON));
+
+        List<Facility> found = api.searchPlaces(FacilityType.LIBRARY, CENTRE);
+        Optional<Facility> details = api.getPlaceDetails("ChIJ-credited");
+
+        server.verify();
+        List<Facility.Attribution> credits = List.of(new Facility.Attribution("Test Data Co", "https://data.example/"),
+                new Facility.Attribution("No Link Co", null));
+        assertThat(found.getFirst().getAttributions()).isEqualTo(credits);
+        assertThat(found.get(1).getAttributions()).isEmpty();
+        assertThat(details).get().satisfies(f -> assertThat(f.getAttributions()).isEqualTo(credits));
+        assertThat(credits.getFirst().hasWebLink()).isTrue();
+        assertThat(credits.get(1).hasWebLink()).isFalse();
     }
 
     private static void assertServiceUnavailable(org.assertj.core.api.ThrowableAssert.ThrowingCallable call) {

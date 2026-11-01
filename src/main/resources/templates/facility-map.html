@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--/* DM 15 FacilityMap — FacilityMapUI.displayFacilityMarkers (FR-FACMAP-01..05, FR-FACILITY-02, DC-16).
        Model: school, facilities (FacilityRow: facility, typeLabel, distanceKm, detailsUrl — those with a map
-       location), foundCount, omittedCount, radiusKm, typesLabel, interactive, markersJson (school + facilities),
-       listUrl, and fieldErrors / serviceUnavailable / schoolNotMappable when something went wrong. */-->
+       location), placeSources (their third-party data credits), foundCount, omittedCount, radiusKm, typesLabel,
+       interactive, markersJson (school + facilities), listUrl, and fieldErrors / serviceUnavailable / schoolNotMappable when something went wrong. */-->
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Facility map')}"></head>
 <body>
@@ -70,6 +70,10 @@
                         </div>
                     </li>
                 </ol>
+                <!--/* DC-88: this list is not on the map, and without a map it is all there is */-->
+                <th:block th:unless="${#lists.isEmpty(facilities)}">
+                    <p th:replace="~{fragments/google-maps-credit :: placesCredit('Places', ${placeSources})}"></p>
+                </th:block>
                 <p th:if="${googleStub}" class="card-footer small text-body-secondary mb-0">
                     Facilities marked (stub) are not real.</p>
             </section>

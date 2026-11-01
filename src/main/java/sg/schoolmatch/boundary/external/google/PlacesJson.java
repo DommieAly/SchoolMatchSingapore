@@ -61,7 +61,8 @@ final class PlacesJson {
     /** One place (search result or details). Fields that were not asked for, or are unknown, stay null. */
     @JsonIgnoreProperties(ignoreUnknown = true)
     record Place(String id, LocalizedText displayName, String formattedAddress, LatLngJson location,
-                 String nationalPhoneNumber, String websiteUri, OpeningHours regularOpeningHours) {
+                 String nationalPhoneNumber, String websiteUri, OpeningHours regularOpeningHours,
+                 List<AttributionJson> attributions) {
 
         /** Null when the place has no id (cannot be linked to). {@code type} may be null (details only). */
         Facility toFacility(FacilityType type) {
@@ -75,8 +76,17 @@ final class PlacesJson {
             facility.setTelephone(nationalPhoneNumber);
             facility.setWebsite(websiteUri);
             facility.setOpeningHours(regularOpeningHours == null ? null : regularOpeningHours.joined());
+            facility.setAttributions(attributions == null ? List.of() : attributions.stream()
+                    .filter(a -> a != null && a.provider() != null && !a.provider().isBlank())
+                    .map(a -> new Facility.Attribution(a.provider(), a.providerUri()))
+                    .toList());
             return facility;
         }
+    }
+
+    /** A third-party data credit on a place (DC-93). */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record AttributionJson(String provider, String providerUri) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

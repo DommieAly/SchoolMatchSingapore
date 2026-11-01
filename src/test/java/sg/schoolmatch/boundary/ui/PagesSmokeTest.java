@@ -109,7 +109,8 @@ class PagesSmokeTest {
                 arguments("19", "/directions?to=school:" + CODE),
                 arguments("19", "/directions?to=facility:" + PLACE + "&from=/schools/" + CODE + "/facilities"),
                 arguments("21", "/directions?to=school:" + CODE + "&mode=TRANSIT"),
-                arguments("–", "/about/data"));
+                arguments("–", "/about/data"),
+                arguments("–", "/about/privacy"));
     }
 
     /** Login-only pages: DM id, route. */
