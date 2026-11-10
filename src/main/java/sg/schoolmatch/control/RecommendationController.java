@@ -32,7 +32,7 @@ import sg.schoolmatch.error.InvalidInputException;
 
 /**
  * Design class «control» RecommendationController — ranks schools for a student's criteria
- * (use case Get School Recommendations; FR-REC-01, proposed id). Scoring rules: DC-20,
+ * (use case Get School Recommendations; FR-REC-01). Scoring rules: DC-20,
  * docs/recommendation-scoring.md section 5. Called by RecommendationUI.
  * <ol>
  *   <li>Candidates: schools with a PSLE range for the posting group (DC-22; the affiliated range when the
