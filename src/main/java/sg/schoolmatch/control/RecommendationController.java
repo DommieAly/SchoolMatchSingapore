@@ -148,7 +148,7 @@ public class RecommendationController {
         if (criteria.getStartLocation() == null || !criteria.getStartLocation().isResolved()) {
             errors.put("startLocation", START_MESSAGE);
         }
-        if (criteria.getWeights().values().stream().anyMatch(w -> w == null || w < 0)) {
+        if (criteria.getWeights().values().stream().anyMatch(w -> w == null || w.isNaN() || w < 0)) {
             errors.put("weights", WEIGHTS_MESSAGE);
         }
         return errors;
