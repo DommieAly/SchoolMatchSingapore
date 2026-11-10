@@ -1,0 +1,20 @@
+tc_id,requirement,technique,input,expected
+TC-BB-REC-11,FR-REC-01; NFR-USE-03,boundary value: 3 just below the lowest score 4 (I1),psleScore=3,InvalidInputException {psleScore=Enter a whole number from 4 to 32}
+TC-BB-REC-12,FR-REC-01; NFR-USE-03,boundary value: 33 just above the highest score 32 (I2),psleScore=33,InvalidInputException {psleScore=Enter a whole number from 4 to 32}
+TC-BB-REC-13,FR-REC-01; NFR-USE-03,equivalence class: score missing while the dataset has PSLE ranges (I3),psleScore=,InvalidInputException {psleScore=Enter a whole number from 4 to 32}
+TC-BB-REC-14,FR-REC-01; NFR-USE-03,boundary value: 0 just below posting group 1 (I4),postingGroup=0,"InvalidInputException {postingGroup=Choose posting group 1, 2 or 3}"
+TC-BB-REC-15,FR-REC-01; NFR-USE-03,boundary value: 4 just above posting group 3 (I5),postingGroup=4,"InvalidInputException {postingGroup=Choose posting group 1, 2 or 3}"
+TC-BB-REC-16,FR-REC-01; NFR-USE-03,equivalence class: posting group missing while the dataset has PSLE ranges (I6),postingGroup=,"InvalidInputException {postingGroup=Choose posting group 1, 2 or 3}"
+TC-BB-REC-17,FR-REC-01; NFR-USE-03,equivalence class: travel mode missing (I7),mode=,"InvalidInputException {travelMode=Choose walk, drive or public transport}"
+TC-BB-REC-18,FR-REC-01; FR-FILTER-06; NFR-USE-03,equivalence class: 14 is not an option; it sits next to the smallest option 15 (I8),maxCommuteMin=14,"InvalidInputException {maxCommuteMin=Choose 15, 30, 45 or 60 minutes}"
+TC-BB-REC-19,FR-REC-01; FR-FILTER-06; NFR-USE-03,equivalence class: 20 inside 15..60 but not an option (I8),maxCommuteMin=20,"InvalidInputException {maxCommuteMin=Choose 15, 30, 45 or 60 minutes}"
+TC-BB-REC-20,FR-REC-01; FR-FILTER-06; NFR-USE-03,equivalence class: 61 is not an option; it sits next to the largest option 60 (I8),maxCommuteMin=61,"InvalidInputException {maxCommuteMin=Choose 15, 30, 45 or 60 minutes}"
+TC-BB-REC-21,FR-REC-01; NFR-USE-03,equivalence class: longest commute missing (I9),maxCommuteMin=,"InvalidInputException {maxCommuteMin=Choose 15, 30, 45 or 60 minutes}"
+TC-BB-REC-22,FR-REC-01; NFR-USE-03,equivalence class: no starting point (I10),start=none,InvalidInputException {startLocation=*}
+TC-BB-REC-23,FR-REC-01; NFR-USE-03,equivalence class: starting point with a coordinate far outside Singapore: Kuala Lumpur (I11b),start=Kuala Lumpur,InvalidInputException {startLocation=*}
+TC-BB-REC-24,FR-REC-01; NFR-USE-03,boundary value: weight -0.01 just below 0 (I12),weight.PSLE_FIT=-0.01,InvalidInputException {weights=*}
+TC-BB-REC-25,FR-REC-01; NFR-USE-03,equivalence class: a weight with no value (I13),weight.CCA=null,InvalidInputException {weights=*}
+TC-BB-REC-26,FR-REC-01; NFR-USE-03,equivalence class: a weight that is not a number (I14),weight.COMMUTE=NaN,InvalidInputException {weights=*}
+TC-BB-REC-27,FR-REC-01; NFR-USE-03; DC-74,equivalence class: no PSLE ranges in the dataset and score 33 given (I2 under E1 = no),psleData=false; psleScore=33,InvalidInputException {psleScore=Enter a whole number from 4 to 32}
+TC-BB-REC-28,FR-REC-01; NFR-USE-03; DC-74,equivalence class: no PSLE ranges in the dataset and posting group 0 given (I4 under E1 = no),psleData=false; postingGroup=0,"InvalidInputException {postingGroup=Choose posting group 1, 2 or 3}"
+TC-BB-REC-32,FR-REC-01; NFR-USE-03,equivalence class: typed starting point that was not found: no coordinate (I11a),start=no coordinate,InvalidInputException {startLocation=*}
