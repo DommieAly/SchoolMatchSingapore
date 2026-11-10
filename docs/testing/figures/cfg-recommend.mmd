@@ -1,0 +1,50 @@
+%%{init: {"flowchart": {"nodeSpacing": 24, "rankSpacing": 30, "padding": 6, "diagramPadding": 6}, "themeVariables": {"fontSize": "17px"}}}%%
+%% Figure 1. Control flow graph of RecommendationController.recommend(MatchCriteria), source lines 85-123
+%% (branch test/lab4-testing based on commit 856c52f). Hexagons are decision nodes; 18 nodes, 24 edges, V(G) = 8.
+%% Node -> source lines: Table 1 in docs/testing/basis-path-recommend.md.
+flowchart TD
+    n1{{"1: hasPsleData() throws?"}}
+    n3["3: errors = validate(criteria, psleData)"]
+    n4{{"4: !errors.isEmpty()"}}
+    n6{{"6: getSchools() throws?"}}
+    n8["8: scored = new ArrayList()"]
+    n9{{"9: for: another school?"}}
+    n10{{"10: psleData"}}
+    n11["11: rec = scoreSchool(...)"]
+    n12["12: rec =<br>scoreWithoutPsleFit(...)"]
+    n13{{"13: rec != null"}}
+    n14["14: scored.add(rec)"]
+    n15{{"15: scored.isEmpty()"}}
+    n17["17: sort; keep top 20;<br>addCommuteTimes; rank;<br>return List.copyOf(shortlist)"]
+    n16["16: return<br>List.of()"]
+    n2["2: throw<br>ExternalService-<br>UnavailableException"]
+    n5["5: throw<br>InvalidInput-<br>Exception"]
+    n7["7: throw<br>ExternalService-<br>UnavailableException"]
+    n18(["18: exit"])
+
+    n1 -- no --> n3
+    n3 --> n4
+    n4 -- false --> n6
+    n6 -- no --> n8
+    n8 --> n9
+    n9 -- yes --> n10
+    n10 -- true --> n11
+    n10 -- false --> n12
+    n11 --> n13
+    n12 --> n13
+    n13 -- true --> n14
+    n14 --> n9
+    n13 -- false --> n9
+    n9 -- no --> n15
+    n15 -- false --> n17
+    n15 -- true --> n16
+    n17 --> n18
+    n16 --> n18
+    n1 -- yes --> n2
+    n4 -- true --> n5
+    n6 -- yes --> n7
+    n7 --> n18
+    n5 --> n18
+    n2 --> n18
+    %% Layout only, not a control flow edge: draws node 15 below the loop body so that no two edges cross.
+    n14 ~~~ n15
